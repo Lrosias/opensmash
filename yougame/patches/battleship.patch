@@ -1,0 +1,151 @@
+diff --git a/port/coroutine_emscripten.cpp b/port/coroutine_emscripten.cpp
+index f3f629e..40643a8 100644
+--- a/port/coroutine_emscripten.cpp
++++ b/port/coroutine_emscripten.cpp
+@@ -67,9 +67,11 @@ struct PortCoroutine {
+ 	char *c_stack;
+ 	char *asyncify_stack;
+ 	size_t asyncify_size;
++	PortCoroutine *snapshot_next;
+ };
+ 
+ /* The fiber representing the main thread's original context. */
++static PortCoroutine *sSnapshotCoroutines = NULL;
+ static emscripten_fiber_t sMainFiber;
+ static char sMainAsyncifyStack[ASYNCIFY_STACK_MIN];
+ static int sMainInitialized = 0;
+@@ -167,6 +169,8 @@ PortCoroutine *port_coroutine_create(void (*entry)(void *), void *arg,
+ 	emscripten_fiber_init(&co->fiber, fiber_entry, co, co->c_stack, stack_size,
+ 	                      co->asyncify_stack, co->asyncify_size);
+ 
++	co->snapshot_next = sSnapshotCoroutines;
++	sSnapshotCoroutines = co;
+ 	return co;
+ }
+ 
+@@ -179,6 +183,9 @@ void port_coroutine_destroy(PortCoroutine *co)
+ 		fprintf(stderr, "SSB64: port_coroutine_destroy on current coroutine\n");
+ 		abort();
+ 	}
++	PortCoroutine **link = &sSnapshotCoroutines;
++	while (*link && *link != co) link = &(*link)->snapshot_next;
++	if (*link) *link = co->snapshot_next;
+ 	free(co->c_stack);
+ 	free(co->asyncify_stack);
+ 	free(co);
+@@ -234,4 +241,27 @@ int port_coroutine_in_coroutine(void)
+ 	return sCurrentCoroutine != NULL;
+ }
+ 
++/* A suspended fiber only owns the live portion of each stack. Omit complete
++ * pages of unused capacity from checkpoints; keep allocator metadata and the
++ * fiber record itself. Called only after the frame has returned to JavaScript.
++ * The skipped bytes cannot be read by a resumed frame before being initialized. */
++extern "C" EMSCRIPTEN_KEEPALIVE uintptr_t *port_yougame_stack_exclusions(void)
++{
++    static uintptr_t ranges[8193];
++    unsigned n = 0;
++    if (sCurrentCoroutine) { ranges[0] = 0; return ranges; }
++    // We have returned to JS: the main stack below its last suspension is
++    // unused too. Keep the former live part and all stack/fiber metadata.
++    ranges[++n] = (uintptr_t)sMainFiber.stack_limit;
++    ranges[++n] = (uintptr_t)sMainFiber.stack_ptr;
++    for (PortCoroutine *co = sSnapshotCoroutines; co; co = co->snapshot_next) {
++        if (n + 4 > 8192) { ranges[0] = 0; return ranges; }
++        ranges[++n] = (uintptr_t)co->c_stack;
++        ranges[++n] = (uintptr_t)co->fiber.stack_ptr;
++        ranges[++n] = (uintptr_t)co->fiber.asyncify_data.stack_ptr;
++        ranges[++n] = (uintptr_t)co->asyncify_stack + co->asyncify_size;
++    }
++    ranges[0] = n;
++    return ranges;
++}
+ #endif /* __EMSCRIPTEN__ */
+diff --git a/port/gameloop.cpp b/port/gameloop.cpp
+index 9b0e715..fa11dc5 100644
+--- a/port/gameloop.cpp
++++ b/port/gameloop.cpp
+@@ -61,6 +61,8 @@ extern "C" bool port_drain_pending_menu_toggle(void);
+ #ifdef __EMSCRIPTEN__
+ #include <emscripten.h>
+ extern "C" int32_t gPortLastReplayTick;
++extern "C" int port_yougame_before_tick(void);
++extern "C" void port_yougame_after_tick(void);
+ #endif
+ 
+ /* Backbuffer screenshot capture — implemented in libultraship's DX11 backend.
+@@ -768,6 +770,9 @@ static void port_screenshot_maybe_capture(int frame)
+ 	}
+ }
+ 
++#ifdef __EMSCRIPTEN__
++EMSCRIPTEN_KEEPALIVE
++#endif
+ void PortPushFrame(void)
+ {
+ 	// Process cheats safely before the frame updates
+@@ -789,7 +794,7 @@ void PortPushFrame(void)
+ #ifdef __EMSCRIPTEN__
+ 	/* Matchup card: hold the game (no VI tick, no coroutine resume) while
+ 	 * the shell shows who is fighting. The watchdog still sees frames. */
+-	if (port_matchup_gate()) {
++	if (!port_yougame_before_tick() || port_matchup_gate()) {
+ 		port_watchdog_note_frame_end();
+ 		return;
+ 	}
+@@ -976,6 +981,7 @@ void PortPushFrame(void)
+ 	 * otherwise-identical runs (fast moves land on different poses). */
+ 	EM_ASM({ if (Module.onGameTick) Module.onGameTick($0); },
+ 	       gPortLastReplayTick >= 0 ? gPortLastReplayTick : sFrameCount);
++	port_yougame_after_tick();
+ #endif
+ 
+ 	/* RenderDoc capture trigger: env-var driven, zero cost when disabled.
+diff --git a/port/port.cpp b/port/port.cpp
+index 2605e9e..8016f69 100644
+--- a/port/port.cpp
++++ b/port/port.cpp
+@@ -1308,6 +1308,12 @@ int PortIsRunning(void) {
+ 
+ } // extern "C"
+ 
++#ifdef __EMSCRIPTEN__
++extern "C" EMSCRIPTEN_KEEPALIVE uintptr_t port_yougame_heap_base(void) {
++    extern unsigned char __heap_base;
++    return (uintptr_t)&__heap_base;
++}
++#endif
+ int main(int argc, char* argv[]) {
+ 	/* Use an absolute path for ssb64.log so it lands in a predictable
+ 	 * place regardless of how the binary was launched (Finder / open /
+@@ -1483,6 +1489,9 @@ int main(int argc, char* argv[]) {
+ 	/* Boot chain is done and the deep fiber swaps are behind us — safe to
+ 	 * let SDL's audio drain callback re-enter wasm from here on. */
+ 	port_audio_boot_complete();
++	/* The YouGame controller owns the fixed simulation clock. Return from
++	 * main at a quiescent fiber boundary; every subsequent tick is explicit. */
++	if (std::getenv("SSB64_YOUGAME_ROLLBACK")) return 0;
+ #endif
+ 	while (WindowIsRunning()) {
+ #ifdef __EMSCRIPTEN__
+diff --git a/port/staged_file.c b/port/staged_file.c
+index a4da014..98e9c76 100644
+--- a/port/staged_file.c
++++ b/port/staged_file.c
+@@ -2,6 +2,7 @@
+ 
+ #ifdef __EMSCRIPTEN__
+ #include <emscripten.h>
++EM_JS(int, port_has_staging_js, (), { return typeof Module.ensureStaged === "function"; });
+ 
+ /* Returns 1 when the file exists in MEMFS (already there, or fetched now),
+  * 0 when the shell knows no URL for it or the fetch failed. See
+@@ -26,7 +27,7 @@ FILE *port_fopen_staged(const char *path, const char *mode)
+ #ifdef __EMSCRIPTEN__
+     FILE *existing = fopen(path, mode);
+     if (existing != NULL) return existing;
+-    if (!port_ensure_staged_js(path)) return NULL;
++    if (!port_has_staging_js() || !port_ensure_staged_js(path)) return NULL;
+ #endif
+     return fopen(path, mode);
+ }

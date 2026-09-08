@@ -1,0 +1,16 @@
+{
+  "uploadId": "5e3ad9cebb05427db5da15f12ab91c4e",
+  "title": "OpenSmash",
+  "description": "Choose from 12 fighters and battle to knock your opponent off the stage. Play the original solo and training modes, or select ONLINE in the game menu for casual 1v1, ranked 1v1, and friend matches. Online battles use 3 stocks, an 8-minute timer, Dream Land, and no items.\n\nChoose a fighter, confirm, and press Start to join a match. On phones, landscape starts automatically with an on-screen stick and buttons; YouGame handles fullscreen. Keyboard uses the B0XX-AHK layout: 2/3/4/] move (WASD/arrows also work), M attacks/selects, O uses specials/back, P or 0 jumps, Q or 9 shields, [ grabs, and 7 or Enter is Start. Hold V or B with a direction for stick modifiers. Gamepads are supported.",
+  "genres": [
+    "Fighting",
+    "Platformer"
+  ],
+  "controls": "Touch",
+  "play_mode": "both",
+  "mobile": true,
+  "mature": false,
+  "score_kind": "none",
+  "paywalls": [],
+  "notes": "Includes casual and ranked online 1v1, friend matches, and original solo/training modes. Fighting is the primary genre; Platformer describes movement and stage combat. Touch is the primary control listing for landscape phone play; keyboard and gamepad also work. Online competition uses YouGame's ranked ladder, with no separate score leaderboard. No paid unlocks or play charges. Media includes a typography-led promotional thumbnail generated with the built-in image tool, four original screenshots (gameplay, Online menu, fighter roster, and landscape touch controls), and a 24-second gameplay demo with sound. The video shows a real CPU-versus-CPU exhibition in the engine, not a network match. The upload passed YouGame's build checks. Native menus, solo play, local two-client multiplayer, and browser touch tests passed; physical iPhone/Android and wider cross-network testing remain outstanding. Multiplayer uses delayed lockstep, without rollback or an authoritative game server."
+}

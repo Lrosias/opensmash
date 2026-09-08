@@ -1,0 +1,57 @@
+diff --git a/src/fast/interpreter.cpp b/src/fast/interpreter.cpp
+index 08c954b..225ba63 100644
+--- a/src/fast/interpreter.cpp
++++ b/src/fast/interpreter.cpp
+@@ -1,4 +1,7 @@
+ #include <chrono>
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++#endif
+ #ifdef __wasm_simd128__
+ #include <wasm_simd128.h>
+ #endif
+@@ -7105,6 +7108,13 @@ void Interpreter::Init(class GfxWindowBackend* wapi, class GfxRenderingAPI* rapi
+         // We cap texture max to 8k, because why would you need more?
+         int max_tex_size = std::min(8192, mRapi->GetMaxTextureSize());
+         mTexUploadBuffer = (uint8_t*)malloc(max_tex_size * max_tex_size * 4);
++#ifdef __EMSCRIPTEN__
++        // Upload conversion scratch is fully written before each texture upload.
++        // It has no state between frames; omit its potentially 256 MB capacity
++        // from local rollback checkpoints (the allocation itself stays live).
++        EM_ASM({ Module.yougameTextureScratch = Array.of($0, $0 + $1); },
++               mTexUploadBuffer, max_tex_size * max_tex_size * 4);
++#endif
+     }
+ 
+     ucode_handler_index = UcodeHandlers::ucode_f3dex2;
+diff --git a/src/ship/audio/SDLAudioPlayer.cpp b/src/ship/audio/SDLAudioPlayer.cpp
+index 53370cf..d0296cb 100644
+--- a/src/ship/audio/SDLAudioPlayer.cpp
++++ b/src/ship/audio/SDLAudioPlayer.cpp
+@@ -1,5 +1,8 @@
+ #include "ship/audio/SDLAudioPlayer.h"
+ #include <spdlog/spdlog.h>
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++#endif
+ 
+ namespace Ship {
+ 
+@@ -80,6 +83,9 @@ static void emMaybeUnpause() {
+         sEmUnpaused = true;
+     }
+ }
++extern "C" EMSCRIPTEN_KEEPALIVE void port_yougame_audio_rewind(void) {
++    if (sEmDevice) SDL_ClearQueuedAudio(sEmDevice);
++}
+ extern "C" void port_audio_boot_complete(void) {
+     sEmBootDone = true;
+     emMaybeUnpause();
+@@ -88,6 +94,7 @@ extern "C" void port_audio_boot_complete(void) {
+ 
+ void SDLAudioPlayer::DoPlay(const uint8_t* buf, size_t len) {
+ #ifdef __EMSCRIPTEN__
++    if (EM_ASM_INT({ return Module.yougameReplay ? 1 : 0; })) return;
+     sEmDevice = mDevice;
+     emMaybeUnpause();
+ #endif

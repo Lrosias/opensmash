@@ -98,3 +98,11 @@ web-prototype/asset-sources/n64-console-sketchfab-recovered.glb
 # ROM and native outputs and local exporter environment.
 /build/
 /.venv/
+/tools/emsdk/
+/yougame/dist/
+/yougame/*.zip
+/yougame/test-results/
+/yougame/build-check.json
+
+# Generated local SDK test fixture
+yougame/tests/.sdk-sync.mjs

@@ -1,5 +1,8 @@
 # OpenSmash
 
+**YouGame edition:** ranked and casual online 1v1, a static upload build, and engine
+integration notes are in [yougame/README.md](yougame/README.md).
+
 Super Smash Bros. 64 in the browser, with new fighters from image uploads. Give it a
 name and (optionally) a photo, and the pipeline produces a low-poly rigged
 mesh, a character-select portrait, a stock icon, a series emblem, and an
