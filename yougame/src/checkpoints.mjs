@@ -8,14 +8,15 @@ export class NativeCheckpoints {
  }
  save(frame,state){
   const memory=this.driver.memory(),bytes=this.driver.used(),words=new Uint32Array(memory.buffer,0,Math.ceil(bytes/4));
-  const pages=[],size=this.pageBytes/4,excluded=new Set();
+  const pages=[],size=this.pageBytes/4,excluded=new Uint8Array(Math.ceil(words.length/size));
   for(const [begin,end] of this.driver.exclusions?.()||[])
-   for(let page=Math.ceil(begin/this.pageBytes);(page+1)*this.pageBytes<=end;page++)excluded.add(page);
+   excluded.fill(1,Math.max(0,Math.ceil(begin/this.pageBytes)),Math.max(0,Math.min(excluded.length,Math.floor(end/this.pageBytes))));
   for(let start=0,index=0;start<words.length;start+=size,index++){
-   if(excluded.has(index)){pages.push(null);continue;}
+   if(excluded[index]){pages.push(null);continue;}
    const end=Math.min(start+size,words.length),old=this.pages[index]||this.zero;
    let same=old.length===end-start;
-   if(same){
+   if(same&&this.driver.comparePage){same=this.driver.comparePage(old,start,end-start);}
+   else if(same){
     const length=end-start;let j=0;
     // Compare eight words per branch; unchanged pages dominate each frame.
     for(;j+8<=length;j+=8){const i=start+j;

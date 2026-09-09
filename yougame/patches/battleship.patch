@@ -1,3 +1,41 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index aa14103..7ac3450 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -926,13 +926,10 @@ elseif (EMSCRIPTEN)
+         -sMAX_WEBGL_VERSION=2
+         -sGL_ENABLE_GET_PROC_ADDRESS=1
+         -sALLOW_MEMORY_GROWTH=1
+-        # Measured via Module._port_heap_used (sbrk high-water): ~320MB through
+-        # CSS + a battle with an injected character. 512MB = ~60% headroom;
+-        # growth stays on so an overshoot costs one buffer copy, not a crash.
+-        # The old 1024MB guess doubled the tab's committed memory for nothing —
+-        # on low-RAM machines that pressure lengthens browser GC pauses (the
+-        # intermittent demo freeze).
+-        -sINITIAL_MEMORY=512MB
++        # YouGame uses dynamically sized texture scratch instead of an eager
++        # 256 MiB upload buffer. Start at 192 MiB; keep growth enabled for
++        # larger scenes and measure the high-water mark in browser tests.
++        -sINITIAL_MEMORY=192MB
+         -sSTACK_SIZE=8388608
+         -sFORCE_FILESYSTEM=1
+         -sEXPORTED_RUNTIME_METHODS=FS,callMain
+diff --git a/port/audio/audio_playback.cpp b/port/audio/audio_playback.cpp
+index 8b9b26d..5538ad7 100644
+--- a/port/audio/audio_playback.cpp
++++ b/port/audio/audio_playback.cpp
+@@ -115,6 +115,11 @@ static void wavWriteHeader(FILE *fp, uint32_t dataBytes)
+ 
+ static void wavMaybeOpen(void)
+ {
++#ifdef __EMSCRIPTEN__
++    // Browser MEMFS capture allocates/copies PCM on the simulation thread.
++    const char* capture = std::getenv("SSB64_AUDIO_DUMP");
++    if (!capture || std::strcmp(capture, "1") != 0) return;
++#endif
+     if (sWavFile != nullptr || sWavBytesWritten >= kWavMaxBytes) return;
+     sWavFile = std::fopen("/tmp/ssb64_dump.wav", "wb");
+     if (sWavFile == nullptr) {
 diff --git a/port/coroutine_emscripten.cpp b/port/coroutine_emscripten.cpp
 index f3f629e..40643a8 100644
 --- a/port/coroutine_emscripten.cpp
@@ -102,7 +140,7 @@ index 9b0e715..fa11dc5 100644
  
  	/* RenderDoc capture trigger: env-var driven, zero cost when disabled.
 diff --git a/port/port.cpp b/port/port.cpp
-index 2605e9e..8016f69 100644
+index 2605e9e..74f7c4d 100644
 --- a/port/port.cpp
 +++ b/port/port.cpp
 @@ -1308,6 +1308,12 @@ int PortIsRunning(void) {
@@ -124,10 +162,48 @@ index 2605e9e..8016f69 100644
  	port_audio_boot_complete();
 +	/* The YouGame controller owns the fixed simulation clock. Return from
 +	 * main at a quiescent fiber boundary; every subsequent tick is explicit. */
-+	if (std::getenv("SSB64_YOUGAME_ROLLBACK")) return 0;
++	if (std::getenv("SSB64_YOUGAME_ROLLBACK") || std::getenv("SSB64_YOUGAME_MANUAL")) return 0;
  #endif
  	while (WindowIsRunning()) {
  #ifdef __EMSCRIPTEN__
+diff --git a/port/port_log.c b/port/port_log.c
+index 2316920..2f8834c 100644
+--- a/port/port_log.c
++++ b/port/port_log.c
+@@ -28,6 +28,10 @@ static FILE *sLogFile = NULL;
+ void port_log_init(const char *path)
+ {
+ 	if (sLogFile != NULL) return;
++	#ifdef __EMSCRIPTEN__
++	const char *enabled = getenv("SSB64_FILE_LOG");
++	if (enabled == NULL || enabled[0] != '1') return;
++#endif
+ 	sLogFile = fopen(path, "w");
+ }
+ 
+@@ -94,6 +98,22 @@ void port_log(const char *fmt, ...)
+ 	}
+ #endif
+ 	if (sLogFile == NULL) return;
++#ifdef __EMSCRIPTEN__
++	/* Stop retaining diagnostics at the cap. Gameplay must never grow a
++	 * MEMFS backing array indefinitely or format messages after the cap. */
++	if (ftell(sLogFile) >= 1024 * 1024) return;
++	char line[1024];
++	va_list browserArgs;
++	va_start(browserArgs, fmt);
++	int length = vsnprintf(line, sizeof(line), fmt, browserArgs);
++	va_end(browserArgs);
++	if (length > 0) {
++		size_t remaining = 1024 * 1024 - (size_t)ftell(sLogFile);
++		size_t count = (size_t)length < sizeof(line) ? (size_t)length : sizeof(line) - 1;
++		fwrite(line, 1, count < remaining ? count : remaining, sLogFile);
++	}
++	return;
++#endif
+ 	va_list ap;
+ 	va_start(ap, fmt);
+ 	vfprintf(sLogFile, fmt, ap);
 diff --git a/port/staged_file.c b/port/staged_file.c
 index a4da014..98e9c76 100644
 --- a/port/staged_file.c

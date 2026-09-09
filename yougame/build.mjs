@@ -36,7 +36,7 @@ async function collect(dir,prefix=''){for(const e of await readdir(dir,{withFile
  const row={path:relative,size:(await stat(f)).size};
  // Generated Emscripten glue contains embedded virtual-filesystem paths;
  // scan the authored loaders and game modules instead, plus every file's size.
- if(/\.(html|css|m?js)$/.test(relative)&&!['engine/BattleShip.js','engine/torch/torch.js'].includes(relative))row.text=await readFile(f,'utf8');files.push(row);
+ if((relative==='yougame.json'||/\.(html|css|m?js)$/.test(relative))&&!['engine/BattleShip.js','engine/torch/torch.js'].includes(relative))row.text=await readFile(f,'utf8');files.push(row);
  }}}
 await collect(out);
 await writeFile(path.join(root,'yougame/build-check.json'),JSON.stringify({files}));

@@ -1,5 +1,18 @@
+diff --git a/include/fast/interpreter.h b/include/fast/interpreter.h
+index 2328ba6..27d8888 100644
+--- a/include/fast/interpreter.h
++++ b/include/fast/interpreter.h
+@@ -610,6 +610,8 @@ class Interpreter {
+     std::map<ColorCombinerKey, ColorCombiner> mColorCombinerPool; // color_combiner_pool;
+     std::map<ColorCombinerKey, ColorCombiner>::iterator mPrevCombiner = mColorCombinerPool.end();
+     uint8_t* mTexUploadBuffer = nullptr;
++    size_t mTexUploadCapacity = 0;
++    bool EnsureTextureUploadCapacity(uint64_t bytes);
+ 
+     GfxDimensions mGfxCurrentWindowDimensions{}; // gfx_current_window_dimensions;
+     int32_t mCurWindowPosX{};
 diff --git a/src/fast/interpreter.cpp b/src/fast/interpreter.cpp
-index 08c954b..225ba63 100644
+index 08c954b..6e20f71 100644
 --- a/src/fast/interpreter.cpp
 +++ b/src/fast/interpreter.cpp
 @@ -1,4 +1,7 @@
@@ -10,22 +23,204 @@ index 08c954b..225ba63 100644
  #ifdef __wasm_simd128__
  #include <wasm_simd128.h>
  #endif
-@@ -7105,6 +7108,13 @@ void Interpreter::Init(class GfxWindowBackend* wapi, class GfxRenderingAPI* rapi
-         // We cap texture max to 8k, because why would you need more?
-         int max_tex_size = std::min(8192, mRapi->GetMaxTextureSize());
-         mTexUploadBuffer = (uint8_t*)malloc(max_tex_size * max_tex_size * 4);
+@@ -1618,6 +1621,8 @@ void Interpreter::ImportTextureRgba16(int tile, bool importReplacement) {
+ 
+     uint32_t i = 0;
+ 
++    if (!EnsureTextureUploadCapacity((uint64_t)width * height * 4)) return;
++
+     for (uint32_t y = 0; y < height; y++) {
+         for (uint32_t x = 0; x < width; x++) {
+             uint32_t clrIdx = (y * (fullImageLineSizeBytes / 2)) + (x);
+@@ -1697,6 +1702,8 @@ void Interpreter::ImportTextureRgba32(int tile, bool importReplacement) {
+     // Copy pixel by pixel, respecting full image stride (handles sub-tile loads)
+     uint32_t fullImageStridePixels = full_image_line_size_bytes / 4;
+     uint32_t i = 0;
++    if (!EnsureTextureUploadCapacity((uint64_t)width * height * 4)) return;
++
+     for (uint32_t y = 0; y < height; y++) {
+         for (uint32_t x = 0; x < width; x++) {
+             uint32_t srcIdx = y * fullImageStridePixels + x;
+@@ -1760,6 +1767,8 @@ void Interpreter::ImportTextureIA4(int tile, bool importReplacement) {
+                                             mRdp->texture_tile[tile].lrs);
+ 
+     uint32_t i = 0;
++    if (!EnsureTextureUploadCapacity((uint64_t)width * height * 4)) return;
++
+     for (uint32_t y = 0; y < height; y++) {
+         for (uint32_t x = 0; x < width; x++) {
+             uint32_t srcPixelIdx = y * (fullImageLineSizeBytes * 2) + x;
+@@ -1819,6 +1828,8 @@ void Interpreter::ImportTextureIA8(int tile, bool importReplacement) {
+                                             mRdp->texture_tile[tile].lrs);
+ 
+     uint32_t i = 0;
++    if (!EnsureTextureUploadCapacity((uint64_t)width * height * 4)) return;
++
+     for (uint32_t y = 0; y < height; y++) {
+         for (uint32_t x = 0; x < width; x++) {
+             uint32_t srcIdx = y * fullImageLineSizeBytes + x;
+@@ -1876,6 +1887,8 @@ void Interpreter::ImportTextureIA16(int tile, bool importReplacement) {
+ 
+     uint32_t i = 0;
+ 
++    if (!EnsureTextureUploadCapacity((uint64_t)width * height * 4)) return;
++
+     for (uint32_t y = 0; y < height; y++) {
+         for (uint32_t x = 0; x < width; x++) {
+             uint32_t clrIdx = (y * (full_image_line_size_bytes / 2)) + (x);
+@@ -1941,6 +1954,8 @@ void Interpreter::ImportTextureI4(int tile, bool importReplacement) {
+ 
+     uint32_t i = 0;
+ 
++    if (!EnsureTextureUploadCapacity((uint64_t)width * height * 4)) return;
++
+     for (uint32_t y = 0; y < height; y++) {
+         for (uint32_t x = 0; x < width; x++) {
+             uint32_t clrIdx = (y * (fullImageLineSizeBytes * 2)) + (x);
+@@ -2002,6 +2017,8 @@ void Interpreter::ImportTextureI8(int tile, bool importReplacement) {
+     }
+ 
+     uint32_t i = 0;
++    if (!EnsureTextureUploadCapacity((uint64_t)width * height * 4)) return;
++
+     for (uint32_t y = 0; y < height; y++) {
+         for (uint32_t x = 0; x < width; x++) {
+             uint8_t intensity = addr[y * fullImageLineSizeBytes + x];
+@@ -2104,6 +2121,8 @@ void Interpreter::ImportTextureCi4(int tile, bool importReplacement) {
+     }
+ 
+     uint32_t i = 0;
++    if (!EnsureTextureUploadCapacity((uint64_t)width * height * 4)) return;
++
+     for (uint32_t y = 0; y < height; y++) {
+         for (uint32_t x = 0; x < width; x++) {
+             uint32_t srcPixelIdx = y * (fullImageLineSizeBytes * 2) + x;
+@@ -2213,6 +2232,8 @@ void Interpreter::ImportTextureCi8(int tile, bool importReplacement) {
+     }
+ 
+     uint32_t i = 0;
++    if (!EnsureTextureUploadCapacity((uint64_t)width * height * 4)) return;
++
+     for (uint32_t y = 0; y < height; y++) {
+         for (uint32_t x = 0; x < width; x++) {
+             uint8_t idx = addr[y * fullImageLineSizeBytes + x];
+@@ -2332,6 +2353,8 @@ void Interpreter::ImportTextureRaw(int tile, bool importReplacement) {
+         safeFullImageLineSizeBytes = resourceImageSizeBytes;
+     }
+ 
++    if (!EnsureTextureUploadCapacity(std::max<uint64_t>((uint64_t)resultNewLineSize * resultNewHeight, numLoadedBytes))) return;
++
+     // Safely only copy the amount of bytes the resource can allow
+     for (uint32_t i = 0, j = 0; i < safeLoadedBytes; i += safeLineSizeBytes, j += safeFullImageLineSizeBytes) {
+         memcpy(mTexUploadBuffer + i, addr + j, safeLineSizeBytes);
+@@ -2657,6 +2680,8 @@ void Interpreter::ImportTextureMask(int i, int tile) {
+             break;
+     }
+ 
++    if (!EnsureTextureUploadCapacity((uint64_t)width * height * 4)) return;
++
+     for (uint32_t texIndex = 0; texIndex < width * height; texIndex++) {
+         uint8_t masked = orig_addr[texIndex];
+         if (masked) {
+@@ -7073,6 +7098,34 @@ void Interpreter::GetDimensions(uint32_t* width, uint32_t* height, int32_t* posX
+     mWapi->GetDimensions(width, height, posX, posY);
+ }
+ 
++bool Interpreter::EnsureTextureUploadCapacity(uint64_t bytes) {
++    if (bytes > 256ull * 1024 * 1024) {
++        SPDLOG_ERROR("Texture upload exceeds supported capacity");
++        return false;
++    }
++    if (bytes <= mTexUploadCapacity) return true;
++    size_t capacity = mTexUploadCapacity ? mTexUploadCapacity : 65536;
++    while (capacity < bytes) capacity *= 2;
++    uint8_t* next = (uint8_t*)realloc(mTexUploadBuffer, capacity);
++    if (!next) { SPDLOG_ERROR("Could not allocate texture upload buffer"); return false; }
++    mTexUploadBuffer = next;
++    mTexUploadCapacity = capacity;
 +#ifdef __EMSCRIPTEN__
-+        // Upload conversion scratch is fully written before each texture upload.
-+        // It has no state between frames; omit its potentially 256 MB capacity
-+        // from local rollback checkpoints (the allocation itself stays live).
-+        EM_ASM({ Module.yougameTextureScratch = Array.of($0, $0 + $1); },
-+               mTexUploadBuffer, max_tex_size * max_tex_size * 4);
++    /* The bounds live in Wasm memory so a rollback restores them together
++     * with allocator metadata. JS must not retain a speculative realloc. */
++    static uintptr_t range[2];
++    range[0] = (uintptr_t)mTexUploadBuffer;
++    range[1] = range[0] + mTexUploadCapacity;
++    EM_ASM({
++        const ptr = $0;
++        Object.defineProperty(Module, 'yougameTextureScratch', {
++            configurable: true, get() { return [HEAPU32[ptr >> 2], HEAPU32[(ptr >> 2) + 1]]; }
++        });
++    }, range);
++#endif
++    return true;
++}
++
+ void Interpreter::Init(class GfxWindowBackend* wapi, class GfxRenderingAPI* rapi, const char* game_name,
+                        bool start_in_fullscreen, uint32_t width, uint32_t height, uint32_t posX, uint32_t posY) {
+     mWapi = wapi;
+@@ -7102,13 +7155,15 @@ void Interpreter::Init(class GfxWindowBackend* wapi, class GfxRenderingAPI* rapi
+     }
+ 
+     if (mTexUploadBuffer == nullptr) {
+-        // We cap texture max to 8k, because why would you need more?
++#ifdef __EMSCRIPTEN__
++        EnsureTextureUploadCapacity(65536);
++#else
+         int max_tex_size = std::min(8192, mRapi->GetMaxTextureSize());
+-        mTexUploadBuffer = (uint8_t*)malloc(max_tex_size * max_tex_size * 4);
++        mTexUploadCapacity = (size_t)max_tex_size * max_tex_size * 4;
++        mTexUploadBuffer = (uint8_t*)malloc(mTexUploadCapacity);
 +#endif
      }
  
-     ucode_handler_index = UcodeHandlers::ucode_f3dex2;
+-    ucode_handler_index = UcodeHandlers::ucode_f3dex2;
+-
+     // Pre-allocate texture cache buckets to prevent rehash-induced iterator invalidation.
+     mTextureCache.map.reserve(TEXTURE_CACHE_MAX_SIZE);
+ }
+diff --git a/src/ship/Context.cpp b/src/ship/Context.cpp
+index 1e0fa40..fb93522 100644
+--- a/src/ship/Context.cpp
++++ b/src/ship/Context.cpp
+@@ -1,6 +1,7 @@
+ #include "ship/Context.h"
+ #include "ship/controller/controldevice/controller/mapping/keyboard/KeyboardScancodes.h"
+ #include <filesystem>
++#include <cstdlib>
+ #include <iostream>
+ #include <system_error>
+ #include <spdlog/sinks/rotating_file_sink.h>
+@@ -160,17 +161,27 @@ bool Context::InitLogging(spdlog::level::level_enum debugBuildLogLevel,
+         sinks.push_back(systemConsoleSink);
+ #endif
+ 
++#ifdef __EMSCRIPTEN__
++        // MEMFS logs otherwise grow and copy on the game thread during play.
++        const char* fileLog = std::getenv("SSB64_FILE_LOG");
++        const bool browserFileLog = fileLog && std::string(fileLog) == "1";
++        if (browserFileLog) {
++            auto logPath = GetPathRelativeToAppDirectory("logs/" + GetName() + ".log");
++            sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logPath, 1024 * 1024, 1));
++        }
++#else
+         auto logPath = GetPathRelativeToAppDirectory(("logs/" + GetName() + ".log"));
+         auto fileSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logPath, 1024 * 1024 * 10, 10);
+         sinks.push_back(fileSink);
++#endif
+ #if defined(_DEBUG)
+         mLogger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
+         GetLogger()->set_level(debugBuildLogLevel);
+         GetLogger()->flush_on(spdlog::level::trace);
+ #elif defined(__EMSCRIPTEN__)
+         mLogger = std::make_shared<spdlog::logger>(GetName(), sinks.begin(), sinks.end());
+-        GetLogger()->set_level(releaseBuildLogLevel);
+-        GetLogger()->flush_on(spdlog::level::info);
++        GetLogger()->set_level(browserFileLog ? releaseBuildLogLevel : spdlog::level::warn);
++        GetLogger()->flush_on(spdlog::level::warn);
+ #else
+         mLogger = std::make_shared<spdlog::async_logger>(GetName(), sinks.begin(), sinks.end(), spdlog::thread_pool(),
+                                                          spdlog::async_overflow_policy::block);
 diff --git a/src/ship/audio/SDLAudioPlayer.cpp b/src/ship/audio/SDLAudioPlayer.cpp
-index 53370cf..d0296cb 100644
+index 53370cf..c5f974a 100644
 --- a/src/ship/audio/SDLAudioPlayer.cpp
 +++ b/src/ship/audio/SDLAudioPlayer.cpp
 @@ -1,5 +1,8 @@
@@ -37,21 +232,59 @@ index 53370cf..d0296cb 100644
  
  namespace Ship {
  
-@@ -80,6 +83,9 @@ static void emMaybeUnpause() {
+@@ -10,6 +13,9 @@ SDLAudioPlayer::~SDLAudioPlayer() {
+ }
+ 
+ void SDLAudioPlayer::DoClose() {
++#ifdef __EMSCRIPTEN__
++    if (EM_ASM_INT({ return !!Module.yougameAudio; })) { EM_ASM({ Module.yougameAudio.flush(); }); return; }
++#endif
+     if (mDevice != 0) {
+         // Pause playback first
+         SDL_PauseAudioDevice(mDevice, 1);
+@@ -21,6 +27,12 @@ void SDLAudioPlayer::DoClose() {
+ }
+ 
+ bool SDLAudioPlayer::DoInit() {
++#ifdef __EMSCRIPTEN__
++    if (EM_ASM_INT({ return !!Module.yougameAudio; })) {
++        mNumChannels = this->GetNumOutputChannels();
++        return EM_ASM_INT({ return Module.yougameAudio.configure($0, $1) ? 1 : 0; }, this->GetSampleRate(), mNumChannels);
++    }
++#endif
+     if (SDL_Init(SDL_INIT_AUDIO) != 0) {
+         SPDLOG_ERROR("SDL init error: {}", SDL_GetError());
+         return false;
+@@ -60,6 +72,9 @@ bool SDLAudioPlayer::DoInit() {
+ }
+ 
+ int SDLAudioPlayer::Buffered() {
++#ifdef __EMSCRIPTEN__
++    if (EM_ASM_INT({ return !!Module.yougameAudio; })) return EM_ASM_INT({ return Module.yougameAudio.buffered(); });
++#endif
+     return SDL_GetQueuedAudioSize(mDevice) / (sizeof(int16_t) * mNumChannels);
+ }
+ 
+@@ -80,6 +95,10 @@ static void emMaybeUnpause() {
          sEmUnpaused = true;
      }
  }
 +extern "C" EMSCRIPTEN_KEEPALIVE void port_yougame_audio_rewind(void) {
++    EM_ASM({ if (Module.yougameAudio) Module.yougameAudio.flush(); });
 +    if (sEmDevice) SDL_ClearQueuedAudio(sEmDevice);
 +}
  extern "C" void port_audio_boot_complete(void) {
      sEmBootDone = true;
      emMaybeUnpause();
-@@ -88,6 +94,7 @@ extern "C" void port_audio_boot_complete(void) {
+@@ -88,6 +107,11 @@ extern "C" void port_audio_boot_complete(void) {
  
  void SDLAudioPlayer::DoPlay(const uint8_t* buf, size_t len) {
  #ifdef __EMSCRIPTEN__
 +    if (EM_ASM_INT({ return Module.yougameReplay ? 1 : 0; })) return;
++    if (EM_ASM_INT({ return !!Module.yougameAudio; })) {
++        if (Buffered() < 6000) EM_ASM({ Module.yougameAudio.push(HEAP16, $0, $1); }, buf, len);
++        return;
++    }
      sEmDevice = mDevice;
      emMaybeUnpause();
  #endif

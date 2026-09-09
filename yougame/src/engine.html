@@ -6,10 +6,17 @@ canvas{width:min(100vw,calc(100vh * 4 / 3));height:min(100vh,calc(100vw * 3 / 4)
 #status{position:fixed;bottom:12px;color:#fff;font:14px system-ui;padding:8px;background:#000c0}
 </style></head><body><canvas id="canvas" tabindex="0"></canvas><div id="status" role="status">Loading arena…</div>
 <script type="module">
+import {loadPageComparator} from '../page-compare.mjs';
+import {startOfflineClock} from '../frame-clock.mjs';
+import {createAudioOutput,muteEngineOutput} from '../audio-output.mjs';
 const status = document.querySelector('#status');
 const params = new URLSearchParams(location.search);
 const bridge = parent.openSmashAttachEngine(window);
-window.__runHidden = true;
+const rollback=params.has('SSB64_YOUGAME_ROLLBACK');
+const muted=params.get('SSB64_YOUGAME_MUTE')==='1';
+if(muted)muteEngineOutput(window);
+window.__runHidden = rollback;
+let stopClock,disposed=false;
 window.Module = {
   canvas:document.querySelector('canvas'), arguments:[],
   yougameMenu:bridge.menuState(),
@@ -21,11 +28,12 @@ window.Module = {
   onAbort:e => bridge.error(String(e)),
   async onRuntimeInitialized() {
     status.hidden = true;
-    if (params.has('SSB64_YOUGAME_ROLLBACK')) {
-      try {
+    try {
         Module.callMain([]);
         if(Asyncify.currData)await Asyncify.whenDone();
-        bridge.ready({
+        const comparator=rollback?await loadPageComparator({memory:wasmMemory,allocate:_malloc}):null;
+        const driver={
+          comparePage:comparator?.samePage,
           silence(value){Module.yougameReplay=value;if(value)Module._port_yougame_audio_rewind();},
           rollback(){Module._port_yougame_audio_rewind();Module.yougameReplay=true;queueMicrotask(()=>{Module.yougameReplay=false;});},
           step(){Module._PortPushFrame();if(Asyncify.currData)throw new Error('Native frame did not complete synchronously');},
@@ -33,18 +41,20 @@ window.Module = {
           exclusions(){
             const p=Module._port_yougame_stack_exclusions()>>2,n=HEAPU32[p];
             const ranges=Module.yougameTextureScratch?[Module.yougameTextureScratch]:[];
+            if(comparator)ranges.push(comparator.range);
             const scene=Module._port_yougame_scene_unused()>>2;ranges.push([HEAPU32[scene],HEAPU32[scene+1]]);
             for(let i=1;i<=n;i+=2)ranges.push([HEAPU32[p+i],HEAPU32[p+i+1]]);
             return ranges;
           }
-        });
-      } catch(e){bridge.error(e.message);}
-
-    } else { bridge.ready(); Module.callMain([]); }
+        };
+        await bridge.ready(driver);
+        if(!rollback)stopClock=startOfflineClock(driver.step,{onError:e=>bridge.error(e.message)});
+    } catch(e){bridge.error(e.message);}
   },
   preRun:[function() {
     addRunDependency('yougame-assets');
-    if(params.has('SSB64_YOUGAME_ROLLBACK'))ENV.SDL_EMSCRIPTEN_ASYNCIFY='0';
+    ENV.SDL_EMSCRIPTEN_ASYNCIFY='0';
+    if(!rollback)ENV.SSB64_YOUGAME_MANUAL='1';
     for (const [k,v] of params) if (k.startsWith('SSB64_')) ENV[k] = v;
     (async() => {
       let done = 0;
@@ -57,8 +67,20 @@ window.Module = {
     })().then(() => removeRunDependency('yougame-assets')).catch(e => {status.textContent=e.message; bridge.error(e.message);});
   }]
 };
+function audioContext(){return Module.yougameAudio?.context||Module.SDL2?.audioContext;}
+for(const event of ['pointerdown','keydown'])window.addEventListener(event,()=>{if(!document.hidden)audioContext()?.resume().catch(()=>{});},{capture:true});
+document.addEventListener('visibilitychange',()=>{
+ if(rollback)return;
+ const context=audioContext();
+ if(document.hidden){Module.yougameAudio?.flush();context?.suspend().catch(()=>{});}
+ else context?.resume().catch(()=>{});
+});
+Module.yougameDispose=()=>{disposed=true;stopClock?.();if(Module.yougameAudio)Module.yougameAudio.close();else audioContext()?.close().catch(()=>{});};
+window.addEventListener('pagehide',Module.yougameDispose,{once:true});
 let manifest;
 try {
+  Module.yougameAudio=params.get('SSB64_YOUGAME_AUDIO')==='SDL'?null:await createAudioOutput({muted});
+  if(disposed){Module.yougameAudio?.close();throw new Error("Engine closed during loading");}
   const response = await fetch('./manifest.json'); if (!response.ok) throw new Error('Engine build is missing');
   manifest = await response.json();
   if (!manifest.files.some(f=>f.path === '/BattleShip.o2r')) throw new Error('This build is missing its game assets.');

@@ -1,0 +1,4 @@
+<!doctype html><meta charset="utf-8"><title>OpenSmash offline frame pacing probe</title>
+<style>body{margin:0;background:#151821;color:#fff;font:13px monospace}header{padding:8px}button,select{padding:8px}#game{height:calc(100vh - 110px)}iframe{width:100%;height:100%;border:0}pre{margin:5px;white-space:pre-wrap;font-size:11px}</style>
+<header><select id="variant"><option value="baseline">Published v1.7 offline</option><option value="optimized">Optimized offline build</option><option value="fallback">Optimized SDL fallback</option></select> <button id="load">Load battle</button> <button id="run" disabled>Measure 30 seconds</button> <button id="full">Fullscreen</button> <button id="stop">Stop simulation</button><pre id="report">Measures tick spans and browser frame delivery, not GPU presentation timestamps.</pre></header><div id="game"></div>
+<script type="module" src="./performance.mjs"></script>

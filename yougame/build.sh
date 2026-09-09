@@ -14,6 +14,7 @@ emcmake cmake -S BattleShip -B "BattleShip/$engine_build" -G Ninja \
   -DPython3_EXECUTABLE="$python_env/bin/python3" "${rom_options[@]}"
 cmake --build "BattleShip/$engine_build" --target BattleShip.js -j 6
 PACKAGE_O2R=1 BattleShip/scripts/package_web.sh "$engine_build" web-dist
+node yougame/build-page-compare.mjs
 node yougame/build.mjs
 node --test yougame/tests/*.test.mjs
 echo 'Run the YouGame MCP check_build with yougame/build-check.json before distributing.'

@@ -5,10 +5,11 @@
 import {NativeCheckpoints} from '../src/checkpoints.mjs';
 let engine,state,pads=[[0,0,0],[0,0,0]];
 window.openSmashAttachEngine=()=>({menuState:()=>({phase:0}),menuAction(){},ready(driver){engine=driver;run.disabled=false;report.textContent='Ready';},beforeTick:()=>true,afterTick(...s){state=s;},error(e){if(!report.textContent.includes('FAIL'))report.textContent+='\nENGINE ERROR: '+String(e);},readPorts(ptr,H){for(let i=0;i<4;i++){const b=(ptr>>2)+i*4,p=pads[i];H[b]=p?2:1;H[b+1]=p?.[0]||0;H[b+2]=p?.[1]||0;H[b+3]=p?.[2]||0;}}});
-const frame=document.createElement('iframe');frame.src='../dist/engine/index.html?SSB64_YOUGAME=1&SSB64_YOUGAME_ROLLBACK=1&SSB64_BOOT_BATTLE=0,8,6,0&SSB64_BOOT_HUMANS=2&SSB64_BOOT_SLOTS=hhoo&SSB64_STOCKS=3&SSB64_VS_INTRO=0';game.append(frame);
+const frame=document.createElement('iframe');frame.src='../dist/engine/index.html?SSB64_YOUGAME_MUTE=1&SSB64_YOUGAME=1&SSB64_YOUGAME_ROLLBACK=1&SSB64_BOOT_BATTLE=0,8,6,0&SSB64_BOOT_HUMANS=2&SSB64_BOOT_SLOTS=hhoo&SSB64_STOCKS=3&SSB64_VS_INTRO=0';game.append(frame);
 run.onclick=async()=>{
  run.disabled=true;const log=[];const say=s=>{log.push(s);report.textContent=log.join('\n');};
  try{
+  if(typeof engine.comparePage!=='function')throw new Error('Wasm checkpoint helper did not load');
   for(let i=0;i<600&&!(state?.[4]>=30);i++)engine.step();
   say('Warmup: '+JSON.stringify(state));if(!state?.[4])throw new Error('Battle has not started');
   const store=new NativeCheckpoints(engine,{window:64});const times=[];const t0=performance.now();const saved=store.save(0,state);say('Snapshot bytes: '+engine.used()+'; heap base: '+engine.heapBase()+'; first save ms: '+(performance.now()-t0).toFixed(1));

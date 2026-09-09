@@ -1,25 +1,26 @@
+import {engineAudioContext} from './audio-output.mjs';
 import {RollbackDuelSession,ROLLBACK_PROTOCOL} from './rollback-session.mjs';
 import {prepareRollbackEngine} from './rollback-engine.mjs';
 import {createTouch} from './touch.mjs';
 import {createInput} from './input.mjs';
 const BUILD = 'YOUGAME_BUILD';
-let fighter=0, queueKind=0, busy=false, room=null, session=null, menu=null, battle=null, generation=0;
+let fighter=0, queueKind=0, busy=false, room=null, session=null, menu=null, battle=null, generation=0, platformLobby=false;
 let menuState={phase:0,text:'',revision:0};
 const engines=new Map(),listeners=[];
-const touch=createTouch({wakeAudio:()=>{(battle||menu)?.contentWindow.SDL2?.audioContext?.resume().catch(()=>{});},leave:()=>cleanup('YOU LEFT THE MATCH',6)});
+const touch=createTouch({wakeAudio:()=>{engineAudioContext((battle||menu)?.contentWindow)?.resume().catch(()=>{});},leave:()=>cleanup('YOU LEFT THE MATCH',6)});
 function status(text,phase=menuState.phase){
  menuState={phase,text,revision:menuState.revision+1};
  document.getElementById('status').textContent=text;
  if(menu?.contentWindow.Module)menu.contentWindow.Module.yougameMenu=menuState;
 }
 function removeEngine(frame){
- if(!frame)return;engines.get(frame)?.input.destroy();engines.delete(frame);frame.remove();
+ if(!frame)return;engines.get(frame)?.input.destroy();engines.delete(frame);frame.contentWindow.Module?.yougameDispose?.();frame.remove();
 }
-function showMenu(){touch.clear();touch.context(false,9);removeEngine(battle);battle=null;menu.hidden=false;menu.contentWindow.SDL2?.audioContext?.resume().catch(()=>{});menu.contentWindow.focus();}
+function showMenu(){touch.clear();touch.context(false,9);removeEngine(battle);battle=null;menu.hidden=false;engineAudioContext(menu.contentWindow)?.resume().catch(()=>{});if(platformLobby)window.focus();else menu.contentWindow.focus();}
 function disconnect(){
  generation++;session?.destroy();session=null;
  for(const [r,event,handler]of listeners.splice(0))r.off(event,handler);
- const old=room;room=null;old?.leave();window.YouGame?.multiplayer?.leave();busy=false;
+ const old=room;room=null;old?.leave();window.YouGame?.multiplayer?.leave();busy=false;platformLobby=false;
 }
 function cleanup(message='',phase=0){disconnect();showMenu();status(message,phase);}
 function listen(r,event,handler){r.on(event,handler);listeners.push([r,event,handler]);}
@@ -29,7 +30,7 @@ function createEngine(params,duel=null){
  engines.set(frame,{input,duel});frame.src=`./engine/index.html?${params}`;document.getElementById('game').append(frame);return frame;
 }
 function launch(fighters,duel){
- touch.clear();touch.context(true,22);removeEngine(battle);menu.hidden=true;menu.contentWindow.SDL2?.audioContext?.suspend().catch(()=>{});
+ touch.clear();touch.context(true,22);removeEngine(battle);menu.hidden=true;engineAudioContext(menu.contentWindow)?.suspend().catch(()=>{});
  const params=new URLSearchParams({SSB64_BOOT_BATTLE:`${fighters[0]},${fighters[1]},6,0`,SSB64_STOCKS:'3',SSB64_YOUGAME:'1',SSB64_YOUGAME_ROLLBACK:'1',SSB64_YOUGAME_SEED:String(duel.seed),SSB64_BOOT_HUMANS:'2',SSB64_BOOT_SLOTS:'hhoo',SSB64_VS_INTRO:'0'});
  battle=createEngine(params,duel);status('LOADING MATCH',3);
 }
@@ -46,7 +47,7 @@ window.openSmashAttachEngine=win=>{
  const frame=[...engines.keys()].find(f=>f.contentWindow===win);
  if(!frame)throw new Error('Unexpected game frame');
  const {input,duel}=engines.get(frame);let pads=[[0,0,0],[0,0,0]],nativeState=null;input.attach(win);
- const resumeAudio=()=>win.SDL2?.audioContext?.resume().catch(()=>{});
+ const resumeAudio=()=>engineAudioContext(win)?.resume().catch(()=>{});
  win.addEventListener('pointerdown',resumeAudio,true);win.addEventListener('keydown',resumeAudio,true);
  // Own controller mapping in menus too; SDL must not also interpret the same keys.
  win.addEventListener('keydown',e=>{if(e.code==='Escape'&&duel)setTimeout(()=>cleanup('YOU LEFT THE MATCH',6),0);},true);
@@ -58,7 +59,7 @@ window.openSmashAttachEngine=win=>{
    if(duel)try{const driver=await prepareRollbackEngine(raw,{getState:()=>nativeState,setPads:p=>{pads=p;},cancelled:()=>duel.closed});if(driver)duel.attach(driver);}catch(e){duel.fail(e.message);}
    if(!duel?.closed&&!touch.active())win.focus();
   },
-  beforeTick(){if(!duel){if(!frame.hidden)touch.context(false,win.Module.nativeScene);return !frame.hidden;}return !duel.closed;},
+  beforeTick(){if(!duel){if(platformLobby&&busy&&!room?.playing)return false;if(!frame.hidden)touch.context(false,win.Module.nativeScene);return !frame.hidden;}return !duel.closed;},
   afterTick(...args){nativeState=args;},
   readPorts(ptr,H){const local=duel?null:input.read();for(let i=0;i<4;i++){
    const p=duel?pads[i]:i===0?local:null;const base=(ptr>>2)+i*4;
@@ -84,15 +85,24 @@ function bind(r){
  });
  listen(r,'close',()=>cleanup('CONNECTION CLOSED',6));
  listen(r,'result',e=>{session?.destroy();showMenu();status(e.void?'MATCH VOID':e.draw?'DRAW':e.won?'YOU WIN':'YOU LOSE',4);});
- // Selecting a fighter and pressing Start is the initial Ready action.
- r.ready();
+ // Friends keep YouGame's visible lobby and explicit Ready/Continue actions.
+ // Do not let an empty private room fill from the public queue before the friend joins.
+ if(platformLobby){
+  if(r.queue==='private'&&r.isHost)r.settings({fill:false});
+ }else r.ready();
 }
 async function online(){
  if(busy)return;
  if(!window.YouGame?.multiplayer){status('ONLINE UNAVAILABLE',6);return;}
- busy=true;status(queueKind===1?'SEARCHING RANKED':'SEARCHING',1);const token=++generation;
+ platformLobby=queueKind===2||queueKind===3||!!YouGame.multiplayer.invite;
+ busy=true;touch.clear();
+ if(platformLobby)window.focus();
+ status(queueKind===2?'CHOOSE A FRIEND':platformLobby?'JOINING FRIEND ROOM':queueKind===1?'SEARCHING RANKED':'SEARCHING',1);const token=++generation;
  try{
-  const options={players:2,mode:ROLLBACK_PROTOCOL,ui:false,lobby:true,onStatus:s=>{if(token!==generation)return;if(s.room)bind(s.room);}};
+  const options={players:2,mode:ROLLBACK_PROTOCOL,ui:platformLobby,lobby:true,onStatus:s=>{
+   if(token!==generation){s.room?.leave();return;}
+   if(s.room){bind(s.room);if(platformLobby&&!s.room.playing)status(s.room.full?'READY IN THE LOBBY':'WAITING FOR FRIEND',2);}
+  }};
   if(queueKind===2)options.friend=true;else if(queueKind!==3)options.ranked=queueKind===1;
   const r=await YouGame.multiplayer.findMatch(options);
   if(token!==generation){r.leave();return;}bind(r);if(r.playing)startRound(r,r.round);
