@@ -110,3 +110,51 @@ test('read failure closes the handle, neutralizes held input and retains explici
   const p=usb.device.pending;usb.device.pending=null;p.reject(Error('transfer failed'));await tick();
   assert.equal(a.state,'error');assert.equal(a.device,null);assert.equal(usb.device.opened,false);assert.equal(a.owned,true);assert(a.snapshot().ports.every(p=>!p.connected));await a.destroy();
 });
+test('previously granted adapter opens on startup without showing a chooser',async()=>{
+  const usb=new USB();usb.device=device();let prompts=0;
+  usb.getDevices=async()=>[usb.device];usb.requestDevice=async()=>{prompts++;return usb.device;};
+  const a=new GameCubeAdapter({usb});await a.ready;
+  assert.equal(prompts,0);assert.equal(a.state,'connected');assert.equal(a.owned,true);
+  usb.device.deliver(packet());await tick();assert.equal(a.snapshot().ports[0].connected,true);
+  await a.destroy();
+});
+test('no grants never opens a chooser, and granted hotplug becomes the default',async()=>{
+  const usb=new USB();usb.device=device();let prompts=0;
+  usb.getDevices=async()=>[];usb.requestDevice=async()=>{prompts++;return usb.device;};
+  const a=new GameCubeAdapter({usb});await a.ready;assert.equal(a.owned,false);
+  usb.dispatchEvent(Object.assign(new Event('connect'),{device:usb.device}));await tick();
+  assert.equal(a.owned,true);assert.equal(prompts,0);await a.destroy();
+});
+test('explicit regular-controls choice suppresses later automatic connections',async()=>{
+  const usb=new USB();usb.device=device();usb.getDevices=async()=>[usb.device];
+  const a=new GameCubeAdapter({usb});await a.ready;await a.close();
+  usb.dispatchEvent(Object.assign(new Event('connect'),{device:usb.device}));await tick();
+  assert.equal(a.device,null);assert.equal(a.owned,false);
+  await a.connect();assert.equal(a.owned,true);await a.destroy();
+});
+test('late granted-device enumeration cannot reconnect after teardown or overwrite manual connection',async()=>{
+  const usb=new USB();usb.device=device();let finish;
+  usb.getDevices=()=>new Promise(r=>{finish=r;});
+  const a=new GameCubeAdapter({usb});await a.destroy();finish([usb.device]);await a.ready;
+  assert.equal(usb.device.opened,false);
+  const b=new GameCubeAdapter({usb});await b.connect();finish([usb.device]);await b.ready;
+  assert.equal(usb.device.calls.filter(c=>c==='open').length,1);await b.destroy();
+});
+test('real WUP-028 HID descriptor routes to native app before claiming protected interface',async()=>{
+  const usb=new USB();usb.device=device();await usb.device.selectConfiguration(1);
+  usb.device.configuration.interfaces=[{interfaceNumber:0,alternate:{alternateSetting:0},alternates:[{
+    interfaceClass:3,alternateSetting:0,endpoints:[
+      {direction:'in',type:'interrupt',endpointNumber:1,packetSize:37},
+      {direction:'out',type:'interrupt',endpointNumber:2,packetSize:5}]}]}];
+  const a=new GameCubeAdapter({usb});await a.connect();
+  assert.equal(a.state,'native-required');assert.match(a.message,/detected.*HID.*desktop app/);
+  assert.doesNotMatch(a.message,/driver|retry/i);
+  assert.equal(usb.device.calls.some(c=>Array.isArray(c)&&c[0]==='claim'),false);
+  assert.equal(usb.device.opened,false);assert.equal(a.owned,false);await a.destroy();
+});
+test('denied permission policy and unrelated grants leave ordinary controls available',async()=>{
+  const usb=new USB();usb.getDevices=async()=>{throw Error('SecurityError');};
+  const a=new GameCubeAdapter({usb});await a.ready;assert.equal(a.state,'idle');await a.destroy();
+  const other=device();other.productId=1;usb.getDevices=async()=>[other];
+  const b=new GameCubeAdapter({usb});await b.ready;assert.equal(other.opened,false);await b.destroy();
+});

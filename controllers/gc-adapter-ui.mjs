@@ -3,7 +3,7 @@ import {createOpenSmashAdapter} from './platform-adapter.mjs';
 
 export function mountAdapterControls({before=null}={}) {
   const adapter=createOpenSmashAdapter(GameCubeAdapter);
-  const button=document.createElement('button');button.type='button';button.textContent='GC adapter';
+  const button=document.createElement('button');button.type='button';button.textContent='Use a GameCube controller';
   button.setAttribute('aria-label','GameCube adapter controls');
   // Keep this entry clear of YouGame's reserved bottom-right / top-left areas,
   // including Melee's pre-existing header placement on its opening screen.
@@ -12,9 +12,10 @@ export function mountAdapterControls({before=null}={}) {
   else document.body.append(button);
   const dialog=document.createElement('dialog');
   dialog.style.cssText='max-width:min(480px,85vw);max-height:75vh;overflow:auto;background:#171923;color:#fff;border:1px solid #888;border-radius:12px;font:14px system-ui;padding:20px';
-  dialog.innerHTML='<h2 style="margin-top:0">GameCube adapter</h2><p data-status role="status"></p><p>Use a Nintendo or compatible adapter in Wii U / Switch mode. Close Slippi/Dolphin before connecting. USB ports 1–4 are players 1–4; empty ports stay empty. Adapter mode takes over all four controller seats.</p><button data-connect type="button">Connect adapter</button> <button data-release type="button">Use regular controls</button><div data-ports style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"></div><p>Calibration: release both sticks and triggers, then calibrate that port. Raw values are preserved; calibration only subtracts the chosen neutral offsets. A reconnect resets calibration.</p><button data-reset type="button">Reset calibration</button> <button data-close type="button">Done</button><p data-help></p>';
+  dialog.innerHTML='<h2 style="margin-top:0">GameCube adapter</h2><p data-status role="status"></p><p>Official WUP-028 adapters use YouGame desktop. Browser-compatible adapters can be paired once and reconnect automatically. Close Slippi/Dolphin before native use. USB ports 1–4 are players 1–4; empty ports stay empty. Adapter mode takes over all four controller seats.</p><button data-connect type="button">Connect adapter</button> <button data-release type="button">Use regular controls</button><div data-ports style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"></div><p>Calibration: release both sticks and triggers, then calibrate that port. Raw values are preserved; calibration only subtracts the chosen neutral offsets. A reconnect resets calibration.</p><button data-reset type="button">Reset calibration</button> <button data-close type="button">Done</button><p data-help></p>';
   document.body.append(dialog);
   const capability=document.createElement('p');dialog.append(capability);
+  const desktopLink=document.createElement('a');desktopLink.href='https://yougame.co/desktop';desktopLink.target='_blank';desktopLink.rel='noopener';desktopLink.textContent='Get YouGame desktop for WUP-028 support';dialog.append(desktopLink);
   const get=s=>dialog.querySelector(s),rows=[];
   for(let i=0;i<4;i++){
     const row=document.createElement('p'),label=document.createElement('span'),calibrate=document.createElement('button');
@@ -29,11 +30,13 @@ export function mountAdapterControls({before=null}={}) {
       'WebUSB is unavailable here. Try desktop Chrome/Edge, or regular controls.':
       policy?.allowsFeature&&!policy.allowsFeature('usb')?
       'This player blocks direct USB. Open YouGame Controls to connect through the platform.':'';
+    const nativeRequired=['native-required','browser-blocked'].includes(adapter.state);
+    desktopLink.hidden=!nativeRequired;
     const snapshot=adapter.snapshot({diagnostic:true});get('[data-status]').textContent=adapter.message;
-    get('[data-connect]').disabled=adapter.busy||!!adapter.device;
-    get('[data-release]').disabled=adapter.busy||(!adapter.owned&&!adapter.device);
+    get('[data-connect]').disabled=adapter.busy||!!adapter.device||nativeRequired;
+    get('[data-release]').disabled=adapter.busy||(!adapter.owned&&!adapter.device&&!nativeRequired);
     rows.forEach(({label,calibrate},i)=>{const p=snapshot.ports[i];label.textContent=`Port ${i+1}: ${p.connected?p.type+' · sticks '+p.axes.join(', ')+' · L/R '+p.triggers.join(', '):'no fresh controller input'}`;calibrate.disabled=!p.connected;});
-    button.textContent=adapter.owned?'GC adapter ●':'GC adapter';
+    button.textContent=adapter.owned?'GameCube controller ●':'Use a GameCube controller';
     if(adapter.owned&&snapshot.stale&&adapter.device)get('[data-status]').textContent='Waiting for fresh adapter reports; input is neutral.';
   }
   button.onclick=()=>{render();dialog.showModal();button.blur();};
