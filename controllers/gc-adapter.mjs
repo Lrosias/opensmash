@@ -26,18 +26,29 @@ export class GameCubeAdapter {
     this.owned=false;this.busy=false;this.opening=false;this.generation=0;this.sequence=0;this.receivedAt=-Infinity;
     this.ports=Array.from({length:4},(_,i)=>neutral(i));this.origins=Array.from({length:4},()=>[128,128,128,128,0,0]);
     this.state='idle';this.message='Use a Wii U / Switch mode adapter. Ports 1–4 map to players 1–4.';
-    this.invalidReports=0;this.suspended=false;this.listeners=new Set();
+    this.invalidReports=0;this.suspended=false;this.listeners=new Set();this.autoConnect=true;
     this.onDisconnect=e=>{if(e.device===this.device){void this.close(false);this.setStatus('disconnected','Adapter unplugged. Reconnect it or choose Use regular controls.');}};
-    this.onConnect=e=>{if(this.owned&&!this.device&&!this.busy&&matches(e.device))void this.open(e.device).catch(e=>this.error(e));};
+    this.onConnect=e=>{if(this.autoConnect&&!this.device&&!this.busy&&matches(e.device))void this.open(e.device).catch(e=>this.error(e));};
     usb?.addEventListener('disconnect',this.onDisconnect);usb?.addEventListener('connect',this.onConnect);
+    this.ready=this.restoreGranted();
   }
   subscribe(fn){this.listeners.add(fn);return ()=>this.listeners.delete(fn);}
   setStatus(state,message){this.state=state;this.message=message;for(const fn of this.listeners)fn();}
-  error(error){this.setStatus('error',`Adapter unavailable: ${error.message}. Close Slippi/Dolphin or other adapter apps, check the adapter mode and USB driver, then retry.`);}
+  async restoreGranted() {
+    if(!this.usb?.getDevices)return;
+    const generation=this.generation;
+    try {
+      const devices=await this.usb.getDevices();
+      if(!this.autoConnect||generation!==this.generation||this.busy||this.opening||this.device)return;
+      const device=devices.find(matches);
+      if(device)await this.open(device);
+    } catch { /* Permission policy can block enumeration; never launch a chooser here. */ }
+  }
+  error(error){if(error.code==='WUP028_NATIVE_REQUIRED'){this.setStatus('native-required',error.message);return;}this.setStatus('error',`Adapter unavailable: ${error.message}. Close Slippi/Dolphin or other adapter apps, check the adapter mode and USB driver, then retry.`);}
   async connect() {
     if(this.busy||this.opening||this.device)return;
     if(!this.usb)throw Error('This browser does not provide WebUSB. Use desktop Chrome/Edge, or regular controller mode');
-    this.busy=true;const generation=this.generation;
+    this.autoConnect=true;this.busy=true;const generation=this.generation;
     try {
       // Call the chooser directly in the click gesture, before any await.
       const device=await this.usb.requestDevice({filters:[ADAPTER_FILTER]});
@@ -59,7 +70,11 @@ export class GameCubeAdapter {
       const match=candidates.find(({a})=>a.interfaceClass===255&&
         a.endpoints.some(e=>e.direction==='in'&&e.type==='interrupt'&&e.packetSize>=37)&&
         a.endpoints.some(e=>e.direction==='out'&&e.type==='interrupt'));
-      if(!match)throw Error('Compatible vendor-specific USB interface not found');
+      if(!match){
+        if(candidates.some(({a})=>a.interfaceClass===3))
+          throw Object.assign(Error('GameCube adapter detected. This WUP-028 uses an HID interface that this browser cannot access through WebUSB. Open this game in the YouGame desktop app for native adapter support.'),{code:'WUP028_NATIVE_REQUIRED'});
+        throw Error('No supported GameCube USB interface found');
+      }
       await device.claimInterface(match.i.interfaceNumber);check();this.claimed=match.i.interfaceNumber;
       if(match.i.alternate?.alternateSetting!==match.a.alternateSetting)
         await device.selectAlternateInterface(this.claimed,match.a.alternateSetting);
@@ -105,7 +120,7 @@ export class GameCubeAdapter {
   async close(releaseOwnership=true) {
     ++this.generation;const device=this.device;
     this.device=null;this.claimed=null;this.busy=false;this.receivedAt=-Infinity;this.resetCalibration();
-    if(releaseOwnership)this.owned=false;
+    if(releaseOwnership){this.owned=false;this.autoConnect=false;}
     // close() cancels a pending transferIn; releaseInterface can wait behind it.
     if(device?.opened)try {await device.close();}catch{}
     if(releaseOwnership)this.setStatus('idle','Regular keyboard, touch and browser controllers enabled.');

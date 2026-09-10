@@ -1,5 +1,7 @@
 # GameCube adapters: OpenSmash implementation and YouGame handoff
 
+> **WUP-028 correction, 2026-09-10:** The official adapter has a class `0x03` HID interface, not the vendor-specific interface used in our simulated WebUSB tests. Chromium protects HID interfaces from WebUSB even after its chooser says Paired. USB permission delegation alone cannot enable the official adapter. Use the native YouGame transport; see [the diagnosis and UX contract](gamecube-wup028-correction.md). Earlier browser-test results below demonstrate protocol/game integration with a simulated vendor-specific transport, not official WUP-028 browser compatibility.
+
 **For the YouGame implementation agent: the game-side implementation is done and staged locally for OpenSmash64, OpenSmash64 Remix and OpenSmash Melee. YouGame must provide/verify USB access in the hosted player, or implement the host-owned transport below. Do not feed raw GameCube input through the existing standard-gamepad mapper.**
 
 Prepared 2026-09-10 UTC. No production listing was updated. No physical adapter was attached in the inspected USB inventory. Slippi Launcher is installed on this Mac; reference behavior was checked against pinned Slippi source, not inferred from its UI. This is direct browser USB support, with a tested simulated transport. It is **not a claim of measured Slippi-equivalent latency, physical adapter compatibility, or native OS driver support**.
@@ -71,7 +73,7 @@ Calibration is explicit: release sticks/triggers, then click that port's calibra
 
 Each valid report increments a sequence and receives a monotonic browser arrival timestamp. The timestamp is **not** a hardware sampling timestamp. All four ports publish together. A snapshot older than 250 ms is neutral; that threshold is configurable on `GameCubeAdapter` and is a recovery policy, not a latency target. A blocked browser thread cannot run a watchdog on time; the check occurs when sampling resumes.
 
-Hidden documents, lost page focus, and the adapter dialog suppress game input; diagnostics can still inspect fresh raw reports while calibrating. A same-origin engine iframe receiving focus should remain active. Closing cancels outstanding reads; generation checks prevent results from an earlier connection, including a delayed chooser, from reviving it. A previously owned matching device reconnects through the USB connect event. A new page load requires the Connect flow again in this implementation.
+Hidden documents, lost page focus, and the adapter dialog suppress game input; diagnostics can still inspect fresh raw reports while calibrating. A same-origin engine iframe receiving focus should remain active. Closing cancels outstanding reads; generation checks prevent results from an earlier connection, including a delayed chooser, from reviving it. A previously owned matching device reconnects through the USB connect event. The corrected fallback restores previously granted compatible devices through `getDevices()` on a new page and listens for granted-device hotplug without opening a chooser. Explicitly choosing regular controls disables automatic acquisition for that instance.
 
 ## 4. YouGame changes — minimum unblock
 
