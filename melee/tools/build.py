@@ -89,6 +89,7 @@ def main():
     old_source_archive = dist / 'opensmash-melee-source.zip'
     if old_source_archive.exists(): old_source_archive.unlink()
     with zipfile.ZipFile(dist.parent / 'OpenSmash-Melee-source.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+        archive.write(ROOT / 'LICENSE', 'LICENSE')
         for source in sorted((ROOT / 'melee').rglob('*')):
             excluded = {'__pycache__', 'media', 'test-results'}
             if source.is_file() and not excluded.intersection(source.relative_to(ROOT / 'melee').parts):
