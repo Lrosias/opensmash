@@ -8,7 +8,7 @@ import {RollbackDuelSession,MAX_ROLLBACK} from '../src/rollback-session.mjs';
 // Set YOUGAME_SDK_PATH to a downloaded https://yougame.co/sdk.js (no network
 // or copied/reimplemented prediction algorithm inside the test).
 const sdkPath=process.env.YOUGAME_SDK_PATH;
-function setup({lag=4,loseEvery=0}={}){
+function setup({lag=4,loseEvery=0,attach=true}={}){
  const sdk=readFileSync(sdkPath,'utf8'),loops=[],network=[],sessions=[],reports=[[],[]],errors=[];
  let now=0;
  const source=sdk.slice(sdk.indexOf('  function canon('),sdk.indexOf('  // A hidden tab'))+
@@ -32,7 +32,7 @@ function setup({lag=4,loseEvery=0}={}){
    step(pads){s.x+=pads[0][1]-pads[1][1];s.frame++;return [s.x>>>0,-1,3,3,s.frame];}};
   engines.push(engine);
   const session=new RollbackDuelSession({room:rooms[i],round:1,fighter:i,build:'same',seed:'test-seed',
-   readInput:()=>[0,(now%11<5?1:-1)*(i+1),0],launch:(_,s)=>s.attach(engine),status(){},stop:e=>errors.push(e)});
+   readInput:()=>[0,(now%11<5?1:-1)*(i+1),0],launch:(_,s)=>{if(attach)s.attach(engine);},status(){},stop:e=>errors.push(e)});
   clearInterval(session.timer);sessions.push(session);
  }
  for(let n=0;n<3;n++){deliver();for(const s of sessions){s.lastHello=0;s.pulse();}}
@@ -78,5 +78,18 @@ test('delayed bundles from a previous game or round cannot change a live SDK tim
   // These frame numbers overlap the new timeline but belong to older scopes.
   for(const scope of [[s.profile.protocol,1,0],[s.profile.protocol,0,1],['other-edition',1,1]])s.sync.receive('p1',{_ls:1,f:before+2,in:Array(8).fill([32768,80,80]),os:scope});
   for(let n=0;n<100;n++)p.tick();assert.deepEqual(p.errors,[]);assert.equal(s.sync.desynced,false);const f=Math.min(...p.sessions.map(s=>s.frame))-MAX_ROLLBACK-3;assert.deepEqual(p.engines[0].history.get(f),p.engines[1].history.get(f));
+ }finally{p.close();}
+});
+
+
+test('native loading failure after platform Ready voids both peers before simulation starts',{skip:!sdkPath},async()=>{
+ const p=setup({lag:0,attach:false});try{
+  assert.ok(p.sessions.every(s=>!s.started));
+  p.sessions[0].fail('Engine asset could not load');
+  for(let n=0;n<3;n++)p.tick();
+  await Promise.resolve();await Promise.resolve();
+  assert.ok(p.sessions.every(s=>s.closed));
+  assert.deepEqual(p.reports,[[{void:true}],[{void:true}]]);
+  assert.ok(p.errors.includes('Engine asset could not load'));
  }finally{p.close();}
 });

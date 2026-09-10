@@ -93,7 +93,9 @@ export class RollbackDuelSession {
   }
   fail(message,draw=false){
     if(this.closed)return;
-    draw=draw||!!this.started;
+    // Ready has already started the platform round even while native assets load.
+    // Every technical failure is neutral, including failures before engine startup.
+    draw=true;
     try{this.send({type:'abort',draw});}catch{}
     this.destroy();
     // Complete settlement before leaving; a synchronous leave here could
