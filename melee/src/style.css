@@ -16,7 +16,7 @@ header{position:absolute;z-index:3;top:12px;right:14px;display:flex;align-items:
 #loading{margin-top:10px}#loading[hidden]{display:none}#progress-detail{font-size:11px;line-height:1.5;color:#f1f6ff;margin:7px 0 0}.progress-track{height:4px;background:#061a46bf;overflow:hidden;border-radius:2px}#progress-bar{height:100%;width:0;background:#ffe16a;transition:width .15s linear}
 dialog{max-width:680px;width:calc(100% - 40px);border:1px solid #536077;border-radius:12px;background:#101b2c;color:inherit}dialog::backdrop{background:#000a}dialog p{color:#b7cbe1}dialog textarea{width:100%;height:35vh;resize:vertical;background:#070b13;color:#edf3ff;border:1px solid #536077;padding:12px}dialog>div{display:flex;gap:8px}
 @media(max-height:600px){.menu-content{bottom:18px}.mode-label{margin-bottom:10px;font-size:10px}#play{min-height:50px;font-size:20px}#welcome-controls{margin-top:6px;min-height:32px}#status{margin-top:6px;font-size:10px}#progress-detail{font-size:10px}}
-body:not(.playing) header{top:auto;bottom:14px;right:14px}body:not(.playing) header #controls{display:none}
+body:not(.playing) header{top:max(12px,env(safe-area-inset-top));bottom:auto;right:max(14px,env(safe-area-inset-right))}body:not(.playing) header #controls{display:none}
 @media(max-width:650px){header{gap:6px;right:8px;top:8px}header button{font-size:10px;min-height:36px;padding:7px 9px}#metrics{font-size:9px}}
 @media(max-aspect-ratio:3/2){.title-art{object-fit:contain}}
 @media(max-aspect-ratio:1/1){.title-art{object-fit:contain}.menu-content{bottom:8vh}#welcome:after{background:linear-gradient(transparent 25%,#0c293900 40%,#0c2939 75%)}}
