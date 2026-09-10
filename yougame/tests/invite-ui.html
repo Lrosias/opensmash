@@ -1,6 +1,8 @@
 <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../src/style.css"><div id="play-surface"></div>
 <script type="module">
 import {createCompetitiveUI} from '../src/competitive-ui.mjs';
+import {mountAdapterControls} from '../../controllers/gc-adapter-ui.mjs';
+mountAdapterControls();
 import {PROFILES} from '../src/game-profile.mjs';
 window.joins=[];window.queues=[];window.backs=[];
 const profile=PROFILES[new URLSearchParams(location.search).get('edition')||'original'];

@@ -47,4 +47,5 @@ body{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-ri
 
 #match-clock{position:absolute;z-index:16;box-sizing:border-box;width:88px;height:36px;display:grid;place-items:center;border:1px solid #ffffff40;border-radius:8px;background:#101923dc;color:#f4f6ed;font:700 22px/1 system-ui;font-variant-numeric:tabular-nums;letter-spacing:.04em;pointer-events:none;box-shadow:0 2px 10px #0006}
 #match-clock[hidden]{display:none}#match-clock.low-time{color:#ffd47e}
-.online-playing>button[aria-label="GameCube adapter controls"]{display:none}
+.online-playing>button[aria-label="GameCube adapter controls"],
+.competitive-open>button[aria-label="GameCube adapter controls"]{display:none}
