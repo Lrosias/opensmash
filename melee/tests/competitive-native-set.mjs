@@ -9,7 +9,7 @@ const asyncSDK=sdk.slice(sdk.indexOf('  function canon('),sdk.indexOf('  // A hi
   sdk.slice(sdk.indexOf('  function makeAsyncRollback('),sdk.indexOf('  /* ---------- host-authoritative kit:'));
 const base=process.env.MELEE_URL||'http://127.0.0.1:8291/';
 const output=process.env.MELEE_RESULTS||'melee/test-results/native-set';await mkdir(output,{recursive:true});
-const browser=await chromium.launch({channel:'chrome',headless:true,args:['--autoplay-policy=no-user-gesture-required','--disable-background-timer-throttling','--disable-renderer-backgrounding']});
+const browser=await chromium.launch({channel:'chrome',headless:true,args:['--mute-audio','--autoplay-policy=no-user-gesture-required','--disable-background-timer-throttling','--disable-renderer-backgrounding']});
 const pages=[],errors=[],reports=[[],[]];let packet=0;
 const html=`<!doctype html><style>body{margin:0}.native-match{position:fixed;inset:0;width:100%;height:100%;border:0}</style><script>${asyncSDK};window.makeAsync=makeAsyncRollback;</script><script type="module">
 import {MeleeCompetitiveRoom} from './competitive-room.mjs';

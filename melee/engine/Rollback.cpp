@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <emscripten.h>
+#include <wasm_simd128.h>
 #include <emscripten/threading.h>
 #include "Common/Buffer.h"
 #include "Common/Hash.h"
@@ -20,6 +21,18 @@
 extern "C" void melee_input(int,int,float,float,float,float,float,float);
 
 namespace {
+__attribute__((target("simd128"))) bool equal_simd(const u8* a, const u8* b, size_t n) {
+  size_t i=0;
+  for (; i+64<=n; i+=64) {
+    auto x=wasm_v128_xor(wasm_v128_load(a+i),wasm_v128_load(b+i));
+    x=wasm_v128_or(x,wasm_v128_xor(wasm_v128_load(a+i+16),wasm_v128_load(b+i+16)));
+    x=wasm_v128_or(x,wasm_v128_xor(wasm_v128_load(a+i+32),wasm_v128_load(b+i+32)));
+    x=wasm_v128_or(x,wasm_v128_xor(wasm_v128_load(a+i+48),wasm_v128_load(b+i+48)));
+    if(wasm_v128_any_true(x))return false;
+  }
+  for (; i<n; ++i)if(a[i]!=b[i])return false;
+  return true;
+}
 constexpr size_t PAGE = 16384;
 constexpr size_t HISTORY = 16;
 using Page = std::array<u8, PAGE>;
@@ -97,7 +110,7 @@ int capture() {
   for (size_t offset = 0, index = 0; offset < size; offset += PAGE, ++index) {
     const size_t length = std::min(PAGE, size - offset);
     if (previous && index < previous->pages.size() && previous->size >= offset + length &&
-        std::memcmp(previous->pages[index]->data(), scratch.data() + offset, length) == 0) {
+        equal_simd(previous->pages[index]->data(), scratch.data() + offset, length)) {
       snapshot.pages.push_back(previous->pages[index]);
     } else {
       auto page = std::make_shared<Page>();

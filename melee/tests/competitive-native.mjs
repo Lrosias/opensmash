@@ -7,7 +7,7 @@ const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
 const output=process.env.MELEE_RESULTS||'melee/test-results/competitive-native';
 await mkdir(output,{recursive:true});
-const browser=await chromium.launch({channel:'chrome',headless:false,args:['--disable-backgrounding-occluded-windows','--disable-renderer-backgrounding','--autoplay-policy=no-user-gesture-required']});
+const browser=await chromium.launch({channel:'chrome',headless:false,args:['--mute-audio','--disable-backgrounding-occluded-windows','--disable-renderer-backgrounding','--autoplay-policy=no-user-gesture-required']});
 const page=await browser.newPage({viewport:{width:1280,height:800}}),errors=[];
 page.on('pageerror',e=>errors.push(String(e)));
 page.on('console',m=>{if(m.type()==='error')errors.push(m.text());if(m.text().includes('competitive match configured'))console.log(m.text());});
