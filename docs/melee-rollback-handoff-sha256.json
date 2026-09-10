@@ -1,0 +1,17 @@
+{
+  "melee/engine/MeleeRollback.h": "54d00336a17411244258584d5f00f3836aea4484fa707748b0bdd3aa3de2596f",
+  "melee/src/rollback-engine.mjs": "6664aca7ec6064768f20e5eb77c1dc1f20dba963ce74a4f2d74304bc49d0d2f5",
+  "melee/src/rollback-sdk.mjs": "96e71b93157438d0b58405cb6044b4f92ca08437e49e50c948fa506d198b8d83",
+  "melee/src/rollback-timeline.mjs": "f6c6044529e453c459627279c15b3399578869ca1df322e7dfef0c2ea2e4c0de",
+  "melee/src/rollback-lab.mjs": "6f70e5f617b556a6b5c88fc2782b3bd8f5dde6125166b565b7e6617ea6b5c6da",
+  "melee/tests/rollback-engine.test.mjs": "080d4c4ec033f2f82e9f702d0f58fd2966e71c0701e06f6646937fd7d58113af",
+  "melee/tests/rollback-sdk.test.mjs": "fca2ac78c88ac58270acac5c5da77eeeed18bc91d528e8a7dee9089e745f588a",
+  "melee/tests/rollback-timeline.test.mjs": "329a76d40790d1ae4ddbb38673d16f4ab6342aed2ec0c6e6e1a4d425e4cfef46",
+  "melee/tests/rollback-native.mjs": "2964bd837048d0d2f3456438997d88ef9f98265bcb49073e9825213aff76cbf5",
+  "melee/tests/rollback-sdk-native.mjs": "3d509fbbe883fb83b307257a33043cbf83566f7d26ada39b7cb73a39dd06f935",
+  "melee/tests/rollback-match-setup.json": "dce81d7d3560a3baf4e7fbfff46251e1ae2d33c2c9ab73182f67003fbd779bd6",
+  "melee/ROLLBACK.md": "7c258b3eea7963eb5af6a9582ad5f277c3ebf81f03286d3256f07547bf5a730b",
+  "melee/YOUGAME-ROLLBACK-CONTRACT.md": "ab9fad847a81011ae286e63caeac10bc6cd0baf29628e4c1e5d5949189801322",
+  "docs/slippi-rollback-research-2026-09-09.md": "76a71e65c6f214d1acf27edc6913038fca340431a6f059659420f4e710871570",
+  "docs/slippi-rollback-sources-2026-09-09.json": "c37fd0f11643dbec49ecb9c27b36eb69943100adf7af62528c6224b63e4c710c"
+}
