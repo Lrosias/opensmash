@@ -1,7 +1,8 @@
 import {GameCubeAdapter} from './gc-adapter.mjs';
+import {createOpenSmashAdapter} from './platform-adapter.mjs';
 
 export function mountAdapterControls({before=null}={}) {
-  const adapter=new GameCubeAdapter();
+  const adapter=createOpenSmashAdapter(GameCubeAdapter);
   const button=document.createElement('button');button.type='button';button.textContent='GC adapter';
   button.setAttribute('aria-label','GameCube adapter controls');
   // Keep this entry clear of YouGame's reserved bottom-right / top-left areas,
@@ -13,14 +14,21 @@ export function mountAdapterControls({before=null}={}) {
   dialog.style.cssText='max-width:min(480px,85vw);max-height:75vh;overflow:auto;background:#171923;color:#fff;border:1px solid #888;border-radius:12px;font:14px system-ui;padding:20px';
   dialog.innerHTML='<h2 style="margin-top:0">GameCube adapter</h2><p data-status role="status"></p><p>Use a Nintendo or compatible adapter in Wii U / Switch mode. Close Slippi/Dolphin before connecting. USB ports 1–4 are players 1–4; empty ports stay empty. Adapter mode takes over all four controller seats.</p><button data-connect type="button">Connect adapter</button> <button data-release type="button">Use regular controls</button><div data-ports style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"></div><p>Calibration: release both sticks and triggers, then calibrate that port. Raw values are preserved; calibration only subtracts the chosen neutral offsets. A reconnect resets calibration.</p><button data-reset type="button">Reset calibration</button> <button data-close type="button">Done</button><p data-help></p>';
   document.body.append(dialog);
+  const capability=document.createElement('p');dialog.append(capability);
   const get=s=>dialog.querySelector(s),rows=[];
   for(let i=0;i<4;i++){
     const row=document.createElement('p'),label=document.createElement('span'),calibrate=document.createElement('button');
     calibrate.type='button';calibrate.textContent=`Calibrate port ${i+1}`;
-    calibrate.onclick=()=>{try{adapter.calibrate(i);get('[data-help]').textContent=`Port ${i+1} calibrated.`;}catch(e){get('[data-help]').textContent=e.message;}};
+    calibrate.onclick=async()=>{try{await adapter.calibrate(i);get('[data-help]').textContent=`Port ${i+1} calibrated.`;}catch(e){get('[data-help]').textContent=e.message;}};
     row.append(label,document.createElement('br'),calibrate);get('[data-ports]').append(row);rows.push({label,calibrate});
   }
   function render(){
+    const policy=document.permissionsPolicy||document.featurePolicy;
+    capability.textContent=adapter.hosted?'Adapter access is managed in YouGame Controls.':
+      !globalThis.isSecureContext?'USB needs HTTPS or localhost.':!navigator.usb?
+      'WebUSB is unavailable here. Try desktop Chrome/Edge, or regular controls.':
+      policy?.allowsFeature&&!policy.allowsFeature('usb')?
+      'This player blocks direct USB. Open YouGame Controls to connect through the platform.':'';
     const snapshot=adapter.snapshot({diagnostic:true});get('[data-status]').textContent=adapter.message;
     get('[data-connect]').disabled=adapter.busy||!!adapter.device;
     get('[data-release]').disabled=adapter.busy||(!adapter.owned&&!adapter.device);
@@ -29,14 +37,10 @@ export function mountAdapterControls({before=null}={}) {
     if(adapter.owned&&snapshot.stale&&adapter.device)get('[data-status]').textContent='Waiting for fresh adapter reports; input is neutral.';
   }
   button.onclick=()=>{render();dialog.showModal();button.blur();};
-  get('[data-connect]').onclick=()=>{void adapter.connect().catch(e=>{get('[data-help]').textContent=e.message;});};
-  get('[data-release]').onclick=()=>{void adapter.close();};
-  get('[data-reset]').onclick=()=>{adapter.resetCalibration();get('[data-help]').textContent='Nominal centers restored.';};
+  get('[data-connect]').onclick=()=>{if(adapter.hosted)dialog.close();void adapter.connect().catch(e=>{get('[data-help]').textContent=e.message;if(!dialog.open)dialog.showModal();});};
+  get('[data-release]').onclick=()=>{void adapter.close().catch(e=>{get('[data-help]').textContent=e.message;});};
+  get('[data-reset]').onclick=async()=>{try{await adapter.resetCalibration();get('[data-help]').textContent='Nominal centers restored.';}catch(e){get('[data-help]').textContent=e.message;}};
   get('[data-close]').onclick=()=>dialog.close();
-  const policy=document.permissionsPolicy||document.featurePolicy;
-  get('[data-help]').textContent=!globalThis.isSecureContext?'USB needs HTTPS or localhost.':!navigator.usb?
-    'WebUSB is unavailable here. Try desktop Chrome/Edge, or regular controls.':policy?.allowsFeature&&!policy.allowsFeature('usb')?
-    'YouGame must allow USB access in this player iframe. The game cannot grant this permission itself.':'';
   const unsubscribe=adapter.subscribe(render),timer=setInterval(()=>{if(dialog.open)render();},250);
   const visibility=()=>adapter.suspend(document.hidden||dialog.open);
   document.addEventListener('visibilitychange',visibility);
