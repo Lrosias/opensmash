@@ -1,7 +1,11 @@
 # Competitive release — September 10, 2026
 
-Original Smash64 **v1.3**, Smash Remix **v2.3** and Melee **v1.7** are live and
-verified. Runtime publication and Git source merges are tracked separately below.
+Original Smash64 **v1.3**, Smash Remix **v2.3** and Melee **v1.7** were published
+and verified as the competitive release recorded here. They have since received
+the [keyboard updates](keyboard-standard-release-2026-09-10.md). The subsequent
+[Remix native update](remix-native-release-2026-09-10.md) has its own acceptance
+and publication record. Runtime publication and Git source merges are tracked
+separately below.
 
 ## Exact artifacts
 

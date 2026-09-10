@@ -1,16 +1,17 @@
 // Stage a reviewed frozen native payload over the latest released frontend.
-// Usage: node tools/stage-remix-candidate.mjs <base> <frozen-candidate> <new-output>
+// Usage: node tools/stage-remix-candidate.mjs <base> <frozen-candidate> <new-output> [reviewed-manifest-sha256]
 import {cp,mkdir,readFile,readdir,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import path from 'node:path';
 const root=path.resolve(import.meta.dirname,'..');
-const [baseArg,candidateArg,outArg]=process.argv.slice(2);
+const [baseArg,candidateArg,outArg,reviewedManifest='64bbec5d6ef19192ba54235f919c9cfb232e8dca9acb7406488a4808149bad90']=process.argv.slice(2);
 if(!baseArg||!candidateArg||!outArg)throw Error('Expected base, frozen candidate and new output');
+if(!/^[a-f0-9]{64}$/.test(reviewedManifest))throw Error('Expected the independently reviewed manifest SHA256');
 const base=path.resolve(baseArg),candidate=path.resolve(candidateArg),out=path.resolve(outArg);
 if(out===base||out.startsWith(base+path.sep)||out===candidate||out.startsWith(candidate+path.sep))throw Error('Output must be separate');
 const digest=b=>createHash('sha256').update(b).digest('hex');
 const frozen=await readFile(path.join(candidate,'manifest.json'));
-if(digest(frozen)!=='64bbec5d6ef19192ba54235f919c9cfb232e8dca9acb7406488a4808149bad90')throw Error('Unreviewed candidate manifest');
+if(digest(frozen)!==reviewedManifest)throw Error('Unreviewed candidate manifest');
 const manifest=JSON.parse(frozen);
 const engineFiles=Object.entries(manifest.files).filter(([f])=>f.startsWith('engine/')&&f!=='engine/Remix-notes.md');
 if(engineFiles.length!==45)throw Error('Unexpected native overlay');
@@ -36,5 +37,5 @@ for(const f of files){const b=await readFile(path.join(out,f));hashes[f]=digest(
  const row={path:f,size:b.length};if(f==='yougame.json'||(/\.(html|css|m?js)$/.test(f)&&!f.startsWith('engine/')))row.text=b.toString();checks.push(row);
 }
 await writeFile(out+'-check.json',JSON.stringify({files:checks}));
-await writeFile(out+'-release.json',JSON.stringify({candidate:manifest.build,base,out,build,nativeSha256:hashes['engine/BattleShip.wasm'],changes,hashes},null,2));
+await writeFile(out+'-release.json',JSON.stringify({candidate:manifest.build,manifestSha256:reviewedManifest,base,out,build,nativeSha256:hashes['engine/BattleShip.wasm'],changes,hashes},null,2));
 console.log(JSON.stringify({out,build,files:files.length,changed:changes.length,nativeSha256:hashes['engine/BattleShip.wasm']}));

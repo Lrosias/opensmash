@@ -2,7 +2,7 @@
 
 This follows the published keyboard release, Remix **v2.4**, upload
 `947a9b2bdfd047bdbf40c4b2f3d74a9c`. Publication of the native update remains
-pending exact-candidate hosted acceptance. Original v1.4 and Melee v1.8 are
+blocked by a reproduced hosted native gameplay stall. Original v1.4 and Melee v1.8 are
 outside this update's publication scope.
 
 ## Candidate and source
@@ -92,8 +92,24 @@ capacity (384 MiB total). This is not process RSS or a natural battle-to-result
 peak: that fixture injects settled SDK outcomes and never boots a battle.
 Evidence and scope are recorded in
 `yougame/test-results/native-results-candidate-v3/visual-review.md`.
-Official two-identity hosted acceptance and natural transition checks remain
-pending before publication.
+Official two-identity hosted acceptance found a release blocker on this exact
+upload: after fresh private Marth/Conker Ready, moving Conker right for 600 ms
+then pressing his special key while airborne froze both native game renderers.
+The first run included a periodic native heap-used observer; a clean rerun
+removed that observer and reproduced the stall immediately. No result frame
+existed before the stall. This candidate must not be published. Native diagnosis
+and a new reviewed candidate are required before repeating settlement, rematch
+and natural transition acceptance.
+Official session `e83403b43c714eaf994f42be2b093cfd` and all its test browsers are
+closed, with zero completed matches or rating updates. Fresh invitation,
+fighter selection and Ready passed; clean menu load was 2,676 ms and Ready to
+synchronized play was 3,250 ms. The saved active-iframe DOM subsequently supplied
+the exact clean boot parameters: fighters `[58,56]`, native stage `13`, seed
+`2243759118`, three stocks and two humans. The keys map to stick X=80 followed
+by B=`0x4000`; the 600 ms hold was not recorded as an exact per-frame trace. The blocked
+report is `/tmp/opensmash-remix-v3-blocked-report.json`; the clean interaction
+screenshot and bounded renderer stack are in
+`/tmp/opensmash-remix-v3-clean-evidence`.
 
 The current platform baseline is production `ba9e61eb-faec-4290-8ac2-e9c9656b3136`
 and testing app `d8184b38-4bc0-4bfa-b338-3326e058563e`, both with the SDK above.
