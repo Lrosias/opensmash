@@ -1,8 +1,9 @@
 import {KeyboardState} from './keyboard.mjs';
-export function createInput({allowStart=false,readTouch=()=>[0,0,0]}={}) {
+import {n64Pad} from '../../controllers/gc-adapter.mjs';
+export function createInput({allowStart=false,readTouch=()=>[0,0,0],adapter=null,enabled=()=>true}={}) {
   const keyboard=new KeyboardState(),cleanups=[];
   function attach(win) {
-    const down=e=>{if(keyboard.down(e.code))e.preventDefault();};
+    const down=e=>{if(!enabled()){keyboard.clear();return;}if(keyboard.down(e.code))e.preventDefault();};
     const up=e=>keyboard.up(e.code);
     const clear=()=>keyboard.clear();
     win.addEventListener('keydown', down,true); win.addEventListener('keyup', up,true); win.addEventListener('blur', clear);
@@ -10,7 +11,8 @@ export function createInput({allowStart=false,readTouch=()=>[0,0,0]}={}) {
     win.document?.addEventListener('visibilitychange',hide);
     cleanups.push(() => { win.removeEventListener('keydown', down,{capture:true}); win.removeEventListener('keyup', up,{capture:true}); win.removeEventListener('blur', clear);win.document?.removeEventListener('visibilitychange',hide); });
   }
-  return { attach, destroy() { cleanups.forEach(f => f());keyboard.clear(); }, read() {
+  function read() {
+    if(adapter?.owned)return n64Pad(adapter.snapshot().ports[0],adapter.origins[0],allowStart);
     let [b,x,y]=keyboard.read();
     const pad = [...(navigator.getGamepads?.() || [])].find(p => p?.connected);
     if (pad) {
@@ -25,5 +27,11 @@ export function createInput({allowStart=false,readTouch=()=>[0,0,0]}={}) {
     }
     const touch=readTouch();b|=touch[0];if(touch[1]||touch[2]){x=touch[1];y=touch[2];}
     return [allowStart?b:b & ~0x1000, Math.max(-80, Math.min(80,x)), Math.max(-80, Math.min(80,y))];
-  }};
+  }
+  return {attach,destroy(){cleanups.forEach(f=>f());keyboard.clear();},read,
+    readPorts(){
+      if(!adapter?.owned)return [read(),null,null,null];
+      const snapshot=adapter.snapshot();
+      return snapshot.ports.map((p,i)=>p.connected?n64Pad(p,adapter.origins[i],allowStart):null);
+    }};
 }

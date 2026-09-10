@@ -1,0 +1,655 @@
+{
+  "researchDate": "2026-09-09",
+  "scope": "Static DMG/source inspection and existing focused unit tests; no live Slippi execution or new engine benchmark. Branch snapshots are not asserted to match the emulator selected by launcher 2.15.1.",
+  "diskImage": {
+    "path": "/Users/luis/Documents/Slippi-Launcher-2.15.1-arm64.dmg",
+    "bytes": 122713749,
+    "sha256": "9107a522d0350da42f0f2c0d2bbd80a5bc9d74ced850e3272ecc28a242181ac9",
+    "releaseUrl": "https://github.com/project-slippi/slippi-launcher/releases/tag/v2.15.1",
+    "releasePublishedAt": "2026-08-31T05:05:48Z",
+    "githubAssetDigest": "sha256:9107a522d0350da42f0f2c0d2bbd80a5bc9d74ced850e3272ecc28a242181ac9",
+    "digestMatches": true,
+    "launched": false,
+    "mountMode": "read-only, no browse, no autoopen"
+  },
+  "repositories": [
+    {
+      "repo": "dolphin",
+      "branch": "slippi",
+      "sha": "41a7a3a110ed52999486ae1901c8fbb9a63d4f13",
+      "commitDate": "2026-08-30T16:48:37Z",
+      "license": {
+        "key": "other",
+        "name": "Other",
+        "spdx_id": "NOASSERTION",
+        "url": null,
+        "node_id": "MDc6TGljZW5zZTA="
+      },
+      "downloadedFiles": [
+        {
+          "path": ".gitmodules",
+          "sha256": "cc24f9f8142fe75a6bf06ebc66f8017d5fea3ee0c8073557874420126973d6ae",
+          "bytes": 3400,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/.gitmodules"
+        },
+        {
+          "path": "COPYING",
+          "sha256": "695114256e306a5e1ca407bc6e2a11877b112328dbe990253b52f59726e01b4b",
+          "bytes": 494,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/COPYING"
+        },
+        {
+          "path": "Source/Core/Core/Config/MainSettings.cpp",
+          "sha256": "366de3cc09646f8243f5dffbf4ab2f6f205d11e6a930831958e0755926aebe1d",
+          "bytes": 41729,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/Config/MainSettings.cpp"
+        },
+        {
+          "path": "Source/Core/Core/HW/EXI/EXI_DeviceSlippi.cpp",
+          "sha256": "e4fa84f1b414fc3e75923649bbb9d58f0e087777e45d8e9ad36e0a4b99832682",
+          "bytes": 125482,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/HW/EXI/EXI_DeviceSlippi.cpp"
+        },
+        {
+          "path": "Source/Core/Core/HW/EXI/EXI_DeviceSlippi.h",
+          "sha256": "88ceafd21cffe2610abe80ee7bb3d3669abaa8673ebdb8c700b5fa93e8e05d35",
+          "bytes": 11834,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/HW/EXI/EXI_DeviceSlippi.h"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiMatchmaking.cpp",
+          "sha256": "9a848e3bd2819ba5d51f10ec8c3e507b9c121f3d9bc08134dc0bbe17c04d313f",
+          "bytes": 26593,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/Slippi/SlippiMatchmaking.cpp"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiMatchmaking.h",
+          "sha256": "f3e217b9525e5d1c72b45694bba945448e276c8ad68207501a17258350f12679",
+          "bytes": 3293,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/Slippi/SlippiMatchmaking.h"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiNetplay.cpp",
+          "sha256": "2117647fb673d0dccd3d0fe09b9313d992855f36b7bc9bff3f6f2b4eeb3ffbce",
+          "bytes": 61240,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/Slippi/SlippiNetplay.cpp"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiNetplay.h",
+          "sha256": "21eb7d889b957572a93939aaafb46ae958581e5097e93ef1de6a69e7556aae14",
+          "bytes": 10814,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/Slippi/SlippiNetplay.h"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiPad.cpp",
+          "sha256": "2ecf1ae00d1512014c428ab606159865a37b9a45a5c8319052d182302770c619",
+          "bytes": 782,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/Slippi/SlippiPad.cpp"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiPad.h",
+          "sha256": "f2aa580c4c3d19a56e7135f85193dc5e9f6b234ed56a69f034edd5bda4c50688",
+          "bytes": 391,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/Slippi/SlippiPad.h"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiSavestate.cpp",
+          "sha256": "70a11b3d9fde9fe6a5e6d0f8057d1d60c3f0dd64a63e405317063215e99aef9d",
+          "bytes": 9460,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/Slippi/SlippiSavestate.cpp"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiSavestate.h",
+          "sha256": "ebc7fbee28d91db439d359514f3be7f13ab22cd2b895ab516a62da606fa7f5ce",
+          "bytes": 1164,
+          "url": "https://github.com/project-slippi/dolphin/blob/41a7a3a110ed52999486ae1901c8fbb9a63d4f13/Source/Core/Core/Slippi/SlippiSavestate.h"
+        }
+      ]
+    },
+    {
+      "repo": "Ishiiruka",
+      "branch": "slippi",
+      "sha": "e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1",
+      "commitDate": "2026-08-30T16:48:57Z",
+      "license": {
+        "key": "gpl-2.0",
+        "name": "GNU General Public License v2.0",
+        "spdx_id": "GPL-2.0",
+        "url": "https://api.github.com/licenses/gpl-2.0",
+        "node_id": "MDc6TGljZW5zZTg="
+      },
+      "downloadedFiles": [
+        {
+          "path": ".gitmodules",
+          "sha256": "05b20b140569f1423bd86335ffb8ca4d1ec48ed3add27e46ba836d094013bab1",
+          "bytes": 381,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/.gitmodules"
+        },
+        {
+          "path": "Source/Core/Core/HW/EXI_DeviceSlippi.cpp",
+          "sha256": "adcd8898426bbcb7e7c403bea09b4e21af6925ed2f924adb71e7fc7933ca2df5",
+          "bytes": 120518,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/Source/Core/Core/HW/EXI_DeviceSlippi.cpp"
+        },
+        {
+          "path": "Source/Core/Core/HW/EXI_DeviceSlippi.h",
+          "sha256": "30df3256d9400941fc4597ae33b757924245b018bad9b4c7b040ac0fdde392d8",
+          "bytes": 11335,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/Source/Core/Core/HW/EXI_DeviceSlippi.h"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiMatchmaking.cpp",
+          "sha256": "49655ddb83ab3c595c6917f051a3f2aafc12d30fbd7dd50840d3207779c8b28d",
+          "bytes": 23892,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/Source/Core/Core/Slippi/SlippiMatchmaking.cpp"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiMatchmaking.h",
+          "sha256": "aca4557f8748d62373e07c8ba8d891b7e5ff185dd66e41dde9f0b24b0530c2cf",
+          "bytes": 3151,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/Source/Core/Core/Slippi/SlippiMatchmaking.h"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiNetplay.cpp",
+          "sha256": "5c258ffd05030c2c573c4545d2abeba8e2aaa7f5d90ec7bd9e95c5b3d2757d8b",
+          "bytes": 58292,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/Source/Core/Core/Slippi/SlippiNetplay.cpp"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiNetplay.h",
+          "sha256": "7151558758d627c77ce59ebb3c9a526cfd0e0b264ac7530d3f0dab6fd922f94a",
+          "bytes": 10140,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/Source/Core/Core/Slippi/SlippiNetplay.h"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiPad.cpp",
+          "sha256": "f233cb98247c9db234f25a95e1eb3610520bc996effc407a8bbe93239e1b1374",
+          "bytes": 903,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/Source/Core/Core/Slippi/SlippiPad.cpp"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiPad.h",
+          "sha256": "c0e0e74484e752c380483d7ec6b8a875d632f5eb293c1a9b6637a140222b2eda",
+          "bytes": 387,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/Source/Core/Core/Slippi/SlippiPad.h"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiSavestate.cpp",
+          "sha256": "6a5b081b672e1c807c97cf69d9def685803294d87cbdea5fd7ba558e3c3f0921",
+          "bytes": 8438,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/Source/Core/Core/Slippi/SlippiSavestate.cpp"
+        },
+        {
+          "path": "Source/Core/Core/Slippi/SlippiSavestate.h",
+          "sha256": "7a1d5700ae67709e5e2ce2ee73192597a1fd4cfe5eb682fe93aeba11a8b6ce05",
+          "bytes": 1094,
+          "url": "https://github.com/project-slippi/Ishiiruka/blob/e9d048ac6f2d77f96fcd1c0b04bc1533a7ff81e1/Source/Core/Core/Slippi/SlippiSavestate.h"
+        }
+      ]
+    },
+    {
+      "repo": "slippi-ssbm-asm",
+      "branch": "master",
+      "sha": "fcf47f10dc244152c2ebaa3a9dec142ea42243b7",
+      "commitDate": "2026-05-01T05:19:47Z",
+      "license": {
+        "key": "gpl-3.0",
+        "name": "GNU General Public License v3.0",
+        "spdx_id": "GPL-3.0",
+        "url": "https://api.github.com/licenses/gpl-3.0",
+        "node_id": "MDc6TGljZW5zZTk="
+      },
+      "downloadedFiles": [
+        {
+          "path": "Common/FastForward/DynamicsFix.asm",
+          "sha256": "13002603c6f4e89ba546e95798ed33861eefb2abdea777d2c8345d2a00389e55",
+          "bytes": 1864,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Common/FastForward/DynamicsFix.asm"
+        },
+        {
+          "path": "Common/FastForward/FunctionMacros.s",
+          "sha256": "0cefbfdb6e26a4d245c18818514915230ec65fc2f0cda51e83e0b4a056d673db",
+          "bytes": 1822,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Common/FastForward/FunctionMacros.s"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+          "bytes": 35149,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/LICENSE"
+        },
+        {
+          "path": "Online/Core/BrawlOffscreenDamage.asm",
+          "sha256": "2538d0ecd97eca718a35204680d28cc3c577b53c04e37e6554cf0365f71137a6",
+          "bytes": 1723,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/BrawlOffscreenDamage.asm"
+        },
+        {
+          "path": "Online/Core/CustomizeMessageLRAS.asm",
+          "sha256": "fbc75a77f4da7972ee7a9c48cce81b54b14b1f0b7d0b9c6c7ea7fd126f9fe87c",
+          "bytes": 2051,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/CustomizeMessageLRAS.asm"
+        },
+        {
+          "path": "Online/Core/EXIFileLoad/GetFileSize.asm",
+          "sha256": "887efc191670b43c58f0ac8aa75764020cad491f0deaae580ba1d04911cfeea2",
+          "bytes": 1617,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/EXIFileLoad/GetFileSize.asm"
+        },
+        {
+          "path": "Online/Core/EXIFileLoad/TransferFile.asm",
+          "sha256": "77f56edec3142277ee1b8fb1f02e7ee87c916ff187eeeac48947ab5079b5ee9d",
+          "bytes": 2605,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/EXIFileLoad/TransferFile.asm"
+        },
+        {
+          "path": "Online/Core/ForceEngineOnRollback.asm",
+          "sha256": "06d871048a0092516a4de3896d6d454250f5438912e97809862a394183d47830",
+          "bytes": 2823,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/ForceEngineOnRollback.asm"
+        },
+        {
+          "path": "Online/Core/ForceInputRefetchOnAdvance.asm",
+          "sha256": "503f9bd0e287c3d437adeecf9981a0c40b41e4fb750ea905389bd64291ed74c2",
+          "bytes": 981,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/ForceInputRefetchOnAdvance.asm"
+        },
+        {
+          "path": "Online/Core/FreezeDeadUpFallPhysics/InitHitVelocity.asm",
+          "sha256": "b1c7ada3d2c6c4fec8cdd07472e597cf586ecf78904be64e5300c23380f1e243",
+          "bytes": 561,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/FreezeDeadUpFallPhysics/InitHitVelocity.asm"
+        },
+        {
+          "path": "Online/Core/FreezeDeadUpFallPhysics/UpdateFallVelocity.asm",
+          "sha256": "585738bc7b63602f2402533e0cba9e96893f016f7fcaafeb0be213a2675b5f22",
+          "bytes": 1366,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/FreezeDeadUpFallPhysics/UpdateFallVelocity.asm"
+        },
+        {
+          "path": "Online/Core/FreezeDeadUpFallPhysics/UpdateModelPos.asm",
+          "sha256": "76415f538e8407b8e60a82f083cbf8e6dd175135b9307e12befcb8f925c8dc85",
+          "bytes": 1276,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/FreezeDeadUpFallPhysics/UpdateModelPos.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/FD/DesyncProofBGTransformations.asm",
+          "sha256": "e0746b6aaef064bfaa6fd555733756740a959853e686ae09c1e77a7bb6684390",
+          "bytes": 1345,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/FD/DesyncProofBGTransformations.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/ForceNoDiskCrash.asm",
+          "sha256": "150dbdaa2db6053ec1a844e0d24aa57058fd6355d58f5103e85f7e868cf7a9e7",
+          "bytes": 192,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/ForceNoDiskCrash.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/ForceNoVideoAssert.asm",
+          "sha256": "c9fb4fc08da230d238c55e8ee8cd22b01159c3ffa0c81936f5c10b8fcc84f97d",
+          "bytes": 497,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/ForceNoVideoAssert.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/LoadPremadeTextDataFromDolphin.asm",
+          "sha256": "6a4df0016b24c3f075c054c1d00657f497e4d73b5c98173999036d072462d889",
+          "bytes": 1485,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/LoadPremadeTextDataFromDolphin.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/PreventCharacterCrowdChants.asm",
+          "sha256": "781866e16c5cb02b75d6b00e4497b74f4e020e223eef78c46c2c37634867ba2e",
+          "bytes": 434,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/PreventCharacterCrowdChants.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/PreventPadAlarmDuringRollback.asm",
+          "sha256": "957855e217616d402636d9e316a9acb30d87cc85f3ac79443f7c67d42ddefd7b",
+          "bytes": 1665,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/PreventPadAlarmDuringRollback.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/Stadium/ChangeJumbotronText.asm",
+          "sha256": "83414425b0c6338a60d9add10bf68b98049872278ae4fb5fe2911699ab4b1c76",
+          "bytes": 1258,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/Stadium/ChangeJumbotronText.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/Stadium/CustomZeroBuffer.asm",
+          "sha256": "9bfac52319aed886168212de0f082324868a7919f0439a8d627b8f4a1811619f",
+          "bytes": 982,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/Stadium/CustomZeroBuffer.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/Stadium/GrPsxIsValid.asm",
+          "sha256": "ecd928539bc11f6a110f887109a9744454f08208bd7b4b873c324661d4207223",
+          "bytes": 995,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/Stadium/GrPsxIsValid.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/Stadium/IngameCheckIfFrozen.asm",
+          "sha256": "7a6d9ae7a1d8416c14e6a3ced4bb8357b5832b74fa9df92c2b24cd560d73c56e",
+          "bytes": 967,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/Stadium/IngameCheckIfFrozen.asm"
+        },
+        {
+          "path": "Online/Core/Hacks/Stadium/StadiumFileLoad.asm",
+          "sha256": "98936dd73f4d94344df8ec5fbeee540658e32eed3bfe672fd4ce14805c34bc64",
+          "bytes": 2231,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Hacks/Stadium/StadiumFileLoad.asm"
+        },
+        {
+          "path": "Online/Core/HandleRumble.asm",
+          "sha256": "a1d9ff94175db7f98c34de6b9a85388c9c13db8570a97e61d5e878286781f753",
+          "bytes": 1385,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/HandleRumble.asm"
+        },
+        {
+          "path": "Online/Core/InitOnlinePlay.asm",
+          "sha256": "d0a5df91c9b535b3c711880a4156769c2b3e799e7e72bc9d071be9fd90394067",
+          "bytes": 13671,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/InitOnlinePlay.asm"
+        },
+        {
+          "path": "Online/Core/InitPause.asm",
+          "sha256": "fdee35e943a759349cdb4f23eaaf6f0d8cb668abe6e539fb93dfbbba89e1a33f",
+          "bytes": 6332,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/InitPause.asm"
+        },
+        {
+          "path": "Online/Core/LGLExceededGameEnd.asm",
+          "sha256": "88bf629460c3aecd4403cc9f79f39ecf14a719f5662dcd047ab8ea6e9269d9dd",
+          "bytes": 4175,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/LGLExceededGameEnd.asm"
+        },
+        {
+          "path": "Online/Core/LoopEngineForRollback.asm",
+          "sha256": "3b73ee2323b86160eb9a70a23cf471f51e099ab64b1a7152534cae85a0f94e63",
+          "bytes": 7614,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/LoopEngineForRollback.asm"
+        },
+        {
+          "path": "Online/Core/Music/StartSong.asm",
+          "sha256": "09d10f983e2e5a32f855f733896d45e32e753e59e879e186ca66c0cdcc66e1e1",
+          "bytes": 2144,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Music/StartSong.asm"
+        },
+        {
+          "path": "Online/Core/Music/Stop.asm",
+          "sha256": "b7f72c34f4923dec7c1fdca057a176bcc8b2b8ef0c1966880c567f969b3a0a8d",
+          "bytes": 1071,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Music/Stop.asm"
+        },
+        {
+          "path": "Online/Core/Music/VolumeChange.asm",
+          "sha256": "5de95fe2d6ce8964e47376f63bed99b83d24adff771a118534962e3e6afa17df",
+          "bytes": 1601,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Music/VolumeChange.asm"
+        },
+        {
+          "path": "Online/Core/PauseCounter.asm",
+          "sha256": "e7b77aaf32fc27a8c6ebb1ea3eb59d4dd100bfaeec2c51b1b08b4fe43f89ddfd",
+          "bytes": 409,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/PauseCounter.asm"
+        },
+        {
+          "path": "Online/Core/PreventFileAlarms/MuteMusic.asm",
+          "sha256": "11cc748b337da602687384882861e87dbc0d10907986539268a05c1a93e143c7",
+          "bytes": 192,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/PreventFileAlarms/MuteMusic.asm"
+        },
+        {
+          "path": "Online/Core/PreventFileAlarms/PreventMusicAlarm.asm",
+          "sha256": "8a95a3c395ce5de570e53e9e3d0730dc4176f6676693029760a416a49d28b0db",
+          "bytes": 187,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/PreventFileAlarms/PreventMusicAlarm.asm"
+        },
+        {
+          "path": "Online/Core/PreventPauseStranding.asm",
+          "sha256": "fe45e0f9cfdfd40f15676c948f50df77ccea0a6e94768eef29b1b0ec76d5b27d",
+          "bytes": 1023,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/PreventPauseStranding.asm"
+        },
+        {
+          "path": "Online/Core/Remember Who LRA Started.asm",
+          "sha256": "b7b8f29daa1aad36abc888f83e2abaf944acf0295c7baa116f8b3995b897ca29",
+          "bytes": 384,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Remember%20Who%20LRA%20Started.asm"
+        },
+        {
+          "path": "Online/Core/ReportNoContestLRAS.asm",
+          "sha256": "86885fa2b06c06f13de7753349de50c653ecad92f794629981697b5144a4c5f5",
+          "bytes": 890,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/ReportNoContestLRAS.asm"
+        },
+        {
+          "path": "Online/Core/SkipNewInputFetchOnRollback.asm",
+          "sha256": "788b23a10084d54e2bfcb23822dbf6ea57dc95a6e892570699896b8407b44379",
+          "bytes": 1964,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/SkipNewInputFetchOnRollback.asm"
+        },
+        {
+          "path": "Online/Core/Sound/AssignSoundInstanceId.asm",
+          "sha256": "65034717da64707fd1f85c6a78b4d2070ac55676ca04d9152d49e9d0cc1c1683",
+          "bytes": 2535,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Sound/AssignSoundInstanceId.asm"
+        },
+        {
+          "path": "Online/Core/Sound/NoDestroyVoice.asm",
+          "sha256": "b53c7d263e079f83efb8322171a63bf68480e48d7274b76dc3675bab19370ee4",
+          "bytes": 1980,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Sound/NoDestroyVoice.asm"
+        },
+        {
+          "path": "Online/Core/Sound/NoDestroyVoice2.asm",
+          "sha256": "09a6e79a5a4ea6c16b61e508267c6163516bdeacaf8861bd313190508fb35055",
+          "bytes": 1980,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Sound/NoDestroyVoice2.asm"
+        },
+        {
+          "path": "Online/Core/Sound/PreventDuplicateSounds.asm",
+          "sha256": "101244da1c8c5c3829a837a27f34ff78e01bab827dfc5a6f929e93493ed1f6ab",
+          "bytes": 4363,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Sound/PreventDuplicateSounds.asm"
+        },
+        {
+          "path": "Online/Core/StartEngineLoop.asm",
+          "sha256": "61d0c87a31c98efa40a86ceefd916d43dfd95cd166a4a8a8aea5d16dbe7fe50f",
+          "bytes": 30383,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/StartEngineLoop.asm"
+        },
+        {
+          "path": "Online/Core/Teams/PreventDeadStranding.asm",
+          "sha256": "c420dc7eb24afcaaf955cc1270a76ab500f9b321f803d544f5a5dfeb64a9a18b",
+          "bytes": 856,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/Teams/PreventDeadStranding.asm"
+        },
+        {
+          "path": "Online/Core/TriggerSendInput.asm",
+          "sha256": "f851335ec34afcbe8f0c193b5f455db7c467b4cac43f8fdce933565a0dd29b4f",
+          "bytes": 38292,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/TriggerSendInput.asm"
+        },
+        {
+          "path": "Online/Core/WhispyBlowDirFix/WhispyBlowDirFix.asm",
+          "sha256": "39f9d2a4b70d0b9be72da3e7fed718d0fd4831e5fa10fcca48ec2294a744ede1",
+          "bytes": 1220,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Core/WhispyBlowDirFix/WhispyBlowDirFix.asm"
+        },
+        {
+          "path": "Online/Online.s",
+          "sha256": "1b5536a902b22c2608e014854945a462dd853a67a7d6810762cf1fceaf648c2a",
+          "bytes": 28313,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Online.s"
+        },
+        {
+          "path": "Online/Static/LoadState.asm",
+          "sha256": "5a8c6fc93f6574b60ef72e15769a66968f182259129069a651cdb7bf7da725bc",
+          "bytes": 5402,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Static/LoadState.asm"
+        },
+        {
+          "path": "Online/Static/SaveState.asm",
+          "sha256": "541dc14b20c5acdb97c6f744d70bce3b440c8ba656afcf311fba57b03e1db4d8",
+          "bytes": 2163,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/Online/Static/SaveState.asm"
+        },
+        {
+          "path": "netplay.json",
+          "sha256": "10c06ec0cc824fa412187d30cbd794aa8e79373f78f2fbdd24df9c1a11dc8c0e",
+          "bytes": 16054,
+          "url": "https://github.com/project-slippi/slippi-ssbm-asm/blob/fcf47f10dc244152c2ebaa3a9dec142ea42243b7/netplay.json"
+        }
+      ]
+    },
+    {
+      "repo": "slippi-launcher",
+      "branch": "main",
+      "sha": "309e99760bea333fe6665d8d9fa06dab540ff377",
+      "commitDate": "2026-09-08T03:16:49Z",
+      "license": {
+        "key": "gpl-3.0",
+        "name": "GNU General Public License v3.0",
+        "spdx_id": "GPL-3.0",
+        "url": "https://api.github.com/licenses/gpl-3.0",
+        "node_id": "MDc6TGljZW5zZTk="
+      },
+      "downloadedFiles": [
+        {
+          "path": "LICENSE",
+          "sha256": "3743f7a4ab5132f7dbeb88e68097657ab8374e74b46b6402efbe80ccfb1b6488",
+          "bytes": 35128,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/LICENSE"
+        },
+        {
+          "path": "package.json",
+          "sha256": "a69b1f25084107580c7f35b9c629cc0cef049db1007ee2f8b37725333cecba9b",
+          "bytes": 8633,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/package.json"
+        },
+        {
+          "path": "src/common/constants.ts",
+          "sha256": "323722e3492e8b9d6c77da26d8a910d393981c302542b7ebc0ebd7bf52394733",
+          "bytes": 503,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/common/constants.ts"
+        },
+        {
+          "path": "src/dolphin/install/download.ts",
+          "sha256": "23b10557a79ca6850a9825804a93cc70f9fe1043a6890236c2fa4745cdf813a2",
+          "bytes": 827,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/install/download.ts"
+        },
+        {
+          "path": "src/dolphin/install/execute_command.ts",
+          "sha256": "bf6f47f8a0d3547d9412d337e2f14a89c5afe72061f556d84750c5f2cee92b0c",
+          "bytes": 1091,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/install/execute_command.ts"
+        },
+        {
+          "path": "src/dolphin/install/extract_dmg.ts",
+          "sha256": "0c851d52f3ee31ff0d290e6c964277f84ff41c0d815eeaa6b6900726d7894d17",
+          "bytes": 1543,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/install/extract_dmg.ts"
+        },
+        {
+          "path": "src/dolphin/install/fetch_latest_version.ts",
+          "sha256": "cfc3718992a4d2cd72d522b18f0b59e79c1a5ce8af1b51bb1477fd2ac651e731",
+          "bytes": 3070,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/install/fetch_latest_version.ts"
+        },
+        {
+          "path": "src/dolphin/install/ishiiruka_installation.ts",
+          "sha256": "3a42af315d7f14e0c98511ff8321858cf80d8a46c5e9fa237f1022394cea57e5",
+          "bytes": 11071,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/install/ishiiruka_installation.ts"
+        },
+        {
+          "path": "src/dolphin/install/linux.ts",
+          "sha256": "21df2c8d3f467dfb9369d9e387fd7e34d7d348bdf7e9971397b410d0b9d88295",
+          "bytes": 1144,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/install/linux.ts"
+        },
+        {
+          "path": "src/dolphin/install/macos.ts",
+          "sha256": "e6beda273747cb88f73bcb4d99762cc7ac74c94a2d6ff853b4f0a813ae0af169",
+          "bytes": 2786,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/install/macos.ts"
+        },
+        {
+          "path": "src/dolphin/install/mainline_installation.ts",
+          "sha256": "5bd9b68e25cdc14b1675c3dac77a0d8a71d0d9576a66810a5030ae45a6330f93",
+          "bytes": 11067,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/install/mainline_installation.ts"
+        },
+        {
+          "path": "src/dolphin/install/windows.ts",
+          "sha256": "a2277171545a16f788ae649940d761b0af49343544f39c8af776d14a7bfdf36f",
+          "bytes": 738,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/install/windows.ts"
+        },
+        {
+          "path": "src/dolphin/manager.ts",
+          "sha256": "a93b658de728c2ac13139ed8902d57cacaad78b8f781df62ca753b739de2e259",
+          "bytes": 15616,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/manager.ts"
+        },
+        {
+          "path": "src/dolphin/types.ts",
+          "sha256": "6ce6f040be431481be89ccd9d00861d3ee389ebad983d87d5db795a63c289e38",
+          "bytes": 5405,
+          "url": "https://github.com/project-slippi/slippi-launcher/blob/309e99760bea333fe6665d8d9fa06dab540ff377/src/dolphin/types.ts"
+        }
+      ]
+    }
+  ],
+  "yougameSdk": {
+    "url": "https://yougame.co/sdk.js",
+    "sha256": "f700ac80dee61950cdb6868cb9d22ddffbbf488b67433f032129fda33edf5c9d",
+    "bytes": 185505
+  },
+  "workspace": {
+    "head": "c88f3e3bbad16fc0ecbe34bce3d6c4e8ac0c92fb",
+    "hasPreexistingUncommittedChanges": true,
+    "comparedFiles": [
+      {
+        "path": "yougame/src/rollback-session.mjs",
+        "sha256": "0ba2abffdf54c7efdfde11836bc3d226751e26ab476cbf567945bef701d335c1"
+      },
+      {
+        "path": "yougame/src/rollback-engine.mjs",
+        "sha256": "1bdf846ee089f8d2c50f74ab64eea27a145f1842b9735f7908b0fcf19c8bc73c"
+      },
+      {
+        "path": "yougame/src/checkpoints.mjs",
+        "sha256": "3a54f8889e52b8f3490474ccf090f29f71b37651d19ef39d43995d08e09b8bbd"
+      },
+      {
+        "path": "yougame/src/engine.html",
+        "sha256": "c60989444b7ce5f19151a662e933ddc4c880b9fd2e2f8254579f9a3963178f45"
+      },
+      {
+        "path": "yougame/ROLLBACK.md",
+        "sha256": "a4ef705e45844e0f8cded619e21546f91c688d1c3b2c5049b5870c73de27a347"
+      },
+      {
+        "path": "melee/ROLLBACK.md",
+        "sha256": "8c39b5dd8f02df540bc5c2dd2f6346d26363b679a26802a15ed980d582c0e8d6"
+      },
+      {
+        "path": "melee/PORT-COMPARISON.md",
+        "sha256": "c34f241a6b838ff62a9e55b2fd5657329596103cafc14bb8816a48a9722b2750"
+      },
+      {
+        "path": "docs/rollback-performance-2026-09-09.md",
+        "sha256": "0b373ce24fe5931135c7f377ef31cc7d7acfbea0e5cba1d21ed7a2f29a424c12"
+      }
+    ]
+  },
+  "tests": {
+    "command": "YOUGAME_SDK_PATH=/tmp/opensmash-slippi-research/sdk.js node --test yougame/tests/rollback-session.test.mjs yougame/tests/checkpoints.test.mjs yougame/tests/page-compare.test.mjs",
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "scope": "Existing Node tests, exact page comparison, synthetic checkpoints, SDK with simulated transport/toy engines; no actual Melee/native engine run."
+  }
+}

@@ -61,13 +61,22 @@ test('speculative KO can be undone without submitting a ranked result',{skip:!sd
  }finally{p.close();}
 });
 
-test('a runtime failure stops both timelines and settles a draw, never a forfeit',{skip:!sdkPath},async()=>{
+test('a runtime failure stops both timelines and voids the round, never a forfeit',{skip:!sdkPath},async()=>{
  const p=setup({lag:0});try{
   p.engines[0].step=()=>{throw new Error('Native checkpoint failure');};
   for(let n=0;n<5;n++)p.tick();
   await Promise.resolve();await Promise.resolve();
   assert.ok(p.sessions.every(s=>s.closed));
-  assert.deepEqual(p.reports,[[{draw:true}],[{draw:true}]]);
+  assert.deepEqual(p.reports,[[{void:true}],[{void:true}]]);
   assert.ok(p.errors.some(e=>e.includes('Native checkpoint failure')));
+ }finally{p.close();}
+});
+
+test('delayed bundles from a previous game or round cannot change a live SDK timeline',{skip:!sdkPath},()=>{
+ const p=setup({lag:3});try{
+  for(let n=0;n<100;n++)p.tick();const s=p.sessions[0],before=s.frame;
+  // These frame numbers overlap the new timeline but belong to older scopes.
+  for(const scope of [[s.profile.protocol,1,0],[s.profile.protocol,0,1],['other-edition',1,1]])s.sync.receive('p1',{_ls:1,f:before+2,in:Array(8).fill([32768,80,80]),os:scope});
+  for(let n=0;n<100;n++)p.tick();assert.deepEqual(p.errors,[]);assert.equal(s.sync.desynced,false);const f=Math.min(...p.sessions.map(s=>s.frame))-MAX_ROLLBACK-3;assert.deepEqual(p.engines[0].history.get(f),p.engines[1].history.get(f));
  }finally{p.close();}
 });

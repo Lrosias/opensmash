@@ -70,10 +70,31 @@ test('X and Y can share Jump without releasing each other',()=>{
  const s=new TouchState();s.press(1,8);s.press(2,8);s.read();s.release(1);
  assert.deepEqual(s.read(),[8,0,0]);s.release(2);assert.deepEqual(s.read(),[0,0,0]);
 });
-test('diagonal travel is bounded, deadzone is neutral, cancellation releases all input',()=>{
- const s=new TouchState();s.move(2,2);const [,x,y]=s.read();assert.ok(Math.hypot(x,y)<=81);
+test('each diagonal axis is bounded, deadzone is neutral, cancellation releases all input',()=>{
+ const s=new TouchState();s.move(2,2);assert.deepEqual(s.read(),[0,80,-80]);
  s.move(.01,.01);assert.deepEqual(s.read(),[0,0,0]);
  s.press(7,0x2000);s.move(-1,0);s.clear();assert.deepEqual(s.read(),[0,0,0]);
+});
+test('outside-circle horizontal sweeps never amplify the vertical axis or arc upward',()=>{
+ for(const rotated of [false,true])for(const offset of [-.5,-.1,0,.1,.5]){
+  const s=new TouchState(),g=new TouchStick(),center={x:160,y:160},radius=40;
+  const point=x=>rotated?[center.x-offset*radius,center.y+x*radius]:[center.x+x*radius,center.y+offset*radius];
+  s.move(...g.start(...point(3),radius,rotated,center));
+  const vertical=s.read()[2];
+  for(const x of [3,2,1,.5,0,-.5,-1,-2,-3,0,3]){
+   s.move(...g.move(...point(x)));
+   assert.deepEqual(s.read(),[0,Math.round(Math.max(-1,Math.min(1,x))*80),vertical]);
+  }
+ }
+});
+test('outside-circle taps reset to neutral before the next opposite tap',()=>{
+ const s=new TouchState(),g=new TouchStick(),center={x:160,y:160};
+ for(const x of [280,40,280,40]){
+  s.move(...g.start(x,156,40,false,center));
+  assert.deepEqual(s.read(),[0,x>160?80:-80,0]);
+  g.end();s.center();assert.deepEqual(s.read(),[0,0,0]);
+  s.move(...g.move(x,100));assert.deepEqual(s.read(),[0,0,0]);
+ }
 });
 test('touch goes through the same online controller filter as keyboard and gamepad',()=>{
  const s=new TouchState();s.press(1,0x1000|0x8000);s.move(1,0);

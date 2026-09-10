@@ -11,10 +11,10 @@ const say=s=>{report.textContent+='\n'+s;};
 window.openSmashAttachEngine=win=>{
  const c=clients.find(c=>c.frame.contentWindow===win);
  return {menuState:()=>({phase:0}),menuAction(){},beforeTick:()=>true,afterTick(...s){c.state=s;},
- async ready(raw){try{c.engine=await prepareRollbackEngine(raw,{getState:()=>c.state,setPads:p=>{c.pads=p;}});if(++ready===2){run.disabled=false;report.textContent='Both native battles ready';}}catch(e){errors.push(e.message);say('FAIL: '+e.stack);}},
+ async ready(raw){try{if(typeof raw.comparePage!=='function')throw new Error('Wasm checkpoint helper did not load');c.engine=await prepareRollbackEngine(raw,{getState:()=>c.state,setPads:p=>{c.pads=p;}});if(++ready===2){run.disabled=false;report.textContent='Both native battles ready';}}catch(e){errors.push(e.message);say('FAIL: '+e.stack);}},
  error(e){errors.push(e);say('ENGINE ERROR: '+e);},readPorts(ptr,H){for(let i=0;i<4;i++){const b=(ptr>>2)+i*4,p=c.pads[i];H[b]=p?2:1;H[b+1]=p?.[0]||0;H[b+2]=p?.[1]||0;H[b+3]=p?.[2]||0;}}};
 };
-for(let i=0;i<2;i++){const frame=document.createElement('iframe');clients.push({frame,pads:[[0,0,0],[0,0,0]]});frame.src='../dist/engine/index.html?SSB64_YOUGAME=1&SSB64_YOUGAME_ROLLBACK=1&SSB64_YOUGAME_SEED=1234&SSB64_BOOT_BATTLE=0,8,6,0&SSB64_BOOT_HUMANS=2&SSB64_BOOT_SLOTS=hhoo&SSB64_STOCKS=3&SSB64_VS_INTRO=0';game.append(frame);}
+for(let i=0;i<2;i++){const frame=document.createElement('iframe');clients.push({frame,pads:[[0,0,0],[0,0,0]]});frame.src='../dist/engine/index.html?SSB64_YOUGAME_MUTE=1&SSB64_YOUGAME=1&SSB64_YOUGAME_ROLLBACK=1&SSB64_YOUGAME_SEED=1234&SSB64_BOOT_BATTLE=0,8,6,0&SSB64_BOOT_HUMANS=2&SSB64_BOOT_SLOTS=hhoo&SSB64_STOCKS=3&SSB64_VS_INTRO=0';game.append(frame);}
 run.onclick=async()=>{
  run.disabled=true;report.textContent='Running native rollback scenario…';
  try{

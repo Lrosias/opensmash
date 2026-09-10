@@ -1,0 +1,2 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE);
+(async()=>{const b=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox']});try{const p=await b.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});await p.goto('http://127.0.0.1:4202/remix/thumbnail.html');await p.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth));await p.screenshot({path:'remix/media/thumbnail-gameplay.png'});}finally{await b.close()}})();

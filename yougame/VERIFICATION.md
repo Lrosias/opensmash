@@ -188,3 +188,33 @@ flow are implemented but were not exercised with separate signed-in accounts thi
 - MCP build check and staged upload check both returned ready. The staged HTTPS origin loaded the actual native menu without a ROM prompt.
 - Build 0fab2d72406e99b5, 42 files, ZIP 16,148,955 bytes. Published using update_game as v1.7; existing listing media and URL preserved.
 - Transport tests use two engines in one desktop browser with the real SDK algorithm and a simulated relay. Separate-account live play and physical mobile performance remain unverified.
+
+
+### Friends lobby integration (September 8, 2026; published as v1.8)
+
+- Confirmed on published v1.7 that Online → Friends → choose fighter → Start opens
+  the real signed-in YouGame friend picker. Cancelled without sending an invitation.
+  Selecting Friends alone still opens character selection; this flow is unchanged.
+- Enabled YouGame's SDK lobby/Ready/result cards for Friends and incoming invitations.
+  Removed automatic Ready from that path and disabled public fill for private hosts.
+  Casual/ranked retain the original native matchmaking and rematch presentation.
+- Pause native menu input behind private lobby cards, focus the SDK window when
+  returning to the private result flow, and close stale rooms after cancellation.
+- Added four integration tests exercising the actual app's menu bridge with an SDK
+  boundary fixture: private host, invite recipient, casual/ranked, cancellation/stale events.
+  All 35 tests passed with the current public SDK, including rollback tests; syntax
+  and whitespace checks passed. MCP check_build returned ready.
+- Real SDK dev-room browser test with two actual Wasm clients: room private, fill=false,
+  full=false, zero ready initially; both clients seated with full=true and zero ready;
+  host Ready produced one ready and playing=false; guest Ready started both native
+  battles with the same Luigi/Mario roster and seed (1879533839). Closed test tabs.
+  Local fixture buttons/room diagnostics were outside the package.
+- Candidate build 9a8d3115150547c6, 42 files, ZIP 16,169,578 bytes; SHA256
+  32457f196442c9086eff29d558655de625e968869e40e27d87d082e844951cd1.
+- Upload blocked by automatic approval review. It rejected the export as lacking
+  authorization for this specific upload; a reconsideration citing prior uploads
+  was also rejected. Nothing staged or published; live v1.7 remains unchanged.
+
+- After explicit user approval (“yes go”), uploaded the unchanged tested ZIP and
+  published via MCP update_game as v1.8, minor, zero notifications. Upload ID
+  f9030ddb66294964b696f67a4fb3d9e4; staged build verdict ready.

@@ -1,0 +1,5 @@
+<!doctype html><html><body style="margin:0;background:black"><iframe id="game" style="width:960px;height:720px;border:0"></iframe><script>
+window.pads=[[0,0,0]];window.events=[];
+window.openSmashAttachEngine=()=>({menuState:()=>({phase:4,text:'YOU WIN'}),menuAction(...e){events.push(e)},ready(e){window.driver=e;},beforeTick:()=>true,afterTick(){},error(e){window.error=String(e)},readPorts(ptr,H){for(let i=0;i<4;i++){let b=(ptr>>2)+4*i,p=pads[i];H[b]=p?2:1;H[b+1]=p?.[0]||0;H[b+2]=p?.[1]||0;H[b+3]=p?.[2]||0;}}});
+game.src='./engine/index.html?SSB64_REMIX_MAIN=1&SSB64_START_SCENE=16&SSB64_YOUGAME_ROLLBACK=1&SSB64_LOG_CONSOLE=1';
+</script></body></html>

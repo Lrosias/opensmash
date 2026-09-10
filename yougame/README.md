@@ -1,3 +1,9 @@
+# OpenSmash64 main build
+
+The current main build is the curated Remix edition: 34 fighters and eight stages.
+See [remix/MAIN.md](../remix/MAIN.md) for current scope, rules, limitations and build instructions.
+Earlier 12-fighter and Dream Land-only descriptions below document the original edition.
+
 # OpenSmash for YouGame
 
 This is a static browser edition of [OpenSmash](https://github.com/turtlesoupy/opensmash)
@@ -23,10 +29,14 @@ assets from the same game build when a match launches.
 - Only two humans enter online matches. The original 1P, training, and local VS menus remain.
 - Online uses existing controller icons, menu-tab sprites, backgrounds, and font glyphs.
   There is no HTML launcher, replacement fighter artwork, or external match toolbar.
-- Pressing Start after fighter selection starts matchmaking and marks the player ready.
-  Results and Rematch/Back appear in the native Online menu; YouGame handles the ladder
-  and result settlement with its overlays disabled. Friends opens the platform friend picker.
-  Invite links open the original fighter selection automatically.
+- In Casual/Ranked, Start after fighter selection starts matchmaking and marks the player
+  ready. Results and Rematch/Back appear in the native Online menu; YouGame handles
+  the ladder and result settlement.
+- In Friends, choose a fighter and press Start to open YouGame's real friend picker.
+  Choose a friend or Copy invite link to create the room. YouGame then shows its lobby,
+  Ready, invite-link and result/Continue cards. Private hosts disable public queue fill;
+  nobody is automatically marked ready. Invite links open original fighter selection
+  automatically, then Start joins the existing room. Native menus pause behind the lobby.
 - Leaving an active match forfeits. A connection failure during loading returns to the
   menu. A detected desync or simulation failure ends the active match as a draw.
 
@@ -69,10 +79,13 @@ are not part of this static edition. They remain in `web-prototype/` and `pipeli
 
 Phones automatically show a thumbstick on the left and action buttons on the right.
 The game keeps its original 4:3 picture between the controls, accounting for display
-cutouts and home-indicator safe areas. Landscape starts automatically: the game attempts
-native orientation lock and immediately rotates its play surface if the player viewport
-is portrait. There is no rotation prompt or input gate. Pointer directions and safe areas
-are mapped into the rotated surface. Browser toolbars are handled on viewport resize.
+cutouts and home-indicator safe areas. Landscape starts automatically: the game rotates
+its play surface if the player viewport is portrait, leaving native orientation and
+fullscreen to the host. There is no rotation prompt or input gate. Pointer directions
+and safe areas follow the same surface rotation. Orientation, fullscreen and viewport
+changes release held controls and refresh the layout as the browser resizes.
+Sizing uses the document viewport, avoiding inflated `innerWidth` values from
+the previous landscape surface when rotating back to portrait.
 
 - Native menus: stick to navigate/move the fighter hand, A to select, B to go back,
   and Start to confirm the chosen fighter.
@@ -84,10 +97,9 @@ are mapped into the rotated surface. Browser toolbars are handled on viewport re
 - A large green A anchors the right-thumb cluster, with the smaller buttons following an arc
   from Special lower-left through Jump and Grab to Shield above A. Start (or Hold to leave
   online) is top-right in the black margin.
-- In menus, each stick contact starts neutral at the thumb’s landing point, preventing
-  an off-center touch from sending the opposite direction before a flick. During fights,
-  the visible center stays the analog origin and edge contacts immediately produce
-  movement, preserving dash initiation without requiring an extra drag.
+- In menus, fighter/stage selection, and fights, the visible stick center is the
+  analog origin. Contacts outside the circle immediately produce movement without
+  requiring an extra drag, with the same expanded hit area on every screen.
 - The movement hit area spans the left side below the top 64 pixels and extends
   64 pixels beyond the movement gutter, including space outside the visible circle.
   The circle and game picture are inset a further 32–48 pixels from the left edge
@@ -96,6 +108,9 @@ are mapped into the rotated surface. Browser toolbars are handled on viewport re
   area; the visible circle still defines analog center and travel during fights.
 - Stick axes are not latched: release, cancellation, and the center deadzone immediately
   yield zero. Button taps still survive between simulation samples.
+- Stick travel and its thumb indicator clamp each axis independently, with a small
+  deadzone on each axis. Horizontal sweeps outside the circle keep a constant vertical
+  input instead of curving upward across the center; each new touch starts fresh.
 - Desktop uses the keyboard layout above and standard gamepad controls. `?touch=1` enables the
   controller on desktop for layout testing.
 
@@ -180,6 +195,21 @@ For browser-bridge-only changes after building the engine:
 node yougame/build.mjs
 node --test yougame/tests/*.test.mjs
 ```
+
+Rollback page comparison uses the optional `src/page-compare.wasm` helper, built
+from `engine/page-compare.c` with `node yougame/build-page-compare.mjs` (also run by
+`build.sh`). It imports the existing engine memory and uses scalar integer loads;
+no SIMD or threading requirement. A 32 KiB engine allocation supplies an aligned
+16 KiB scratch page excluded from checkpoints. Allocation metadata remains in
+history. Failed helper loading falls back to the exact JavaScript comparison.
+The checkpoint bookkeeping uses a byte mask instead of rebuilding a large Set.
+
+`tests/performance.mjs` benchmarks the packaged engine with deterministic inputs,
+separating simulation/render submission from snapshot time. Set `PERF_PACED=1`
+and `YOUGAME_SDK_PATH` to a local SDK copy to use YouGame's actual 60 Hz scheduler.
+`tests/verify-rollback.mjs` runs the actual-engine rewind, delayed-pair, and KO
+fixtures after `tests/extract-sdk.mjs`. Both runners serve only runtime assets
+and explicit fixtures on loopback, and accept `PLAYWRIGHT_PATH`.
 
 Packaging selects runtime files, including the extracted `BattleShip.o2r` game archive.
 It excludes raw ROM images, the browser extractor, nested ZIPs, and server scripts.

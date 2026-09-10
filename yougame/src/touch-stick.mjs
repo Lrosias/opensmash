@@ -1,5 +1,5 @@
-// Menus use the contact as neutral; fights use the visible stick center so an
-// edge contact immediately drives movement. Undo the portrait surface rotation.
+// A supplied visible center makes edge contacts immediately drive movement.
+// Undo the portrait surface rotation before applying the stick axes.
 export class TouchStick {
  start(x,y,radius,rotated=false,center=null){
   this.origin={x:center?.x??x,y:center?.y??y,radius,rotated};

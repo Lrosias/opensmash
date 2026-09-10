@@ -1,4 +1,10 @@
-# OpenSmash
+# OpenSmash64
+
+The main browser build now includes 34 selected fighters and eight stages.
+See [the Remix build notes](remix/MAIN.md) for the roster, community stage sources,
+build instructions and current moveset limitations.
+
+# OpenSmash tooling
 
 **YouGame edition:** ranked and casual online 1v1, a static upload build, and engine
 integration notes are in [yougame/README.md](yougame/README.md).

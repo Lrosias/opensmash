@@ -1,0 +1,185 @@
+{
+  "status": "in_progress",
+  "published_version": "2.1 (does not include these special-move ports)",
+  "fighters": [
+    {
+      "id": 0,
+      "name": "Mario",
+      "specials": "native_base"
+    },
+    {
+      "id": 1,
+      "name": "Fox",
+      "specials": "native_base"
+    },
+    {
+      "id": 2,
+      "name": "Donkey Kong",
+      "specials": "native_base"
+    },
+    {
+      "id": 3,
+      "name": "Samus",
+      "specials": "native_base"
+    },
+    {
+      "id": 4,
+      "name": "Luigi",
+      "specials": "native_base"
+    },
+    {
+      "id": 5,
+      "name": "Link",
+      "specials": "native_base"
+    },
+    {
+      "id": 6,
+      "name": "Yoshi",
+      "specials": "native_base"
+    },
+    {
+      "id": 7,
+      "name": "Captain Falcon",
+      "specials": "native_base"
+    },
+    {
+      "id": 8,
+      "name": "Kirby",
+      "specials": "native_base"
+    },
+    {
+      "id": 9,
+      "name": "Pikachu",
+      "specials": "native_base"
+    },
+    {
+      "id": 10,
+      "name": "Jigglypuff",
+      "specials": "native_base"
+    },
+    {
+      "id": 11,
+      "name": "Ness",
+      "specials": "native_base"
+    },
+    {
+      "id": 29,
+      "name": "Falco",
+      "specials": "ported_in_validation"
+    },
+    {
+      "id": 30,
+      "name": "Ganondorf",
+      "specials": "ported_in_validation"
+    },
+    {
+      "id": 31,
+      "name": "Young Link",
+      "specials": "ported_in_validation"
+    },
+    {
+      "id": 32,
+      "name": "Dr. Mario",
+      "specials": "ported_in_validation"
+    },
+    {
+      "id": 33,
+      "name": "Wario",
+      "specials": "not_ported"
+    },
+    {
+      "id": 52,
+      "name": "Bowser",
+      "specials": "not_ported"
+    },
+    {
+      "id": 55,
+      "name": "Wolf",
+      "specials": "not_ported"
+    },
+    {
+      "id": 56,
+      "name": "Conker",
+      "specials": "not_ported"
+    },
+    {
+      "id": 57,
+      "name": "Mewtwo",
+      "specials": "not_ported"
+    },
+    {
+      "id": 58,
+      "name": "Marth",
+      "specials": "ported_in_validation"
+    },
+    {
+      "id": 59,
+      "name": "Sonic",
+      "specials": "not_ported"
+    },
+    {
+      "id": 62,
+      "name": "Sheik",
+      "specials": "not_ported"
+    },
+    {
+      "id": 63,
+      "name": "Marina",
+      "specials": "not_ported"
+    },
+    {
+      "id": 64,
+      "name": "Dedede",
+      "specials": "not_ported"
+    },
+    {
+      "id": 65,
+      "name": "Goemon",
+      "specials": "not_ported"
+    },
+    {
+      "id": 68,
+      "name": "Banjo & Kazooie",
+      "specials": "not_ported"
+    },
+    {
+      "id": 73,
+      "name": "Peach",
+      "specials": "not_ported"
+    },
+    {
+      "id": 72,
+      "name": "Crash",
+      "specials": "not_ported"
+    },
+    {
+      "id": 34,
+      "name": "Dark Samus",
+      "specials": "not_ported"
+    },
+    {
+      "id": 38,
+      "name": "Lucas",
+      "specials": "ported_in_validation"
+    },
+    {
+      "id": 74,
+      "name": "Roy",
+      "specials": "ported_in_validation"
+    },
+    {
+      "id": 75,
+      "name": "Dr. Luigi",
+      "specials": "ported_in_validation"
+    }
+  ],
+  "remaining": [
+    "Port and test all other imported specials",
+    "Aerial, ledge, charge, reflector/absorber and interrupt coverage",
+    "Special attack sounds and effects",
+    "Full-room online results/rematch test",
+    "Local multi-controller setup",
+    "Throw and character-specific mechanic audit",
+    "Full roster regression before publishing"
+  ]
+}

@@ -102,6 +102,7 @@ web-prototype/asset-sources/n64-console-sketchfab-recovered.glb
 /yougame/dist/
 /yougame/*.zip
 /yougame/test-results/
+/melee/test-results/
 /yougame/build-check.json
 
 # Generated local SDK test fixture

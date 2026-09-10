@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smash Remix · Open Smash</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#10151e;color:#e9edf6;font:15px system-ui;height:100dvh;display:flex;flex-direction:column}header{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid #293344}h1{font-size:20px;margin:0}header small{color:#aebcd1;font-size:12px}button,select{background:#253958;color:white;border:1px solid #45608a;border-radius:6px;padding:8px 12px;font:inherit}button{cursor:pointer}label{font-size:12px;color:#b7c3d6}select{max-width:240px}nav{display:flex;gap:10px;align-items:center}main{flex:1;min-height:0;display:grid;place-items:center;background:#000}iframe{border:0;width:100%;height:100%}footer{padding:10px 20px;display:flex;gap:24px;justify-content:space-between;align-items:center;font-size:12px;color:#b7c3d6}p{margin:0}kbd{color:white}#error{color:#ff9696}#details{max-width:480px}@media(max-width:700px){footer{flex-direction:column;gap:5px;align-items:start}header{padding:8px 12px}h1{font-size:17px}select{max-width:190px}nav{gap:5px}}
+</style></head><body>
+<header><div><h1>Smash Remix <small>/ Open Smash · local prototype</small></h1><small id="count">Loading roster…</small></div><nav><label>Fighter <select id="fighter" aria-label="Fighter"></select></label><label>Opponent <select id="mode" aria-label="Opponent"><option value="cpu">Kirby · CPU</option><option value="practice">Kirby · practice</option></select></label><button id="restart">Play / restart</button></nav></header>
+<main id="game"></main>
+<footer><p><kbd>WASD / arrows</kbd> move · <kbd>M</kbd> attack · <kbd>P / Space</kbd> jump · <kbd>Q</kbd> shield · <kbd>Enter</kbd> pause<br>Direction + attack for tilts, smashes and aerials. Gamepads supported.</p><p id="details"></p><span id="error" role="status"></span></footer>
+<script type="module" src="demo.mjs"></script></body></html>

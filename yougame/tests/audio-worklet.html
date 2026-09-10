@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8"><title>OpenSmash muted audio worklet verification</title>
+<button id="run">Verify audio thread (muted)</button><pre id="report">Silent test. Audio processing remains active.</pre>
+<script type="module">
+import {createAudioOutput} from '../src/audio-output.mjs';
+import {C} from '../src/audio-ring.mjs';
+run.onclick=async()=>{run.disabled=true;let audio;
+ try{
+  audio=await createAudioOutput({muted:true});if(!audio)throw new Error('AudioWorklet unavailable');
+  if(!audio.configure(32000,2))throw new Error('Configuration failed');
+  await audio.context.resume();
+  const pcm=new Int16Array(16000);for(let i=0;i<8000;i++){pcm[i*2]=pcm[i*2+1]=Math.round(Math.sin(i*.1)*1000);}
+  audio.ring.push(pcm);const before=audio.buffered();
+  const start=performance.now();while(performance.now()-start<60){}
+  const after=audio.buffered(),consumed=before-after;
+  if(consumed<300)throw new Error('Audio did not advance while the main thread was blocked: '+consumed);
+  audio.flush();if(audio.buffered()!==0)throw new Error('Flush retained old audio');
+  report.textContent='PASS: AudioWorklet consumed '+consumed+' source frames during a 60 ms main-thread block; rollback flush cleared the queue. Output stayed muted. '+JSON.stringify(audio.stats());
+ }catch(e){report.textContent='FAIL: '+e.message;}finally{await audio?.close();run.disabled=false;}
+};
+</script>

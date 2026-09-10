@@ -1,0 +1,32 @@
+import {ACTIVE_PROFILE} from './game-profile.mjs';
+import {FIGHTER_NAMES,STAGE_NAMES,ratingSummary} from './competitive-set.mjs';
+export function createCompetitiveUI({onQueue,onBack,onPick,profile=ACTIVE_PROFILE}){
+ const root=document.createElement('section');root.id='competitive';root.hidden=true;root.setAttribute('aria-label','Competitive online');document.getElementById('play-surface').append(root);
+ let selected=0,lastView=null;
+ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
+ const button=(text,action,cls)=>{const b=el('button',text,cls);b.type='button';b.onclick=action;return b;};
+ function base(kicker,title,subtitle){root.replaceChildren();root.hidden=false;document.body.classList.add('competitive-open');const card=el('div',null,'competitive-card');root.append(card);card.append(el('p',kicker,'competitive-kicker'),el('h1',title),el('p',subtitle,'competitive-subtitle'));return card;}
+ function grid(card,locked=false){const g=el('div',null,'fighter-grid');g.setAttribute('role','group');g.setAttribute('aria-label','Fighters');for(const id of profile.fighters){const b=button(FIGHTER_NAMES[id],()=>{selected=id;for(const c of g.children)c.setAttribute('aria-pressed',String(Number(c.dataset.fighter)===id));});b.dataset.fighter=id;b.setAttribute('aria-pressed',String(id===selected));b.disabled=locked;g.append(b);}card.append(g);}
+ function setup(fighter=selected){selected=fighter;lastView=null;const card=base(`${profile.title.toUpperCase()} / ONLINE`,'Select your fighter','Lock your first-game character, then choose how to play.');grid(card);const modes=el('div',null,'queue-grid');
+ for(const [queue,title,copy] of [['casual','Casual','One game · random stage rotation'],['ranked','Ranked','Best of three · Dream Land'],['friends','Friends','Invite a friend · casual rules']]){const b=button('',()=>onQueue(queue,selected),'queue-card');b.append(el('strong',title),el('span',copy));modes.append(b);}card.append(modes,el('p',`${profile.title} rules · ${profile.stocks} stocks · ${profile.minutes} minutes · no items. Ranked uses ${profile.fighters.length} fighters.`,'rules-note'),el('p','uGames handles matchmaking, Ready, results and Continue. Your ranked ladder updates once per set; casual ratings stay hidden.','rules-note'),button('Back to local play',onBack,'quiet'));
+ }
+ function show(view,players=[]){lastView=view;if(view.phase==='playing'){hide();return;}const names=players.map((p,i)=>p.name||`Player ${i+1}`),own=view.turn===view.seat;
+ const titles={connecting:'Connecting the set',confirming:'Confirming game result',counterpick:own?'Your character counterpick':'Opponent is choosing',replay:'Tie · replaying the game',complete:'Set complete'};
+ const card=base(view.ranked?'RANKED / BEST OF THREE':'CASUAL / ONE GAME',titles[view.phase]||'Preparing game',view.phase==='counterpick'?'The previous winner locks first. The losing player chooses second.':'Both players must agree before the set advances.');
+ const score=el('div',null,'set-score');for(let i=0;i<2;i++){const p=el('div');p.append(el('span',`${names[i]}${i===view.seat?' · YOU':''}`),el('strong',String(view.wins[i])),el('small',FIGHTER_NAMES[view.fighters[i]]||'Selecting'));score.append(p);}card.append(score,el('p',`Game ${view.game} · ${STAGE_NAMES[view.stage]}`,'stage-label'));
+ if(view.ranked)card.append(el('p','Dream Land is the only ranked stage. No strikes or stage bans are needed.','rules-note'));
+ if(view.phase==='counterpick'){selected=view.fighters[view.seat];grid(card,!own);const lock=button('Lock fighter',()=>onPick(selected),'primary');lock.disabled=!own;card.append(lock);}
+ if(view.history.length)card.append(el('p',view.history.map(g=>`G${g.game}: ${g.winner===2?'Tie':names[g.winner]+' won'} on ${STAGE_NAMES[g.stage]}`).join(' · '),'rules-note'));
+ }
+ function result(event,view){const card=base('OPENSMASH 64 / RESULT',event.void?'Set void':event.draw?'Draw':event.won?'Set won':'Set lost','Use Continue in the uGames result card to play again.');if(view)card.append(el('p',view.wins.join(' — '),'result-score'));const rank=ratingSummary(event);if(rank)card.append(el('p',rank,'rank-line'));card.append(el('p','Your fighter stays selected for the next set. To change, leave through uGames and choose again.','rules-note'));}
+ function notice(message){const p=el('p',message,'competitive-notice');p.setAttribute('role','status');root.querySelector('.competitive-card')?.prepend(p);}
+ function hide(){root.hidden=true;document.body.classList.remove('competitive-open');}
+ // Reserve both fallback corners until the host's measured insets are ready.
+ function layout(){const l=window.YouGame?.ui?.getLayout?.(document.getElementById('play-surface'));const i=l?.insets||{};root.style.setProperty('--comp-top',`${Math.max(80,Number(i.top)||0)}px`);root.style.setProperty('--comp-bottom',`${Math.max(76,Number(i.bottom)||0)}px`);root.style.setProperty('--comp-left',`${Math.max(20,Number(i.left)||0)}px`);root.style.setProperty('--comp-right',`${Math.max(20,Number(i.right)||0)}px`);}
+ window.YouGame?.ui?.onChange?.(layout);window.addEventListener('resize',layout);layout();
+ const focusMove=direction=>{const buttons=[...root.querySelectorAll('button:not(:disabled)')];if(!buttons.length)return;const focused=document.activeElement;const at=buttons.indexOf(focused);buttons[at<0?(direction>0?0:buttons.length-1):(at+direction+buttons.length)%buttons.length].focus();};
+ root.addEventListener('keydown',e=>{if(['ArrowRight','ArrowDown','ArrowLeft','ArrowUp'].includes(e.code)){e.preventDefault();focusMove(['ArrowLeft','ArrowUp'].includes(e.code)?-1:1);}});
+ let held=false;
+ function controller(){if(!root.hidden){const pad=[...(navigator.getGamepads?.()||[])].find(p=>p?.connected);const direction=pad&&(pad.buttons[13]?.pressed||pad.buttons[15]?.pressed||pad.axes[0]>.55||pad.axes[1]>.55)?1:pad&&(pad.buttons[12]?.pressed||pad.buttons[14]?.pressed||pad.axes[0]<-.55||pad.axes[1]<-.55)?-1:0;const select=pad?.buttons[0]?.pressed;const back=pad?.buttons[1]?.pressed;if(!held){if(direction)focusMove(direction);else if(select){if(root.contains(document.activeElement)&&document.activeElement.matches('button:not(:disabled)'))document.activeElement.click();else focusMove(1);}else if(back&&!lastView)onBack();}held=!!(direction||select||back);}else held=false;requestAnimationFrame(controller);}requestAnimationFrame(controller);
+ return {setup,show,result,hide,notice,get visible(){return !root.hidden;},get view(){return lastView;}};
+}

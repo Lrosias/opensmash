@@ -1,0 +1,46 @@
+<!doctype html><meta charset="utf-8"><title>Native competitive set acceptance</title><style>body{background:#141820;color:white;font:14px monospace}iframe{width:480px;height:360px;border:0}pre{white-space:pre-wrap}</style><pre id="report">Starting native set…</pre><div id="game"></div>
+<script type="module">
+import {makeSync,loops} from './.sdk-sync.mjs';
+import {CompetitiveSet} from '../src/competitive-set.mjs';
+import {RollbackDuelSession} from '../src/rollback-session.mjs';
+import {prepareRollbackEngine} from '../src/rollback-engine.mjs';
+import {PROFILES,engineParams} from '../src/game-profile.mjs';
+const edition=new URLSearchParams(location.search).get('edition')||'original',profile=PROFILES[edition];
+const clients=[null,null],sessions=[],sets=[],errors=[],wire=[],reports=[[],[]],events=[new Map(),new Map()],games=[[],[]],rollbacks=[[],[]];let now=0;
+const fail=e=>{errors.push(String(e));};
+const rooms=[0,1].map(i=>({me:'p'+i,players:[{id:'p0'},{id:'p1'}],playing:true,ranked:true,seed:1234,
+ on(e,h){if(!events[i].has(e))events[i].set(e,new Set());events[i].get(e).add(h);},off(e,h){events[i].get(e)?.delete(h);},rollback(o){return makeSync(this,o,true);},
+ send(data){if(data._ls&&data.f%7===0)return;wire.push({at:now+(data._ls?3+data.f%3:0),to:1-i,from:'p'+i,data:structuredClone(data)});if(data._ls&&data.f===20)wire.push({at:now+2800,to:1-i,from:'p'+i,data:structuredClone(data)});},
+ async finish(result){reports[i].push(result);}}));
+function deliver(){for(let j=0;j<wire.length;){const e=wire[j];if(e.at>now){j++;continue;}wire.splice(j,1);if(e.data._ls)rooms[e.to]._sync?.receive(e.from,e.data);else for(const h of [...(events[e.to].get('message')||[])])h(e);}}
+window.openSmashAttachEngine=win=>{
+ const c=clients.find(c=>c?.frame.contentWindow===win);
+ return{menuState:()=>({phase:0}),menuAction(){},beforeTick:()=>!c.session.closed,afterTick(...s){c.state=s;},
+ async ready(raw){try{c.engine=await prepareRollbackEngine(raw,{getState:()=>c.state,setPads:p=>{c.pads=p;},cancelled:()=>c.session.closed});if(c.engine)c.session.attach(c.engine);}catch(e){fail(e.stack);}},error:fail,
+ readPorts(ptr,H){for(let i=0;i<4;i++){const b=(ptr>>2)+i*4,p=c.pads[i];H[b]=p?2:1;H[b+1]=p?.[0]||0;H[b+2]=p?.[1]||0;H[b+3]=p?.[2]||0;}}};
+};
+try{
+for(let i=0;i<2;i++)sets[i]=new CompetitiveSet({room:rooms[i],round:1,fighter:i?8:0,profile,build:'acceptance',onError:fail,onGame:config=>{
+ if(sessions[i]){rollbacks[i].push(sessions[i].sync.rollbacks);sessions[i].destroy();clients[i].frame.contentWindow.Module?.yougameDispose?.();clients[i].frame.remove();}
+ games[i].push(config);const loser=config.game===2?0:1;
+ sessions[i]=new RollbackDuelSession({room:rooms[i],round:1,game:config.game,fighter:config.fighters[i],expectedFighters:config.fighters,stage:config.stage,seed:config.seed,profile,build:'acceptance',status(){},stop:fail,
+ readInput:()=>[0,i===loser?(i?80:-80):0,0],onGameResult:r=>{try{sets[i].completeGame(r);}catch(e){fail(e.stack);}},
+ launch:(fighters,session)=>{const frame=document.createElement('iframe');clients[i]={frame,session,pads:[[0,0,0],[0,0,0]]};const params=engineParams({battle:{fighters,stage:session.stage},seed:session.seed,profile});params.set('SSB64_YOUGAME_MUTE','1');frame.src=`/build/competitive-${edition}/engine/index.html?${params}`;game.append(frame);}
+ });clearInterval(sessions[i].timer);
+}});
+await Promise.resolve();
+const started=performance.now();
+for(now=0;now<20000&&!reports.every(r=>r.length);now++){
+ deliver();for(const s of sessions)if(!s.closed&&(!s.started||now%100===0)){s.lastHello=0;s.pulse();}deliver();for(const tick of loops)tick();deliver();await Promise.resolve();
+ for(const set of sets)if(set.phase==='counterpick'&&set.turn===set.seat)set.choose((profile.remix?[[58,74],[29,30]]:[[11,9],[1,5]])[set.game-2][set.seat]);
+ if(errors.length)throw Error(errors.join('; '));
+ if(now%10===0){report.textContent=JSON.stringify({edition,tick:now,games:games.map(g=>g.length),frames:sessions.map(s=>s.frame),rollbacks:sessions.map(s=>s.sync.rollbacks)});await new Promise(r=>setTimeout(r,sessions.every(s=>s.started)?0:10));}
+}
+for(let i=0;i<2;i++)rollbacks[i].push(sessions[i].sync.rollbacks);
+const expected=[{winner:'p0',scores:{p0:2,p1:1}}];
+if(reports.some(r=>JSON.stringify(r)!==JSON.stringify(expected)))throw Error('Unexpected settlement: '+JSON.stringify(reports));
+if(JSON.stringify(games[0])!==JSON.stringify(games[1])||games[0].length!==3)throw Error('Peers did not play the same three games');
+if(!rollbacks.every(a=>a.every(n=>n>0)))throw Error('Every game must exercise rollback: '+JSON.stringify(rollbacks));
+window.testResult={pass:true,edition,games:games[0],reports,rollbacks,seconds:(performance.now()-started)/1000};report.textContent='PASS '+JSON.stringify(window.testResult,null,2);
+}catch(e){window.testResult={pass:false,edition,error:e.stack,errors,games,reports};report.textContent='FAIL '+JSON.stringify(window.testResult,null,2);}finally{sets.forEach(s=>s.destroy());sessions.forEach(s=>s.destroy());}
+</script>

@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marth · Open Smash local prototype</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#10151e;color:#e9edf6;font:15px system-ui;height:100vh;display:flex;flex-direction:column}header{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-bottom:1px solid #293344}h1{font-size:21px;margin:0}header span{color:#aebcd1;font-size:13px}button{background:#253958;color:white;border:1px solid #45608a;border-radius:5px;padding:8px 13px;cursor:pointer}main{flex:1;min-height:0;display:grid;place-items:center;background:#000}iframe{border:0;width:100%;height:100%}footer{padding:12px 24px;display:flex;gap:24px;justify-content:space-between;align-items:center;font-size:13px;color:#b7c3d6}p{margin:0}kbd{color:white}#error{color:#ff9696}
+</style></head><body>
+<header><div><h1>Marth <span> / Open Smash · local prototype</span></h1></div><button id="restart">Restart match</button></header>
+<main id="game"></main>
+<footer><p><kbd>WASD / arrows</kbd> move · <kbd>M</kbd> attack · <kbd>P / Space</kbd> jump · <kbd>Q</kbd> shield · <kbd>Enter</kbd> pause<br>Direction + attack for tilts, smashes and aerials. Gamepads supported.</p><p>Original ROM model, animations and 14 normal attacks.<br>Special moves, voices and full menu integration are unfinished. <span id="error"></span></p></footer>
+<script type="module" src="demo.mjs"></script></body></html>

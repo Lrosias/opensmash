@@ -77,15 +77,15 @@ extern void *func_800269C0_275C0(u16);
 /* Native menu extension: every graphic is an existing game sprite. */
 int port_yougame_menu_context = 0;
 int port_yougame_queue_kind = 0;
-static void *menu_font;
+static void *menu_font, *menu_digits;
 static GObj *online_buttons[3], *online_words;
 static int online_cursor, online_wait, online_phase, online_revision;
 
 void port_yougame_menu_font(void) {
-    u32 ids[] = { llMNCommonFontsFileID };
-    void *files[1];
+    u32 ids[] = { llMNCommonFontsFileID, llMNCommonFileID };
+    void *files[2];
     lbRelocLoadFilesListed(ids, files);
-    menu_font = files[0];
+    menu_font = files[0];menu_digits=files[1];
 }
 void port_yougame_menu_text(GObj *gobj, const char *text, float x, float y, float scale, int color) {
     intptr_t letters[] = {
@@ -107,6 +107,13 @@ void port_yougame_menu_text(GObj *gobj, const char *text, float x, float y, floa
         int ch = *text;
         SObj *s;
         if (ch >= 'a' && ch <= 'z') ch -= 32;
+        if (ch >= '0' && ch <= '9') {
+            intptr_t digits[]={llMNCommonDigit0Sprite,llMNCommonDigit1Sprite,llMNCommonDigit2Sprite,llMNCommonDigit3Sprite,llMNCommonDigit4Sprite,llMNCommonDigit5Sprite,llMNCommonDigit6Sprite,llMNCommonDigit7Sprite,llMNCommonDigit8Sprite,llMNCommonDigit9Sprite};
+            s=lbCommonMakeSObjForGObj(gobj,lbRelocGetFileData(Sprite*,menu_digits,digits[ch-'0']));
+            s->pos.x=x;s->pos.y=y;s->sprite.attr=(s->sprite.attr&~SP_FASTCOPY)|SP_TRANSPARENT;
+            s->sprite.scalex=s->sprite.scaley=scale*0.6F;s->sprite.red=color>>16;s->sprite.green=color>>8;s->sprite.blue=color;
+            s->envcolor.r=s->envcolor.g=s->envcolor.b=0;x+=(s->sprite.width*0.6F+1)*scale;continue;
+        }
         if (ch < 'A' || ch > 'Z') { x += 4 * scale; continue; }
         s = lbCommonMakeSObjForGObj(gobj, lbRelocGetFileData(Sprite*, menu_font, letters[ch-'A']));
         s->pos.x = x; s->pos.y = y;

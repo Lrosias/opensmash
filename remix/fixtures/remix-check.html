@@ -1,0 +1,8 @@
+<!doctype html><html><body style="margin:0;background:#101827"><iframe id="game" style="width:960px;height:720px;border:0"></iframe><script type="module">
+import {NativeCheckpoints} from './checkpoints.mjs';
+window.pads=[[0,0,0],[0,0,0]];window.states=[];window.error=null;
+window.openSmashAttachEngine=()=>({menuState:()=>({phase:0}),menuAction(){},ready(e){window.driver=e;},beforeTick:()=>true,afterTick(...s){window.state=s;window.states.push(s)},error(e){window.error=String(e)},readPorts(ptr,H){for(let i=0;i<4;i++){let p=window.pads[i],b=(ptr>>2)+4*i;H[b]=p?2:1;H[b+1]=p?.[0]||0;H[b+2]=p?.[1]||0;H[b+3]=p?.[2]||0;}}});
+const q=new URLSearchParams(location.search);q.set('SSB64_REMIX_MAIN','1');q.set('SSB64_YOUGAME','1');q.set('SSB64_YOUGAME_ROLLBACK','1');q.set('SSB64_BOOT_HUMANS','2');q.set('SSB64_BOOT_SLOTS','hhoo');q.set('SSB64_VS_INTRO','0');q.set('SSB64_STOCKS','3');q.set('SSB64_BOOT_BATTLE',q.get('battle')||'58,74,6,0');game.src='./engine/index.html?'+q;
+window.probe=()=>{let w=game.contentWindow,p=w.Module._port_marth_probe()>>2;return Array.from(w.HEAP32.slice(p,p+32));};
+window.replay=()=>{const store=new NativeCheckpoints(driver,{window:64});let snapshot=store.save(0,state),expected=[];for(let i=0;i<40;i++){pads=[[32768,i<20?50:-50,0],[32768,0,0]];driver.step();expected.push(JSON.stringify(state));}state=store.load(snapshot);for(let i=0;i<40;i++){pads=[[32768,i<20?50:-50,0],[32768,0,0]];driver.step();if(JSON.stringify(state)!==expected[i])throw Error('replay differs '+i)}return true;};
+</script></body></html>

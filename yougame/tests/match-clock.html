@@ -1,0 +1,7 @@
+<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../src/style.css"><div id="play-surface"></div><button aria-label="GameCube adapter controls">GC adapter</button><div style="position:fixed;bottom:10px;left:10px;z-index:30"><button id="start">Start match</button><button id="advance">Advance simulation</button><button id="stall">Waiting</button><button id="end">Counterpick</button></div>
+<script type="module">
+import {createMatchClock} from '../src/match-clock.mjs';
+if(innerWidth<innerHeight){document.body.className='touch rotated';document.body.style.setProperty('--play-width',innerHeight+'px');document.body.style.setProperty('--play-height',innerWidth+'px');}
+window.YouGame={ui:{getLayout(surface){return{status:'ready',reserved:[{left:0,top:0,width:72,height:72},{left:surface.clientWidth-192,top:surface.clientHeight-60,width:192,height:60}]};},onChange(){}}};
+const clock=createMatchClock();start.onclick=()=>clock.show();advance.onclick=()=>clock.updateStatus('Round 1 · P1 · 29s remaining');stall.onclick=()=>clock.updateStatus('WAITING FOR OPPONENT');end.onclick=()=>clock.hide();
+</script>
