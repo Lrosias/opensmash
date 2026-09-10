@@ -2,7 +2,7 @@
 
 This follows the published keyboard release, Remix **v2.4**, upload
 `947a9b2bdfd047bdbf40c4b2f3d74a9c`. Publication of the native update remains
-blocked by a reproduced hosted native gameplay stall. Original v1.4 and Melee v1.8 are
+pending hosted acceptance of the reviewed Conker fix described below. Original v1.4 and Melee v1.8 are
 outside this update's publication scope.
 
 ## Candidate and source
@@ -14,7 +14,7 @@ engine overlay contains exactly 45 files, preserving the latest keyboard and
 competitive frontend. Staging verifies the keyboard baseline and permits only
 the named engine, presentation and adapter changes.
 
-Current integrated candidate: `build/competitive-remix-f265-v3`, compatibility
+The superseded integrated candidate `build/competitive-remix-f265-v3`, compatibility
 identity `2aa74cc9e29d1896`, upload `5b0a3dcffbdf431fbf83c5a94b37df32`,
 88 files. The first integrated candidate/upload
 `2eb8225d33304860bf6e473dfbf1b062` is superseded: review found a local-menu exit
@@ -23,6 +23,14 @@ problem and a phone result panel obscuring one fighter. The second upload
 the initial result request. Neither was published. V3 waits for two initialized
 native menu frames before requesting results, with a bounded initialization
 loop and cancellation checks across each asynchronous boundary.
+
+The current candidate is `build/competitive-remix-conker-v4`, compatibility
+`ae7e8aa1694e1cd0`, upload `83a161be757b48a8886840a1a6c36954`. Its 88-file inventory
+matches v3: 86 files are byte-identical, app.mjs changes only its compatibility
+identifier, and BattleShip.wasm contains the reviewed native fix. Static checks
+pass. The same upload helper/destination was approved after an initial automatic
+review rejection was resolved with this exact artifact comparison; no alternate
+upload route or publisher was used.
 
 Keyboard source `efc41d9` was integrated locally as `2fbe807`; the reviewed
 five-file adapter correction `a6baeff` was integrated as `7f3635c`. A follow-up
@@ -35,6 +43,19 @@ Existing base preparation and three patches already matched. The source-only
 [provenance supplement](../remix/provenance/f2654986e14088f5/README.md) records
 two generated-source differences; the frozen binary is not described as a
 byte-identical clean rebuild.
+
+The replacement native candidate `conker-f15ccb0f63fd` has manifest SHA256
+`3fa66b4ff978629ea5ccba43288474ac8ed4a396370eb42ba86f2752cc61b890` and Wasm SHA256
+`f15ccb0f63fdc02e8113239a273449a159a05a2049ac8c1606ec60b26a107c6e`.
+All 81 frozen files and sizes match; only Wasm differs among the engine files.
+The Conker source now uses the exact 13-entry ROM motion mapping. The previous
+fixed offset chose wrong animations and indexed beyond the 225-entry motion
+table, causing the hosted freeze. Independent review approved the source,
+pinned-ROM validator, negative cases and frozen runtime evidence. Build
+provenance remains an isolated relink against unchanged f265 objects, not a clean
+full rebuild. The final documented relink matches the tested JS/Wasm exactly.
+Source adoption and provenance are in
+`remix/provenance/conker-f15ccb0f63fd/ADOPTION.md`.
 
 ## Behavior
 
@@ -57,6 +78,20 @@ Phone presentation removes hidden touch-control gutters and uses a compact
 summary; host controls remain reserved.
 
 ## Validation and measured limits
+
+The original performance/set measurements below use the f265 native engine.
+The replacement's mapping-only delta has separate regression evidence: the
+frame-68 failure now completes 260 frames; 22 both-seat scenarios each pass
+220-frame restore/replay, including ground/air shots, charge/release,
+falling/landing and grenade success/failure. Adjacent recovery passes 130-frame
+replay; Kirby's copied move passes on ground and in air. A muted-output,
+sound-active charged-shot case verifies all 1,545 bank entries and 180-frame
+projectile replay. These do not replace exact hosted acceptance.
+
+The final v4 engine also passes all eight desktop/375px result cases and exact
+local-return input checks. Evidence is
+`yougame/test-results/native-results-conker-v4/verification.json`; maximum
+attached Wasm capacity is 384 MiB across two frames, not process RSS.
 
 - 113 unit tests pass against the actual deployed SDK SHA256
   `25aa37a75b1d36daa03156e134da58a95adcc50b1b6ab62427c23d0666e7e4f4`, with no skips.

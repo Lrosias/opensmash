@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
 import path from 'node:path';
 const root=path.resolve(import.meta.dirname,'../..'),stage=path.resolve(process.env.NATIVE_RESULTS_STAGE||path.join(root,'build/competitive-remix-f265-v3'));
-const out=path.join(root,'yougame/test-results/native-results-candidate-v3');await mkdir(out,{recursive:true});
+const out=path.resolve(process.env.NATIVE_RESULTS_OUTPUT||path.join(root,'yougame/test-results/native-results-candidate-v3'));await mkdir(out,{recursive:true});
 const {chromium}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_PATH||'/Users/luis/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const sdk=(await readFile(path.join(root,'yougame/tests/native-results-sdk-fixture.js'),'utf8'))+`
 // Keep the real app's agreed fighters, but do not boot a battle or claim combat.

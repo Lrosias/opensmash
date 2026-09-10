@@ -1,0 +1,418 @@
+{
+  "id": "conker-f15ccb0f63fd",
+  "base": "f2654986e14088f5",
+  "status": "awaiting-independent-review-and-hosted-retest",
+  "native_sha256": "f15ccb0f63fdc02e8113239a273449a159a05a2049ac8c1606ec60b26a107c6e",
+  "js_sha256": "e6bb6ee023adb7fb452a04718741b33b4d98ea0ff9134629c9bf3e8dd363d29e",
+  "source_sha256": "10e19de95c19f88dcc84528bad2143de272a22e877ca54f009d860c1fc94f815",
+  "changed_engine_files": [
+    "BattleShip.wasm"
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "size": 2833,
+      "sha256": "03879f9936fb6c0d9d02446a512816d4ee08013248d533b09a52af4b50f1e2fa"
+    },
+    {
+      "path": "engine/BattleShip.js",
+      "size": 411124,
+      "sha256": "e6bb6ee023adb7fb452a04718741b33b4d98ea0ff9134629c9bf3e8dd363d29e"
+    },
+    {
+      "path": "engine/BattleShip.wasm",
+      "size": 8287241,
+      "sha256": "f15ccb0f63fdc02e8113239a273449a159a05a2049ac8c1606ec60b26a107c6e"
+    },
+    {
+      "path": "engine/Remix-notes.md",
+      "size": 7348,
+      "sha256": "35cdc5ea72d93f81b74fa9ffbe8a62ce0e3ee906595bbf0f27102f9cabd51363"
+    },
+    {
+      "path": "engine/files/BattleShip.o2r",
+      "size": 23270245,
+      "sha256": "22e22831cb8800e7d87b78a9a05adb87827e9de0237dc27c9070a56d0c1fe609"
+    },
+    {
+      "path": "engine/files/BattleShip.o2r.recipe",
+      "size": 40,
+      "sha256": "f4fa5c960fe093b227229b1f69f4092f7c4136cf34c646ef8d7fe836861ae115"
+    },
+    {
+      "path": "engine/files/assets/css_icons/battlefield_background.png",
+      "size": 61126,
+      "sha256": "176ab2c244235c1aba1c017faec8bd09f7ce0d4179c99af5e34334a156fdd4a6"
+    },
+    {
+      "path": "engine/files/assets/css_icons/battlefield_name.png",
+      "size": 408,
+      "sha256": "c3e84e4ea1bc6b85126a565c92c434c8a35b62b6a94ce7b3dcd70c5c63def0e3"
+    },
+    {
+      "path": "engine/files/assets/css_icons/battlefield_small.png",
+      "size": 3862,
+      "sha256": "4d00c2ba7ecd2146cbcc61c789d35a42e89c4250f1ed98d9de7617db9c9a4f20"
+    },
+    {
+      "path": "engine/files/assets/css_icons/final_destination_background.png",
+      "size": 38751,
+      "sha256": "47e7141866b2c768172a2be69c39c5255edcea442389b205e98cf5aac3ab57a9"
+    },
+    {
+      "path": "engine/files/assets/css_icons/final_destination_emblem.png",
+      "size": 3681,
+      "sha256": "ebfb656ceb8db6fc3e4be567db87ef6caca75f14888c9243a448d50fc8409d2a"
+    },
+    {
+      "path": "engine/files/assets/css_icons/final_destination_name.png",
+      "size": 569,
+      "sha256": "a645cf2802c42e5715fa65640990719a1b177485c6712646f087b05eae7d57d7"
+    },
+    {
+      "path": "engine/files/assets/css_icons/final_destination_small.png",
+      "size": 2815,
+      "sha256": "d04ad9bf7a0afa687aff9dd0c892c3a9ec4cbbbf00cddf9318362d17f136dfe8"
+    },
+    {
+      "path": "engine/files/assets/css_icons/metal_cavern_background.png",
+      "size": 54863,
+      "sha256": "431f78e80390421432c11d7b4418337891d2fb7b5a21af544ad6e0f267612aba"
+    },
+    {
+      "path": "engine/files/assets/css_icons/metal_cavern_name.png",
+      "size": 601,
+      "sha256": "86f4d64ea17d2a5b09433c51be861c347cf4914ae2d8ab911cd4093fe143c08c"
+    },
+    {
+      "path": "engine/files/assets/css_icons/metal_cavern_small.png",
+      "size": 4120,
+      "sha256": "54eefc70e73b466f858fb59fc0f4b3f77533dea9a670cb15f9a7531c27af029d"
+    },
+    {
+      "path": "engine/files/assets/custom/fonts/Inconsolata-Regular.ttf",
+      "size": 101752,
+      "sha256": "9d542b954a5ccbf5edd68f240f4a4de9c99acbe3cb4291f0089796e99cddb02e"
+    },
+    {
+      "path": "engine/files/assets/custom/fonts/Montserrat-Regular.ttf",
+      "size": 197624,
+      "sha256": "c3fb0280e4339f6c70cea42b8b432c6fb17fde130fbb12e9209c7cdfa79d976f"
+    },
+    {
+      "path": "engine/files/assets/remix/sounds.bank",
+      "size": 30972668,
+      "sha256": "a7a1f8553d29d0fcf376636850b8b927d85e5ee6a4097cf2fe9380ed2950eb71"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/29.wav",
+      "size": 46348,
+      "sha256": "08a963ca192f67b31a722d7b78ead1f0b9abce6c9636e8cbbca5740ea2d06c8a"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/30.wav",
+      "size": 43244,
+      "sha256": "8e11a56c3a89b227effe816e098ba076b7b22043ce814b3cc07e209c8d910715"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/31.wav",
+      "size": 48492,
+      "sha256": "2ac25a1c5aa679352f615f2c4b67e36769684a33012616901e49512bcf3cc433"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/32.wav",
+      "size": 53740,
+      "sha256": "2b316fad5ee82b2392e6e5f307e2fbf6c38f6b8780f0dca8df652816a3d4385f"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/33.wav",
+      "size": 41228,
+      "sha256": "5bd07c3d5480bb1a938bfee8b821bd54e1d54d35ec9b2a51675fe297e2ea1360"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/34.wav",
+      "size": 53452,
+      "sha256": "1234f71c3f2644c2e732d1df4933d66cf80220672d86316d4589a568920d5253"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/38.wav",
+      "size": 45804,
+      "sha256": "48779dcd850f8026e3d0f0366bbea2a68c84d753722c15627e12cc49aa60b943"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/52.wav",
+      "size": 45548,
+      "sha256": "960613f11bd2b1c25e3d9d78a3e34882953e5a4c429be9cdcf807c579fe543eb"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/55.wav",
+      "size": 33100,
+      "sha256": "ce544eeeb88840dfbb397530067fed3f8d1b10eaad28d033f45cc903ab03df9b"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/56.wav",
+      "size": 45068,
+      "sha256": "0f1049fd4ac2ccf0c9126110a546de5175ec3c4deed7b2ac444fbda7856d4e5b"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/57.wav",
+      "size": 52652,
+      "sha256": "418975b0f5007dd4fac84576cf8ac4c55f27669d86d05f743ccce698caf8f3c8"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/58.wav",
+      "size": 37004,
+      "sha256": "c81acbe4137f56b6faf6fb06dfe0c01d023478317da02e0c0263b8f48308be33"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/59.wav",
+      "size": 39244,
+      "sha256": "a6f0ddb75ffd43e3606b97b56bfa2d427ab4c3d4086b2f0257f917101d0bc804"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/62.wav",
+      "size": 38444,
+      "sha256": "5ed01198341b38669fcb67844eb193b058b12bf10c0a82ac2df13cc028d9c8ce"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/63.wav",
+      "size": 45932,
+      "sha256": "a3ab501966d013b31c3436b4606ae82be9e14ecc6a16d6398c96c362f7f8396a"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/64.wav",
+      "size": 63340,
+      "sha256": "777d95e015f96ad275ea2f9ba8cf62c87ca1e1e12dc9ec03bd0b96ec645c5ad2"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/65.wav",
+      "size": 48044,
+      "sha256": "1126636c5e6b2657a4af7442997293b06ddb2fae4118a25c8b454a861629cb82"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/68.wav",
+      "size": 69196,
+      "sha256": "36279c90423735b52100acb4b6e30354e9e07f04e219f0695b63bf26c8af444e"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/72.wav",
+      "size": 48588,
+      "sha256": "5ee385e7bf006839b6db4420b4d2d4f6778ac830179e2cfe5b1093dfbe4d7355"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/73.wav",
+      "size": 37740,
+      "sha256": "8a092270be283d5ee122cddf40c50771c3c9f57e3636d6e863979a78c5dcaf1c"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/74.wav",
+      "size": 38092,
+      "sha256": "508948a4d2e95824ae832d8ca79cf22d81145ec3ed698853a911200dda0e5877"
+    },
+    {
+      "path": "engine/files/assets/remix/voices/75.wav",
+      "size": 66188,
+      "sha256": "26cd0b9e5a0d51dc2b1a5ad0011bc035c3b12d541aeee39bcfdedbf67de8c6bf"
+    },
+    {
+      "path": "engine/files/config.yml",
+      "size": 978,
+      "sha256": "7087bd5b5f8c1e2623bf6dc0e187d836f7d2844a16a0b23e534bb5585aaaf004"
+    },
+    {
+      "path": "engine/files/f3d.o2r",
+      "size": 20900,
+      "sha256": "392c2d2545cd907ed1b4e1ebc60a46424062a712f55a503bf5742f829bd3a4da"
+    },
+    {
+      "path": "engine/files/gamecontrollerdb.txt",
+      "size": 592586,
+      "sha256": "12bb84b7a49cb64976efa7970a2f4bb99012abbd350396f481e90d746a93a437"
+    },
+    {
+      "path": "engine/manifest.json",
+      "size": 5308,
+      "sha256": "ee3c390b3e38fa22398d5823c5b4ef90145bf564d4a0471278385a305e1cd648"
+    },
+    {
+      "path": "engine/roster.json",
+      "size": 6448,
+      "sha256": "9a658362a7ea9fcfa19e8fbc9638b9c623dfcd765cd0123a7a7ed38141d99576"
+    },
+    {
+      "path": "engine/stages.json",
+      "size": 876,
+      "sha256": "40e5515258f0f98cb81dacf8e2bc44225378180a3bd67db87198cea71a6d28f1"
+    },
+    {
+      "path": "evidence/BattleShip.js.symbols",
+      "size": 800348,
+      "sha256": "afdfa33226e09e8901d69d78c83511db76abda87e6b196ad6dbe49c45493cba2"
+    },
+    {
+      "path": "evidence/abi.json",
+      "size": 83,
+      "sha256": "f208fc3824028c8b5bc9320d68ab92c97e908ee2a9f445e2bd6ace4f7173fc20"
+    },
+    {
+      "path": "evidence/adjacent.log",
+      "size": 1054,
+      "sha256": "c04b9982245e6ee173ab050bd0453dd2c6cc95415240feade4508d7316a78c3e"
+    },
+    {
+      "path": "evidence/audio-entities.log",
+      "size": 246,
+      "sha256": "6c06402e942e1ab2e1822387aae4e7f9dbcf5fb698218c9f1154ef9b1f02d126"
+    },
+    {
+      "path": "evidence/build-commands.json",
+      "size": 42907,
+      "sha256": "af2ab49b96273e9dd69586aa38cacf78af82960480cd6ebaade8ea698060414b"
+    },
+    {
+      "path": "evidence/compile-final.log",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/conker.patch",
+      "size": 3061,
+      "sha256": "f5a1dae7b9c8e96ed8acbdf7e060c7cee4e53251d73129c86c1f0d6c795dd7ce"
+    },
+    {
+      "path": "evidence/entities-rollback.json",
+      "size": 198,
+      "sha256": "35b8d2ccee07cf131056e0d64b1f82129a958cee72502a1f9ec403a7ad4ca7ff"
+    },
+    {
+      "path": "evidence/failing-paused.json",
+      "size": 36158,
+      "sha256": "8849863f8b83b0dd1aac729c56710dd4a36260f2ceb0cc28ca67f46c9b747233"
+    },
+    {
+      "path": "evidence/failing-repro.log",
+      "size": 9362,
+      "sha256": "c75bae165e3d22b1e39025e6a59bfa17b92394b2be3278988efe171d754c84a1"
+    },
+    {
+      "path": "evidence/failing-trace.json",
+      "size": 9365,
+      "sha256": "a4f1538aa2cfb0eeb04fe5f1e944d3510af0ede59c298b00ae68a164d577f6ec"
+    },
+    {
+      "path": "evidence/initial.png",
+      "size": 639912,
+      "sha256": "aedc353860840ee6ef28899285842ef2b7820f0037692e9fc9f9e2e50100d6da"
+    },
+    {
+      "path": "evidence/kirby-56.json",
+      "size": 697,
+      "sha256": "d254fb8b7a35c6f9a73b2a7c216788422ec9a029a119a2731ede2e9f1772502d"
+    },
+    {
+      "path": "evidence/kirby.log",
+      "size": 595,
+      "sha256": "f50b5b9df6a526c81f1c981d18bf799eabd9ad142d05e40776945f41ffc3d18e"
+    },
+    {
+      "path": "evidence/mapping-validation.json",
+      "size": 1221,
+      "sha256": "2cfbad2e1f33d143b96b5e6be062da14660bc37268dead5d2fdeba7af2a80a57"
+    },
+    {
+      "path": "evidence/regression.json",
+      "size": 7312,
+      "sha256": "65c380e4dacbe552497d9f7309ef38a593c47f30489623480ab7cd8cf08fd42e"
+    },
+    {
+      "path": "evidence/regression.log",
+      "size": 2914,
+      "sha256": "ec6c0568d41f951c4d9097c8b0b62f2ed3ade8b76a3745d875a8540dfb343d0c"
+    },
+    {
+      "path": "evidence/repro.log",
+      "size": 27437,
+      "sha256": "95f65c0c409ded206bcb633dbf844921628252b3e9840d776a77e896232c4090"
+    },
+    {
+      "path": "evidence/rom-actions.json",
+      "size": 2286,
+      "sha256": "92723cf3b9fea7025e7e86ec71e638343a59aa504463c16ae741502caade17be"
+    },
+    {
+      "path": "evidence/specials-56.json",
+      "size": 46568,
+      "sha256": "92d816d3f9fcaf1ba71bdfd9c467d3cb5547006533d6096ea13b74426d784922"
+    },
+    {
+      "path": "evidence/trace.json",
+      "size": 35730,
+      "sha256": "819bfde330bc477ecdc0396ac0e3cc0b9aa4301903ed9fb64d33819dedd3d20e"
+    },
+    {
+      "path": "evidence/transitions.json",
+      "size": 4370,
+      "sha256": "34037121c67555af7a9184c6af68d7d8c136dd8a6e49e4b3539b447a525c610f"
+    },
+    {
+      "path": "evidence/transitions.log",
+      "size": 3544,
+      "sha256": "34f2cfc3dae52672b9cc9de36d573603653fe29edcfe92a035013dabb8c2c9db"
+    },
+    {
+      "path": "evidence/validator-negative-tests.json",
+      "size": 126,
+      "sha256": "7d43deb7b99b3af6bac224c10c3a6528362c33cbc52d5f243de2d97bf41c3b4b"
+    },
+    {
+      "path": "source/remix/special_conker.c",
+      "size": 12877,
+      "sha256": "10e19de95c19f88dcc84528bad2143de272a22e877ca54f009d860c1fc94f815"
+    },
+    {
+      "path": "source/remix/verify_conker_actions.py",
+      "size": 1847,
+      "sha256": "04e54ce54c4e12b7d086b291225423ac07eac5497ef6a7185166adf96592c2c9"
+    },
+    {
+      "path": "tests/adjacent.cjs",
+      "size": 2828,
+      "sha256": "c94ed604c19bc4c740ecd57470c2c82776c82f47ff17f8b7ef8a23d9622045b7"
+    },
+    {
+      "path": "tests/audio-entities.cjs",
+      "size": 2153,
+      "sha256": "a96a5f32a38c22e6e3deaa3c9ee44372928eba2034ba6a624dbd6a256e7b4cc9"
+    },
+    {
+      "path": "tests/build-isolated.py",
+      "size": 1225,
+      "sha256": "547ed5534a31ccef9054fc421da9660d8dfdfb9febad39a1818d1721f4c557e7"
+    },
+    {
+      "path": "tests/freeze.py",
+      "size": 4929,
+      "sha256": "7eeff4358877d22bc980e4dd0136580c3a83dfd8ae3be6e13457261dec87da13"
+    },
+    {
+      "path": "tests/kirby.cjs",
+      "size": 2180,
+      "sha256": "834a1c155778c4f01f76a07c29067da772517731aca9f5fda2327360a9cee968"
+    },
+    {
+      "path": "tests/regression.cjs",
+      "size": 2807,
+      "sha256": "046bc8f56c99e9cd8367579fe158b73aaa8165eb43503e72d2c33302ca3b884f"
+    },
+    {
+      "path": "tests/repro.cjs",
+      "size": 1717,
+      "sha256": "c263bc8ac2520737c0a85fdac899c0875adcf205f11a93acca48ef0667dc7615"
+    },
+    {
+      "path": "tests/transitions.cjs",
+      "size": 3476,
+      "sha256": "e15a9cc01ed3eeb26f77f3823c7f7ec50fce8d70e9a354d1e0a66a6cc386c753"
+    }
+  ]
+}

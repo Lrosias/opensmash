@@ -13,7 +13,8 @@ const digest=b=>createHash('sha256').update(b).digest('hex');
 const frozen=await readFile(path.join(candidate,'manifest.json'));
 if(digest(frozen)!==reviewedManifest)throw Error('Unreviewed candidate manifest');
 const manifest=JSON.parse(frozen);
-const engineFiles=Object.entries(manifest.files).filter(([f])=>f.startsWith('engine/')&&f!=='engine/Remix-notes.md');
+const manifestFiles=Array.isArray(manifest.files)?manifest.files.map(f=>[f.path,f.sha256]):Object.entries(manifest.files);
+const engineFiles=manifestFiles.filter(([f])=>f.startsWith('engine/')&&f!=='engine/Remix-notes.md');
 if(engineFiles.length!==45)throw Error('Unexpected native overlay');
 for(const [f,sha] of engineFiles)if(digest(await readFile(path.join(candidate,f)))!==sha)throw Error('Frozen native file changed: '+f);
 const keyboard=await readFile(path.join(root,'yougame/src/keyboard.mjs'));
@@ -37,5 +38,5 @@ for(const f of files){const b=await readFile(path.join(out,f));hashes[f]=digest(
  const row={path:f,size:b.length};if(f==='yougame.json'||(/\.(html|css|m?js)$/.test(f)&&!f.startsWith('engine/')))row.text=b.toString();checks.push(row);
 }
 await writeFile(out+'-check.json',JSON.stringify({files:checks}));
-await writeFile(out+'-release.json',JSON.stringify({candidate:manifest.build,manifestSha256:reviewedManifest,base,out,build,nativeSha256:hashes['engine/BattleShip.wasm'],changes,hashes},null,2));
+await writeFile(out+'-release.json',JSON.stringify({candidate:manifest.build||manifest.id,manifestSha256:reviewedManifest,base,out,build,nativeSha256:hashes['engine/BattleShip.wasm'],changes,hashes},null,2));
 console.log(JSON.stringify({out,build,files:files.length,changed:changes.length,nativeSha256:hashes['engine/BattleShip.wasm']}));
