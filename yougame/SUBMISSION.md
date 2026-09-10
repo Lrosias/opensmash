@@ -1,18 +1,17 @@
 # YouGame release
 
-Version **1.8** is live at https://yougame.co/g/opensmash, deployed through the YouGame MCP as a minor update on September 8, 2026.
+Version **1.9** is live at https://yougame.co/g/opensmash, published through the
+YouGame MCP as a minor update on September 9, 2026.
 
-- Upload ID: `f9030ddb66294964b696f67a4fb3d9e4`
-- Build fingerprint: `9a8d3115150547c6`
-- Archive: `opensmash-yougame.zip` (42 files; 16,169,578 bytes)
-- ZIP SHA256: `32457f196442c9086eff29d558655de625e968869e40e27d87d082e844951cd1`
-- Friends/invites use YouGame's visible lobby, Ready and result/Continue cards. Private hosts disable public fill; both players confirm Ready explicitly.
-- Online → Friends → choose fighter → Start opens the real YouGame friend picker. Invite links go to native fighter selection before joining the existing room.
-- Casual/ranked native flow, rollback netplay, mobile controls, keyboard layout and bundled assets retained.
-- All 35 tests, syntax, whitespace and MCP build checks passed. Two real SDK dev clients joined a private room, waited for both Ready presses, and launched native battles with matching fighters and seed.
-- Separate-account/device live matches and physical iOS/Android performance remain unverified.
-- Existing screenshots, thumbnail, demo, game URL, and ratings retained. Minor update: zero notifications.
-- No single-player leaderboard is intended; ranked competition uses multiplayer ratings.
-- Initial automatic approval review required specific upload authorization. The user approved with “yes go”; upload and MCP update then succeeded.
+- Upload ID: `b4c282cefbbc4612b11016d43c26000d`
+- Build fingerprint: `dee501eab8c6cd45`
+- Archive: `opensmash-performance-release.zip` (49 files; 16,156,170 bytes)
+- ZIP SHA256: `96a1d199d1f707bb94d6219be1cce13e139f0303f930c2ad04c4be9beb33f2ad`
+- Merged upstream `419d195`, published v1.8 Friends fixes, and both agents’ completed browser and rollback performance improvements.
+- 52 combined Node tests and five upstream tests pass. Native delayed-input rollback and full-match result settlement pass; staged HTTPS native menu startup verified.
+- Existing URL, media, ratings and comments retained. Minor update: zero notifications.
+- No single-player leaderboard is intended; competitive play uses multiplayer ratings.
+- Active Remix expansion is not part of this release.
+- Separate-account live matches, physical mobile performance and embedded isolation on all browsers remain unverified.
 
-See `VERIFICATION.md` and `ROLLBACK.md` for test details and limitations, and `media/README.md` for media provenance.
+See `performance/RELEASE-MERGE.md`, `VERIFICATION.md`, and `ROLLBACK.md` for details.

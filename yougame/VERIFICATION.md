@@ -218,3 +218,29 @@ flow are implemented but were not exercised with separate signed-in accounts thi
 - After explicit user approval (“yes go”), uploaded the unchanged tested ZIP and
   published via MCP update_game as v1.8, minor, zero notifications. Upload ID
   f9030ddb66294964b696f67a4fb3d9e4; staged build verdict ready.
+
+
+### Local browser performance build (not deployed)
+
+- Applied offline rAF pacing, AudioWorklet PCM playback with SDL fallback, dynamic
+  texture scratch, 192 MiB initial Wasm memory, and opt-in bounded browser logs
+  and WAV diagnostics. Native menus and YouGame rollback remain in place.
+- Build d75c5bc145139c10; 46 files. YouGame MCP build check returned ready.
+- All 44 Node tests pass. Release Wasm compiled and native patches passed reverse
+  checks. Chrome native replay, delayed-input and full-match rollback tests pass.
+- Final 30-second muted Chrome sample: 60 ticks/s, maximum tick interval 21.51 ms,
+  no interval above 25 ms, no new audio underruns, no file or Wasm-memory growth.
+- See performance/OPTIMIZATIONS.md and performance/chrome-optimized.json for
+  methodology, implementation details and limits. Physical phones, hosted
+  isolation/fallback behavior and native desktop comparisons remain unverified.
+- Published v1.7 is unchanged.
+
+### Combined v1.9 performance release
+
+Merged latest upstream 419d195, published v1.8 Friends fixes, browser performance
+changes and the other task’s exact Wasm checkpoint comparator. All 52 combined
+Node tests and five upstream tests pass. Two native clients matched through 59
+rollbacks each at frame 227; full match matched at 858 and settled 3–0 exactly
+once each. Staged HTTPS native menu startup verified. Static checks returned
+ready; runtime limitations remain as documented in performance/RELEASE-MERGE.md.
+Build dee501eab8c6cd45 published as v1.9 through MCP, minor, no notifications.

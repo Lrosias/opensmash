@@ -76,7 +76,7 @@ the previously reported offline/mobile FPS or crash issues are resolved.
 
 ## Reproduction
 
-`yougame/tests/performance.mjs` serves only packaged engine assets and explicit
+`yougame/tests/rollback-performance.mjs` serves only packaged engine assets and explicit
 fixtures on loopback. Use an installed Chrome and Playwright (`PLAYWRIGHT_PATH`
 can point to the package). Results default to `yougame/test-results/performance`.
 The local raw runs are in `paced-before-1`, `paced-after-1`, `paced-after-2`, and
@@ -87,7 +87,7 @@ node yougame/build-page-compare.mjs
 YOUGAME_SDK_PATH=/path/to/sdk.js node --test yougame/tests/*.test.mjs
 YOUGAME_SDK_PATH=/path/to/sdk.js node yougame/tests/extract-sdk.mjs
 node yougame/tests/verify-rollback.mjs
-YOUGAME_SDK_PATH=/path/to/sdk.js PERF_PACED=1 PERF_RATES='[1,4,6]' PERF_FRAMES=600 node yougame/tests/performance.mjs
+YOUGAME_SDK_PATH=/path/to/sdk.js PERF_PACED=1 PERF_RATES='[1,4,6]' PERF_FRAMES=600 node yougame/tests/rollback-performance.mjs
 ```
 
 Before comparison, preserve the old `yougame/dist/engine` directory and old
