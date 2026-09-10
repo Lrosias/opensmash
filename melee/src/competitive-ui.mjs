@@ -166,7 +166,7 @@ export class MeleeCompetitiveUI {
     const roundRoom=this.room,roundId=roundRoom.round;
     const current=()=>this.room===roundRoom&&this.session?.round===roundId;
     const bag=this.session?.model?.state.mode!=='ranked'?this.session?.model?.snapshot.bag:null;
-    this.session?.stop();this.model=null;this.roundResult=null;this.screen='set';this.root.hidden=false;this.names=this.room.players.map(p=>p.name);
+    this.session?.stop();this.model=null;this.roundResult=null;this.notice='';this.screen='set';this.root.hidden=false;this.names=this.room.players.map(p=>p.name);
     this.session=new MeleeCompetitiveRoom({room:this.room,build:this.build,selection:this.selection,bag:bag??null,adapter:this.adapterFactory(this.room),
       onChange:(s,model)=>{if(!current())return;this.model=model;this.root.hidden=s.phase==='playing';this.render();},onError:error=>{if(!current())return;this.notice=error.message;this.screen='error';this.root.hidden=false;this.render();},
       // The SDK advances room.round before delivering the previous round's result.

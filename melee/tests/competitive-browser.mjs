@@ -12,7 +12,9 @@ try{
   await context.route('https://yougame.co/sdk.js',r=>r.fulfill({contentType:'text/javascript',body:`window.queueCalls=[];window.YouGame={ready:async()=>{},ui:{onChange:fn=>{fn({status:'standalone'});return()=>{}}},multiplayer:{invite:null,open:async options=>{queueCalls.push({queue:options.queue,mode:options.mode});throw Error('Cancelled')}}};`}));
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   await page.goto(process.env.MELEE_URL||'http://127.0.0.1:8275/');
+  await page.getByRole('button',{name:'GameCube adapter controls',exact:true}).waitFor();
   await page.locator('#online').click();await page.locator('[data-action=fighter][data-value="2"]').click();
+  assert.equal(await page.getByRole('button',{name:'GameCube adapter controls',exact:true}).isVisible(),false);
   await page.screenshot({path:`${output}/desktop-fighters.png`});
   await page.getByRole('button',{name:'Lock fighter →',exact:true}).click();
   for(const mode of ['Casual','Ranked','Friends'])assert.equal(await page.getByRole('button',{name:mode,exact:true}).isDisabled(),false);
@@ -43,7 +45,13 @@ try{
   await page.getByRole('button',{name:'Preview game →'}).tap();await page.getByRole('button',{name:'Record P1 win',exact:true}).tap();await page.getByRole('button',{name:'Play again',exact:true}).tap();
   assert.notEqual(await page.evaluate(()=>melee.competitive.model.state.stage),first);
   // Exercise controller navigation through the same focus/click path as hardware.
-  await page.getByRole('button',{name:'Local play',exact:true}).click();await page.locator('#online').click();
+  await page.getByRole('button',{name:'Local play',exact:true}).click();
+  assert.equal(await page.getByRole('button',{name:'GameCube adapter controls',exact:true}).isVisible(),true);
+  await page.evaluate(()=>{const frame=document.createElement('iframe');frame.className='native-match';document.body.append(frame);});
+  assert.equal(await page.getByRole('button',{name:'GameCube adapter controls',exact:true}).isVisible(),false);
+  await page.evaluate(()=>document.querySelector('.native-match').remove());
+  assert.equal(await page.getByRole('button',{name:'GameCube adapter controls',exact:true}).isVisible(),true);
+  await page.locator('#online').click();
   await page.locator('[data-action=fighter][data-value="2"]').focus();await page.keyboard.press('ArrowRight');
   assert.notEqual(await page.evaluate(()=>document.activeElement.dataset.value),'2');
   await page.evaluate(()=>melee.competitive.pollInput({source:'gamepad',move:{x:0,y:0},a:true,b:false}));

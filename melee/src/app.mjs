@@ -12,6 +12,7 @@ import {readAdapterMenu} from '../../controllers/controller-menu.mjs';
 import {meleePad} from '../../controllers/gc-adapter.mjs';
 const $ = id => document.getElementById(id);
 const adapter=mountAdapterControls({before:$('controls')});
+$('controls').previousElementSibling.classList.add('melee-adapter-entry');
 const matchSound=document.createElement('button');matchSound.textContent='Enable sound';matchSound.hidden=true;
 $('controls').before(matchSound);
 matchSound.onclick=()=>state.competitive.session?.adapter?.engine?.resumeAudio?.().catch(()=>{});
@@ -23,14 +24,14 @@ const rectangles=Array.from({length:4},()=>new RectangleInput());
 state.competitive=new MeleeCompetitiveUI({root:$('competitive'),sdk:window.YouGame,readMenu:()=>readAdapterMenu(adapter),onLocal:()=>$('online').focus()});
 fetch('./engine/wasm.json').then(r=>{if(!r.ok)throw Error('The Melee build could not load.');return r.json();}).then(manifest=>{
   if(!/^[a-f0-9]{64}$/.test(manifest.sha256))throw Error('Invalid Melee build identity.');
-  state.competitive.setAdapter(room=>new MeleeMatchAdapter({room,build:manifest.sha256,createEngine:createNativeMatch,
+  state.competitive.setAdapter(room=>{setupInput();return new MeleeMatchAdapter({room,build:manifest.sha256,createEngine:createNativeMatch,
     input:()=>readSeat(0),onStatus:status=>{
       if(status.event==='audio')matchSound.hidden=status.running;
       if(status.event==='download'&&status.name)$('metrics').textContent=`${status.name} · ${Math.round(status.loaded/(status.total||1)*100)}%`;
       else if(status.event==='stall')$('metrics').textContent='Waiting for the connection…';
       else if(status.event==='overload')$('metrics').textContent='This device is running below game speed';
       else if(['resume','recovered'].includes(status.event))$('metrics').textContent='Online · 3-frame input buffer';
-    }}),manifest.sha256);
+    }});},manifest.sha256);
 }).catch(error=>{state.competitive.notice=error.message;state.competitive.render();});
 $('online').onclick=()=>{if(window.YouGame?.input)setupInput();input?.hide();state.competitive.show();};
 window.YouGame?.ui?.onChange(layout=>{

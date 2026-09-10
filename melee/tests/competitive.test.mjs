@@ -150,7 +150,8 @@ test('UI accepts SDK results after its round advances and ignores callbacks from
     // Match deployed SDK ordering: round increments before result callbacks fire.
     room.round=2;const result={round:1,won:true};first.onResult(result);
     assert.equal(ui.roundResult,result);assert.equal(ui.root.hidden,false);assert.equal(ui.screen,'set');
-    ui.beginRound();assert.equal(ui.session.round,2);assert.equal(ui.roundResult,null);
+    ui.notice='Previous engine failed';
+    ui.beginRound();assert.equal(ui.session.round,2);assert.equal(ui.roundResult,null);assert.equal(ui.notice,'');
     const renders=ui.renders;
     first.onResult(result);first.onChange({phase:'playing'},{stale:true});first.onError(Error('Late finish failure'));
     assert.equal(ui.renders,renders);assert.equal(ui.roundResult,null);assert.equal(ui.model,null);assert.equal(ui.screen,'set');
