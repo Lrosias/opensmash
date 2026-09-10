@@ -12,7 +12,7 @@ if(out===base||out.startsWith(base+path.sep))throw Error('Use a separate output 
 await stat(path.join(base,'index.html'));await mkdir(path.dirname(out),{recursive:true});await mkdir(out);
 await cp(base,out,{recursive:true});
 await cp(path.join(root,'controllers'),path.join(out,'controllers'),{recursive:true});
-const changed=['controllers/gc-adapter.mjs','controllers/gc-adapter-ui.mjs'];
+const changed=(await readdir(path.join(root,'controllers'))).filter(name=>name.endsWith('.mjs')).sort().map(name=>'controllers/'+name);
 for(const name of kind==='n64'?['app.mjs','input.mjs']:['app.mjs']){
   const source=await readFile(path.join(root,kind==='n64'?'yougame':'melee','src',name),'utf8');
   await writeFile(path.join(out,name),source.replaceAll('../../controllers/','./controllers/'));changed.push(name);
