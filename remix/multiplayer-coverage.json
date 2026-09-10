@@ -1,6 +1,6 @@
 {
-  "status": "in_progress",
-  "published_version": "2.1 (does not include these special-move ports)",
+  "status": "ready_for_independent_review",
+  "published_version": "Managed by the competitive-release coordinator; this working candidate is not published.",
   "fighters": [
     {
       "id": 0,
@@ -65,121 +65,210 @@
     {
       "id": 29,
       "name": "Falco",
-      "specials": "ported_in_validation"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 30,
       "name": "Ganondorf",
-      "specials": "ported_in_validation"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 31,
       "name": "Young Link",
-      "specials": "ported_in_validation"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 32,
       "name": "Dr. Mario",
-      "specials": "ported_in_validation"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 33,
       "name": "Wario",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 52,
       "name": "Bowser",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 55,
       "name": "Wolf",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 56,
       "name": "Conker",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 57,
       "name": "Mewtwo",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 58,
       "name": "Marth",
-      "specials": "ported_in_validation"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 59,
       "name": "Sonic",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 62,
       "name": "Sheik",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 63,
       "name": "Marina",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 64,
       "name": "Dedede",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 65,
       "name": "Goemon",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 68,
       "name": "Banjo & Kazooie",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 73,
       "name": "Peach",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 72,
       "name": "Crash",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 34,
       "name": "Dark Samus",
-      "specials": "not_ported"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 38,
       "name": "Lucas",
-      "specials": "ported_in_validation"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 74,
       "name": "Roy",
-      "specials": "ported_in_validation"
+      "specials": "ported_regression_passed"
     },
     {
       "id": 75,
       "name": "Dr. Luigi",
-      "specials": "ported_in_validation"
+      "specials": "ported_regression_passed"
     }
   ],
   "remaining": [
-    "Port and test all other imported specials",
-    "Aerial, ledge, charge, reflector/absorber and interrupt coverage",
-    "Special attack sounds and effects",
-    "Full-room online results/rematch test",
-    "Local multi-controller setup",
-    "Throw and character-specific mechanic audit",
-    "Full roster regression before publishing"
+    "Independent review of the frozen native implementation and extraction recipes",
+    "Adoption into the release owner's current frontend and hosted full-room rematch acceptance",
+    "Release coordinator publication after acceptance"
+  ],
+  "candidate_build": "f2654986e14088f5",
+  "validation": {
+    "imported_specials": 22,
+    "ground_and_air": true,
+    "special_rollback_frames_per_fighter": 130,
+    "active_object_audio_rollback_fighters": [
+      58,
+      63,
+      64,
+      65,
+      68,
+      72
+    ],
+    "object_rollback_frames_per_fighter": 180,
+    "normal_jab_descriptors": 43,
+    "normal_and_jump_fighters": 13,
+    "four_local_controllers": true,
+    "announcer_calls": 22,
+    "animated_online_results": true,
+    "unit_pass": 78,
+    "unit_skip": 3,
+    "marina_cargo": true,
+    "marina_shake_gem": true,
+    "capture_regression": true,
+    "four_player_match_results": true,
+    "local_setup_preserved": true,
+    "paired_rollback_confirmed_frame": 227,
+    "paired_rollbacks_per_client": 59,
+    "kirby_copies_implemented": 22,
+    "kirby_copies_ground_air_checked": 22,
+    "kirby_lifecycle_fighters": [
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      38,
+      52,
+      55,
+      56,
+      57,
+      58,
+      59,
+      62,
+      63,
+      64,
+      65,
+      68,
+      72,
+      73,
+      74,
+      75
+    ],
+    "kirby_copy_rollback_frames": 210,
+    "kirby_charge_cancel_stock_reset": true,
+    "all_specials_recheck_build": "40894a1b860882a0",
+    "parser_tests": 17,
+    "kirby_original_copy_fighters": 11,
+    "kirby_added_copy_fighters": 22,
+    "native_sword_trail_records": 21,
+    "visual_feedback_fighters": [
+      58,
+      74,
+      56,
+      59,
+      64,
+      65,
+      29,
+      34
+    ],
+    "assets_verified": 3985,
+    "relocations_verified": 110050,
+    "prepare_idempotent": true,
+    "menu_results_music": true,
+    "paired_final_result_confirmed_frame": 738,
+    "paired_final_result_winner": "p0",
+    "paired_final_result_scores": [
+      3,
+      0
+    ],
+    "four_player_result_winner": 3,
+    "four_player_finish_frames": 671,
+    "final_presentation_build": "f2654986e14088f5",
+    "final_object_audio_build": "f2654986e14088f5"
+  },
+  "working_changes": "Frozen candidate available for independent review and hosted acceptance; not published by this task.",
+  "known_limitations": [
+    "Default costumes for imported fighters",
+    "Original twelve retain native Smash 64 balance apart from Kirby copy integration",
+    "Custom Remix cosmetic effects beyond the shared native effects are not all translated",
+    "Some sequenced FGM entries and Remix music sequences remain unported; native menu/results music supplies feedback"
   ]
 }

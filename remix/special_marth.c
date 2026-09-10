@@ -75,8 +75,9 @@ int port_remix_counter_damage(FTStruct *fp,int damage){
  if(port_remix_enabled()&&fp->fkind==58&&(fp->status_id==MARTH_DOWN_G||fp->status_id==MARTH_DOWN_A)&&fp->motion_vars.flags.flag0&&damage>0){marth_state[fp->player].counter=1;return 0;}return damage;
 }
 void port_remix_before_status(GObj *g,int status){
+ port_remix_peach_before(g,status);port_remix_stock_reset(g,status);
  FTStruct *fp=ftGetStruct(g);
- if(port_remix_enabled()&&(fp->fkind==58||fp->fkind==74)&&(fp->ga==nMPKineticsGround||status<nFTCommonStatusWait))marth_state[fp->player].boost_used=0;
+ if(port_remix_enabled()&&(fp->fkind==58||fp->fkind==74||(fp->fkind==8&&(fp->passive_vars.kirby.copy_id==58||fp->passive_vars.kirby.copy_id==74)))&&(fp->ga==nMPKineticsGround||status<nFTCommonStatusWait))marth_state[fp->player].boost_used=0;
 }
 static void marth_install(FighterDescriptor *desc){
  int action;memcpy(marth_status,safe_statuses,sizeof(marth_status));

@@ -25,7 +25,7 @@ static void lucas_install(FighterDescriptor *d){
 int port_remix_weapon_desc(GObj *parent,WPDesc *d,u32 flags){
  int origin=-1;if(!port_remix_enabled()||!parent)return origin;
  switch(flags&WEAPON_MASK_PARENT){
- case WEAPON_FLAG_PARENT_FIGHTER:origin=ftGetStruct(parent)->fkind;break;
+ case WEAPON_FLAG_PARENT_FIGHTER:{FTStruct *fp=ftGetStruct(parent);origin=fp->fkind==8?fp->passive_vars.kirby.copy_id:fp->fkind;break;}
  case WEAPON_FLAG_PARENT_WEAPON:origin=wpGetStruct(parent)->port_remix_origin;break;
  default:break;
  }
@@ -37,7 +37,7 @@ int port_remix_weapon_desc(GObj *parent,WPDesc *d,u32 flags){
   }
  }
  if(origin==34){if(d->kind==nWPKindChargeShot)d->p_weapon=&main_files[34][6];if(d->kind==nWPKindSamusBomb)d->p_weapon=&main_files[34][0];}
- return origin;
+ port_remix_mewtwo_weapon_desc(origin,d);return origin;
 }
 void **port_remix_pkfire_file(GObj *g,void **native){return wpGetStruct(g)->port_remix_origin==38?&main_files[38][6]:native;}
 void port_remix_ness_effect(int origin,EFDesc *d,int wave){

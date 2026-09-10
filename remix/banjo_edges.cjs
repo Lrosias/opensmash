@@ -1,0 +1,13 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE),fs=require('node:fs/promises'),assert=require('node:assert/strict');
+(async()=>{const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--enable-unsafe-swiftshader']});try{const report={};for(const name of ['eggs-forward','eggs-back','air-eggs','beak-bomb','beak-recoil','bill-drill','ground-rap']){
+ const p=await browser.newPage(),errors=[];p.on('pageerror',e=>errors.push(String(e)));await p.goto('http://127.0.0.1:4199/remix-check.html?battle=68,74,16,0&SSB64_REMIX_TEST=1');await p.waitForFunction(()=>window.driver,{},{timeout:60000});
+ const r=await p.evaluate(name=>{let rows=[],items=[];const tick=(n,a=[0,0,0],b=[0,0,0])=>{pads=[a,b];for(let j=0;j<n;j++){driver.step();rows.push(probe());let w=game.contentWindow,q=w.Module._port_remix_entity_probe()>>2,v=Array.from(w.HEAP32.slice(q,q+322));items.push(Array.from({length:v[0]+v[1]},(_,i)=>v.slice(2+i*10,12+i*10)))}};for(let n=0;(window.state?.[4]||0)<30&&n<900;n++)tick(1);if(!game.contentWindow.Module._port_remix_test_place(name==='eggs-forward'?1800:name==='ground-rap'?400:800))throw Error('place');tick(2);rows=[];items=[];
+ if(name==='eggs-forward'){tick(1,[16384,0,0]);tick(130);}
+ if(name==='eggs-back'){tick(1,[16384,0,0]);tick(30,[0,-70,0]);tick(150);}
+ if(name==='air-eggs'){tick(1,[8,0,0]);tick(10);tick(1,[16384,0,0]);tick(140);}
+ if(name.startsWith('beak-')){tick(1,[16384,0,70]);tick(12);tick(1,[16384,0,0]);if(name==='beak-recoil'){tick(16);game.contentWindow.Module._port_remix_test_position(1,150,700);}tick(150);}
+ if(name==='bill-drill'){tick(1,[8,0,0]);tick(20);tick(1,[16384,0,-70]);tick(160);}
+ if(name==='ground-rap'){tick(1,[16384,0,-70]);tick(160);}
+ return {rows,items};},name);await fs.writeFile(`build/remix/main/checks/banjo-${name}.json`,JSON.stringify(r));report[name]={statuses:[...new Set(r.rows.map(x=>x[1]))],foeStatuses:[...new Set(r.rows.map(x=>x[17]))],xmax:Math.max(...r.rows.map(x=>x[3])),ymax:Math.max(...r.rows.map(x=>x[4])),last:r.rows.at(-1)[1],damage:r.rows.at(-1)[18],entities:Math.max(...r.items.map(x=>x.length)),errors};console.log(name,report[name]);assert.deepEqual(errors,[]);await p.close();}
+ await fs.writeFile('build/remix/main/checks/banjo-edges.json',JSON.stringify(report,null,2));assert(report['eggs-forward'].entities>0);assert(report['eggs-back'].statuses.includes(227));assert(report['beak-bomb'].statuses.includes(237));assert(report['beak-recoil'].statuses.includes(239)&&report['beak-recoil'].damage>0);assert(report['bill-drill'].statuses.includes(231)&&report['bill-drill'].statuses.includes(232));
+}finally{await browser.close()}})();

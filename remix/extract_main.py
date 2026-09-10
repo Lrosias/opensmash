@@ -43,3 +43,15 @@ if __name__=='__main__':
 
   from extract_voices import extract_voices
   extract_voices(sys.argv[1], IDS)
+
+  from extract_sounds import extract_sounds
+  extract_sounds(sys.argv[1])
+
+  from extract_normals import extract_normals
+  extract_normals(sys.argv[1])
+
+  from extract_kirby import extract_kirby
+  extract_kirby(sys.argv[1])
+
+  from extract_trails import extract_trails
+  extract_trails(sys.argv[1])

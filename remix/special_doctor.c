@@ -18,10 +18,10 @@ static sb32 capsule_map(GObj *g){
 }
 static sb32 capsule_reflect(GObj *g){WPStruct *w=wpGetStruct(g);w->lifetime=w->weapon_vars.fireball.index?100:140;wpMainReflectorSetLR(w,ftGetStruct(w->owner_gobj));wpMainVelSetModelPitch(g);return FALSE;}
 static void doctor_capsule(GObj *g){
- FTStruct *fp=ftGetStruct(g);Vec3f pos={0,0,0};GObj *projectile;WPStruct *w;WPDesc d;int luigi=fp->fkind==75;
+ FTStruct *fp=ftGetStruct(g);Vec3f pos={0,0,0};GObj *projectile;WPStruct *w;WPDesc d;int id=fp->fkind==8?fp->passive_vars.kirby.copy_id:fp->fkind;int luigi=id==75;
  if(!fp->motion_vars.flags.flag0)return;fp->motion_vars.flags.flag0=0;
- gmCollisionGetFighterPartsWorldPosition(fp->joints[FTMARIO_FIREBALL_SPAWN_JOINT],&pos);
- d=dWPMarioFireballWeaponDesc;d.p_weapon=fp->data->p_file_special1;d.o_attributes=0;d.proc_update=capsule_update;d.proc_map=capsule_map;d.proc_reflector=capsule_reflect;
+ gmCollisionGetFighterPartsWorldPosition(fp->joints[fp->fkind==8?FTKIRBY_COPYMARIO_FIREBALL_SPAWN_JOINT:FTMARIO_FIREBALL_SPAWN_JOINT],&pos);
+ d=dWPMarioFireballWeaponDesc;d.p_weapon=&main_files[id][5];d.o_attributes=0;d.proc_update=capsule_update;d.proc_map=capsule_map;d.proc_reflector=capsule_reflect;
  projectile=wpManagerMakeWeapon(g,&d,&pos,WEAPON_FLAG_COLLPROJECT|WEAPON_FLAG_PARENT_FIGHTER);if(!projectile)return;
  w=wpGetStruct(projectile);w->weapon_vars.fireball.index=luigi;w->lifetime=luigi?100:140;
  w->physics.vel_air=(Vec3f){(luigi?36:40*__cosf(-0.4F))*fp->lr,luigi?0:40*__sinf(-0.4F),0};

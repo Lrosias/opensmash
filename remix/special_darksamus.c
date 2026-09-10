@@ -5,7 +5,7 @@ static wpSamusChargeShotAttributes ds_charge_levels[]={
  {250,50,6,125,10,0xED,0xF1,0x17,1},{320,45,9,150,10,0xED,0xF2,0x17,1},
  {400,40,12,175,10,0xED,0xF3,0x17,1},{490,35,15,200,10,0xEC,0xF4,0x16,1},
  {620,30,18,225,10,0xEC,0xF5,0x16,1},{740,25,24,275,10,0xEB,0xF6,0x16,2}};
-wpSamusChargeShotAttributes *port_remix_charge_levels(GObj *g,wpSamusChargeShotAttributes *native){return wpGetStruct(g)->port_remix_origin==34?ds_charge_levels:native;}
+wpSamusChargeShotAttributes *port_remix_charge_levels(GObj *g,wpSamusChargeShotAttributes *native){return wpGetStruct(g)->port_remix_origin==34?ds_charge_levels:port_remix_mewtwo_levels(g,native);}
 static void ds_charge_air_enter(GObj *g){
  FTStruct *fp=ftGetStruct(g);Vec3f pos;ftMainSetStatus(g,231,0,1,FTSTATUS_PRESERVE_COLANIM);
  fp->proc_damage=ftSamusSpecialNProcDamage;fp->status_vars.samus.specialn.charge_int=20;

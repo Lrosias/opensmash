@@ -4,8 +4,8 @@ static FTStatusDesc younglink_status[64];
 static ITStatusDesc bombchu_status[7];
 extern ITStatusDesc dItLinkBombStatusDescs[];
 static int bombchu_is(ITStruct *ip){return port_remix_enabled()&&main_files[31][0]&&ip->kind==nITKindLinkBomb&&(void*)ip->attr==(char*)main_files[31][0]+0x40;}
-void **port_remix_bomb_file(GObj *g,void **native){return bombchu_is(itGetStruct(g))?&main_files[31][0]:native;}
-ITStatusDesc *port_remix_item_status(GObj *g,ITStatusDesc *table){return bombchu_is(itGetStruct(g))?bombchu_status:table;}
+void **port_remix_bomb_file(GObj *g,void **native){return bombchu_is(itGetStruct(g))?&main_files[31][0]:port_remix_conker_bomb_file(g,native);}
+ITStatusDesc *port_remix_item_status(GObj *g,ITStatusDesc *table){return bombchu_is(itGetStruct(g))?bombchu_status:port_remix_peach_item_status(g,table);}
 static void bombchu_direction(GObj *g){DObjGetStruct(g)->rotate.vec.f.z=itGetStruct(g)->lr<0?PI32:0;}
 static sb32 bombchu_explode(GObj *g){itLinkBombExplodeInitVars(g);return FALSE;}
 static void bombchu_fall(GObj *g){

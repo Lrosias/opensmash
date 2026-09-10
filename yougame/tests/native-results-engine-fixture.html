@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#234;color:white;font:22px system-ui}canvas{width:100%;height:100%}</style></head><body><canvas width="640" height="480"></canvas><script>
+// A deliberately fake initialized engine. Only browser bridge/lifecycle
+// behavior is under test; this is not visual or performance proof for native.
+const fixture=parent.resultFixture,battle=new URLSearchParams(location.search).has('SSB64_BOOT_BATTLE');
+const result=frameElement.title==='OpenSmash64 native results';
+const record={battle,result,ticks:0,ports:[],disposed:false,localButtons:0,exports:0};fixture.frames.push(record);
+window.Module={nativeScene:battle?22:7,savedRoster:[58,59,7,11],savedPorts:['human','cpu','off','human'],yougameDispose(){record.disposed=true;},_port_remix_online_results(...args){fixture.exports.push(args);record.exports++;if(result&&tick<2){record.premature=true;Module.nativeScene=7;return 1;}Module.savedRoster=args.slice(0,2);Module.savedPorts=['human','human'];Module.nativeScene=27;return 1;}};
+const bridge=parent.openSmashAttachEngine(window);window.fixtureBridge=bridge;
+let tick=0;const bytes=new Uint8Array(16384),raw={silence(){},memory:()=>bytes,used:()=>bytes.length,step(){tick++;if(result){Module.nativeScene=7;if(tick===1)fixture.duringResultBoot?.();}const terminal=fixture.terminal;bridge.afterTick(123,tick>1?terminal.result:-1,...terminal.stocks,tick);}};
+if(result&&fixture.deferResults)fixture.releaseResultBoot=()=>bridge.ready(raw);else bridge.ready(raw);
+function render(){if(record.disposed)return;if(bridge.beforeTick()){record.ticks++;const heap=new Int32Array(16);bridge.readPorts(0,heap);record.ports=Array.from(heap);if(!result&&!battle)record.localButtons|=heap[1];const c=document.querySelector('canvas').getContext('2d');c.fillStyle='#234';c.fillRect(0,0,640,480);c.fillStyle='white';c.fillText('TEST ENGINE: '+(battle?'BATTLE':result?'RESULTS':'MENU')+' '+record.ticks,20,70);}requestAnimationFrame(render);}render();
+</script></body></html>

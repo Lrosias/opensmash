@@ -1,0 +1,12 @@
+--- /tmp/opensmash-remix-repro-f2654986e14088f5/BattleShip/decomp/src/ft/ftcommon/ftcommonjumpaerial.c	2026-09-10 01:53:58
++++ /Users/luis/Documents/ChatGPT/OpenSmash/BattleShip/decomp/src/ft/ftcommon/ftcommonjumpaerial.c	2026-09-10 01:46:05
+@@ -294,6 +294,9 @@
+ sb32 ftCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj)
+ {
+ #ifdef __EMSCRIPTEN__
++    extern int port_remix_peach_float_check(GObj*);if(port_remix_peach_float_check(fighter_gobj))return TRUE;
++#endif
++#ifdef __EMSCRIPTEN__
+     extern int port_remix_peach_float_check(GObj*);if(port_remix_peach_float_check(fighter_gobj)||port_remix_dedede_jump_check(fighter_gobj))return TRUE;
+ #endif
+     FTStruct *fp = ftGetStruct(fighter_gobj);

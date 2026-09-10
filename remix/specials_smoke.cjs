@@ -5,6 +5,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE),fs=require('node:fs/prom
  const r=await page.evaluate(async()=>{const {NativeCheckpoints}=await import("/checkpoints.mjs");let result={};const tick=(n,a=[0,0,0],b=[0,0,0])=>{let rows=[];for(let i=0;i<n;i++){pads=[a,b];driver.step();rows.push(probe())}return rows};for(let n=0;(window.state?.[4]||0)<30&&n<900;n++)tick(1);if((window.state?.[4]||0)<30)throw Error("Match never reached GO");const place=()=>{if(!game.contentWindow.Module._port_remix_test_place(260))throw Error('fixture placement failed');tick(2)};
  console.log('CHECK: neutral');place();result.neutral=tick(1,[16384,0,0]);for(let n=0;n<75;n++)result.neutral.push(...tick(1,[n%5===4?16384:0,0,0]));result.neutral.push(...tick(90));
  console.log('CHECK: up',probe());place();result.up=[...tick(1,[16384,0,70]),...tick(110)];
+ console.log('CHECK: aerial recovery',probe());place();tick(1,[8,0,0]);tick(18);result.recovery=[...tick(1,[16384,0,70]),...tick(130)];
  console.log('CHECK: down',probe());place();result.counter=[...tick(1,[16384,0,-70]),...tick(10),...tick(1,[0,0,0],[32768,0,0]),...tick(65)];
  console.log('CHECK: rollback',probe());place();const store=new NativeCheckpoints(driver,{window:180});const snap=store.save(0,state);const expected=[];
  const input=n=>n===0?[16384,0,-70]:n===55?[16384,0,70]:[0,0,0];const other=n=>n===11?[32768,0,0]:[0,0,0];

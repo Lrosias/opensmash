@@ -63,9 +63,24 @@ class ScriptTests(unittest.TestCase):
         words=[0xd142c800,0xd442c800,0xd5000001,0xd7000001,0xda000000,0]
         self.assertEqual(self.decode(words)[0],words)
 
+    def test_relative_file_jump_ends_absolute_stream(self):
+        self.assertEqual(self.decode([0x04000002,0xdb000270,0])[0],[0x04000002,0xdb000270])
+
+    def test_known_effects_and_attack_voices_are_retained(self):
+        words=[(38<<26)|(31<<10),0,0,0,20<<26,0]
+        self.assertEqual(self.decode(words),(words,[]))
+
+    def test_custom_effect_remains_explicitly_omitted(self):
+        words,omissions=self.decode([(38<<26)|(117<<10),0,0,0,0])
+        self.assertEqual(words,[0]);self.assertEqual(len(omissions),1)
+
+    def test_known_custom_trail_is_retained(self):
+        words=[(51<<26)|(2<<18),0]
+        self.assertEqual(self.decode(words),(words,[]))
+
     def test_unknown_extension_rejects(self):
-        with self.assertRaisesRegex(ValueError,'Unsupported extension branch'):
-            self.decode([0xdb000000,0])
+        with self.assertRaisesRegex(ValueError,'Unknown extension'):
+            self.decode([0xdc000000,0])
 
     def test_truncated_attack_rejects(self):
         with self.assertRaises(struct.error):

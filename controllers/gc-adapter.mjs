@@ -72,7 +72,7 @@ export class GameCubeAdapter {
         a.endpoints.some(e=>e.direction==='out'&&e.type==='interrupt'));
       if(!match){
         if(candidates.some(({a})=>a.interfaceClass===3))
-          throw Object.assign(Error('GameCube adapter detected. This WUP-028 uses an HID interface that this browser cannot access through WebUSB. Open this game in the YouGame desktop app for native adapter support.'),{code:'WUP028_NATIVE_REQUIRED'});
+          throw Object.assign(Error('GameCube adapter detected. This WUP-028 uses an HID interface that this browser cannot access through WebUSB. Support requires a YouGame desktop app update that is not released yet; version 0.3.0 cannot use this adapter.'),{code:'WUP028_NATIVE_REQUIRED'});
         throw Error('No supported GameCube USB interface found');
       }
       await device.claimInterface(match.i.interfaceNumber);check();this.claimed=match.i.interfaceNumber;

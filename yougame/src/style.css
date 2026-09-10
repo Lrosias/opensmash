@@ -49,3 +49,11 @@ body{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-ri
 #match-clock[hidden]{display:none}#match-clock.low-time{color:#ffd47e}
 .online-playing>button[aria-label="GameCube adapter controls"],
 .competitive-open>button[aria-label="GameCube adapter controls"]{display:none}
+#competitive.native-result:not([hidden]){background:linear-gradient(0deg,#101923aa,transparent 65%);display:flex;align-items:flex-end;pointer-events:none}
+#competitive.native-result .competitive-card{margin:0;max-width:360px;padding:16px 20px;border:1px solid #40505f;border-radius:12px;background:#101923e8}
+#competitive.native-result h1{font-size:25px}#competitive.native-result .result-score{font-size:32px;margin:8px 0}#competitive.native-result .competitive-subtitle,#competitive.native-result .rules-note{font-size:12px;margin:8px 0}#competitive.native-result .rank-line{font-size:16px}
+.touch.native-results #game{left:var(--safe-left);right:var(--safe-right)}
+.touch #competitive.native-result:not([hidden]){align-items:flex-start}
+.touch #competitive.native-result .competitive-card{display:flex;align-items:center;gap:12px;width:auto;max-width:none;padding:6px 12px}
+.touch #competitive.native-result h1{font-size:18px;margin:0}.touch #competitive.native-result .result-score{font-size:22px;margin:0}
+.touch #competitive.native-result .competitive-kicker,.touch #competitive.native-result .competitive-subtitle,.touch #competitive.native-result .rules-note,.touch #competitive.native-result .rank-line{display:none}

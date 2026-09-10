@@ -1,4 +1,14 @@
-# Marth: local Smash Remix binary import
+# OpenSmash64 Remix
+
+The active curated multiplayer implementation is documented in [MAIN.md](MAIN.md).
+Its current test status is in [multiplayer-coverage.json](multiplayer-coverage.json).
+The notes below describe the original Marth extraction experiment, retained as
+historical binary-analysis evidence; they do not describe the current movesets.
+
+## Original Marth import experiment
+
+The published Remix frontend shares the new GameCube adapter implementation with
+OpenSmash64. See the [implementation and YouGame handoff](../docs/gamecube-adapter-handoff.md).
 
 For the expanded 94-fighter selector and offline build, see [ROSTER.md](ROSTER.md).
 

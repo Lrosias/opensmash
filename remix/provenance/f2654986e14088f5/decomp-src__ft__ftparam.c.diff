@@ -1,0 +1,21 @@
+--- /tmp/opensmash-remix-repro-f2654986e14088f5/BattleShip/decomp/src/ft/ftparam.c	2026-09-10 01:53:58
++++ /Users/luis/Documents/ChatGPT/OpenSmash/BattleShip/decomp/src/ft/ftparam.c	2026-09-10 01:46:05
+@@ -12,6 +12,18 @@
+ #else
+ #define REMIX_CARGO_KIND(id) ((id)==nFTKindDonkey)
+ #endif
++
++
++
++
++
++
++
++
++
++
++
++
+ #include <it/item.h>
+ #include <sc/scene.h>
+ #include <ft/ftcommondata.h>

@@ -1,13 +1,14 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import vm from 'node:vm';
 import {ACTIVE_PROFILE,engineParams,validFighter} from '../src/game-profile.mjs';
+import {nativeResultArgs} from '../src/native-results.mjs';
 // Exercise the actual app bridge, keeping only platform/DOM/native dependencies mocked.
 async function setup(invite=null){
  const frames=[],calls=[],sets=[],tasks=[],ui={visible:false,setup(fighter,options){this.visible=true;this.fighter=fighter;this.options=options;},hide(){this.visible=false;},show(){},result(){},notice(){}};let uiOptions;
  const status={textContent:'',classList:{remove(){}}};
  const win={addEventListener(){},focus(){},YouGame:{ready:async()=>{},multiplayer:{invite,leave(){},open(options){return new Promise((resolve,reject)=>calls.push({options,resolve,reject}));}}}};
- const document={getElementById:id=>id==='game'?{append:f=>frames.push(f)}:id==='play-surface'?{append(){}}:status,createElement(){return{hidden:false,contentWindow:{Module:{nativeScene:16},addEventListener(){},focus(){}},remove(){}};}};
- class Set{constructor(o){Object.assign(this,o);sets.push(this);}destroy(){this.closed=true;}view(){return{wins:[0,0]};}}
- const scope={readAdapterMenu:()=>null,createMatchClock:()=>({show(){},hide(){},updateStatus(){}}),mountAdapterControls:()=>null,window:win,YouGame:win.YouGame,document,URLSearchParams,console,ACTIVE_PROFILE,engineParams,validFighter,COMPETITIVE_MODE:ACTIVE_PROFILE.mode,CompetitiveSet:Set,createCompetitiveUI:o=>{uiOptions=o;return ui;},setTimeout:fn=>tasks.push(fn),createTouch:()=>({clear(){},context(){},active:()=>false,read:()=>[0,0,0]}),engineAudioContext:()=>null,createInput:()=>({attach(){},destroy(){},read:()=>[0,0,0]})};
+ const document={body:{classList:{remove(){},toggle(){}}},getElementById:id=>id==='game'?{append:f=>frames.push(f)}:id==='play-surface'?{append(){}}:status,createElement(){return{hidden:false,contentWindow:{Module:{nativeScene:16},addEventListener(){},focus(){}},remove(){}};}};
+ class Set{constructor(o){Object.assign(this,o);sets.push(this);}destroy(){this.closed=true;}view(){return{round:this.round,wins:[0,0],fighters:[this.fighter,0],seat:0};}}
+ const scope={nativeResultArgs,readAdapterMenu:()=>null,createMatchClock:()=>({show(){},hide(){},updateStatus(){}}),mountAdapterControls:()=>null,window:win,YouGame:win.YouGame,document,URLSearchParams,console,ACTIVE_PROFILE,engineParams,validFighter,COMPETITIVE_MODE:ACTIVE_PROFILE.mode,CompetitiveSet:Set,createCompetitiveUI:o=>{uiOptions=o;return ui;},setTimeout:fn=>tasks.push(fn),createTouch:()=>({clear(){},context(){},active:()=>false,read:()=>[0,0,0]}),engineAudioContext:()=>null,createInput:()=>({attach(){},destroy(){},read:()=>[0,0,0]})};
  const source=(await readFile(new URL('../src/app.mjs',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'');await vm.runInNewContext(`(async()=>{${source}})()`,scope);
  const bridge=win.openSmashAttachEngine(frames[0].contentWindow),flush=async()=>{while(tasks.length)tasks.shift()();await Promise.resolve();await Promise.resolve();};
  return{calls,sets,bridge,status,ui,flush,invite:()=>win.YouGame.multiplayer.invite,back:f=>uiOptions.onBack(f),join:async(f=4)=>{uiOptions.onJoinInvite(f);await flush();},queue:async(q,f=4)=>{uiOptions.onQueue(q,f);await flush();},action:async(a,v=0)=>{bridge.menuAction(a,v);await flush();}};

@@ -3,15 +3,24 @@
 Includes the completed browser performance release from source commit `b2e071a`: AudioWorklet with SDL fallback, the offline clock, bounded diagnostics, dynamic texture scratch, accelerated checkpoints and Friends fixes.
 
 Main browser build: `yougame/dist`. Bundle: `build/OpenSmash64-Remix.zip`.
-The original 12 fighters retain their native implementation. The 22 added fighters
-use independent fighter slots and the models, textures, movement attributes,
-animations and normal attack scripts extracted from the supplied Smash Remix
-2.0.1 ROM. This is an experimental port: custom specials, character-specific
-mechanics, voices, and extended attack events are not fully implemented. It is
-not yet gameplay-equivalent to Smash Remix or ready for serious ranked competition.
-Imported fighters currently use their default costumes; alternate skins are not
-additional roster slots. Bosses, polygons, regional variants and disputed bonuses
-are excluded.
+The curated roster has 34 independent fighter slots. The 22 added fighters use
+models, textures, movement attributes, animations, attack scripts and hitboxes
+extracted from the supplied Smash Remix 2.0.1 ROM. Their neutral, up and down
+specials now have native implementations, including projectiles, charging,
+command grabs, counters and recovery states. Kirby loads his extended ROM data,
+copy animations and hats for all 22 additions while retaining the original powers.
+
+The current multiplayer candidate also includes four local controller ports,
+ROM selection announcements, combat samples, sword trails and shared effects,
+animated victory/defeat screens, and returning to the saved local setup. This
+working build is separate from the coordinator's published release. Its exact
+validation status is tracked in [multiplayer-coverage.json](multiplayer-coverage.json).
+
+Imported fighters currently use default costumes. Other original fighters retain
+their native Smash 64 implementation. Some Remix-specific cosmetic effects and
+sequenced sounds remain unported; these checks do not establish exact Remix
+balance or competitive equivalence. Bosses, polygons, regional variants and
+unselected bonuses remain outside this roster.
 
 ## Roster (34)
 
@@ -34,8 +43,8 @@ Banjo & Kazooie, Peach, Crash, Dark Samus, Lucas, Roy, Dr. Luigi.
 | Final Destination | Native flat-stage option |
 
 The six imported stages use ROM geometry, collision lines, blast zones, stage
-textures, backgrounds and model animations. Their music uses a native battle
-track because Remix's expanded sound bank is not ported. Both players spawn at
+textures, backgrounds and model animations. Stage music currently uses a native battle
+track. Combat sound effects use the extracted Remix sample bank. Both players spawn at
 opposite equal-height spawn points selected from each stage's own map data.
 Local VS offers the full pool. Online peers validate the same roster and stage
 IDs, and use P1's stage selection consistently. This is a simple stage selection
@@ -84,7 +93,7 @@ implemented port behavior, not complete moveset accuracy or balance.
 - Eight stages checked for rendering, opposing spawns and 40-frame exact replay.
 - Two native clients: confirmed state agrees at frame 227 after 59 rollbacks each.
 - Marth's jab damages Roy through normal walking and attack inputs.
-- 52 unit tests pass; 3 optional SDK-dependent tests are skipped in the local unit command.
+- 78 unit tests pass; 3 optional SDK-dependent tests are skipped in the local unit command.
 - 3,977 extracted assets and 109,173 relocation references validate against their
   recorded sizes and hashes.
 - Native roster → CPU choice → stage choice → match launch passes.
@@ -96,12 +105,13 @@ Publishing status and release identifiers are recorded separately under remix/me
 The VS flow uses the local Remix ROM's 30-slot portrait order, with Dark Samus,
 Lucas, Roy and Dr. Luigi directly beneath it. Portraits, selection pucks, pointer,
 player cards, mode title and background are ROM sprites; selected fighters use
-real rotating native models. D-pad, keyboard and touch input choose P1, CPU,
-confirm Ready to Fight, then select a stage from a four-column grid.
+real rotating native models. D-pad, keyboard and touch input choose fighters, confirm Ready to Fight, then
+select a stage from a four-column grid. Additional local controllers join with
+Start and select their own fighters.
 
 Stage selection uses the ROM's stage icons and title/cursor artwork, with a native
 3D model preview for each of the eight selected maps. This is an adaptation of
-Remix's graphical menus for this build's curated pool and one-versus-one flow,
+Remix's graphical menus for this build's curated pool and multiplayer flow,
 not an emulation of the ROM menu code or its full options system.
 
 `extract_menu.py` reads portrait layout/table offsets 0x2D20E18/0x2D20EBC and
@@ -109,6 +119,7 @@ stage-icon table 0x2C56C9C from the pinned local ROM. Official CharacterSelect.a
 and Stages.asm signatures located those tables. Menu art adds eight assets;
 combined validation now checks 3,985 assets and 110,050 bounded relocations.
 
-Imported-fighter results use a safe results screen instead of the original
-12-character record tables. A full Marth/Roy match returns to the graphical
-fighter menu. The baked-in personal-name footer is hidden on the start screen.
+Results render each active fighter in its victory or defeat animation, show the
+winner and KO/fall counts, and return to the graphical fighter menu. Local matches
+restore the selected roster and controller setup; online results expose rematch
+and leave actions to the multiplayer session. The baked-in personal-name footer is hidden on the start screen.

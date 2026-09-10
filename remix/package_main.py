@@ -20,4 +20,7 @@ for f in m['files']:
 for src in sorted((ROOT/'build/remix/main/assets/voices').glob('*.wav')):
  dst=out/'files/assets/remix/voices'/src.name;dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dst)
  m['files'].append(dict(path='/assets/remix/voices/'+src.name,url='files/assets/remix/voices/'+src.name,size=src.stat().st_size))
+src=ROOT/'build/remix/main/assets/sounds.bank'
+dst=out/'files/assets/remix/sounds.bank';dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dst)
+m['files'].append(dict(path='/assets/remix/sounds.bank',url='files/assets/remix/sounds.bank',size=src.stat().st_size))
 p.write_text(json.dumps(m,indent=2)+'\n')

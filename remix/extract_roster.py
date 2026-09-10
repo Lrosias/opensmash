@@ -37,7 +37,7 @@ def script(b,address,relocations=None,depth=0):
     remain in their original asset and use the engine's existing interpreter.
     """
     sizes={3:5,4:5,7:2,12:2,13:2,31:4,34:2,36:2,38:4,39:4,46:2}
-    omit={12,13,14,15,16,17,18,19,20,38,39,44,46,49,50,51,52,53,54}
+    omit={12,13,38,39,44,46,49,50,51,52,53,54}
     if depth>8:raise ValueError('Excessive parallel script depth')
     at=offset(address); stack=[]; loops=[]; words=[]; omissions=[]; seen={}; waits=[]; parallel=[]
     def finish(main):
@@ -49,7 +49,8 @@ def script(b,address,relocations=None,depth=0):
         word=struct.unpack_from('>I',b,at)[0]; op=word>>26
         if op>54: raise ValueError(f'Unknown extension {word:#010x} at {at:#x}')
         byte=word>>24
-        if byte>=0xdb:raise ValueError(f'Unsupported extension branch {word:#x}')
+        if byte==0xdb:return finish(words+[word])
+        if byte>=0xdc:raise ValueError(f'Unsupported extension branch {word:#x}')
         n=2 if byte in (0xd6,0xd9) else sizes.get(op,1);event=struct.unpack_from('>'+'I'*n,b,at);at+=n*4
         if op in (34,36):
             target=offset(event[1])
@@ -69,7 +70,13 @@ def script(b,address,relocations=None,depth=0):
             if not 0<count<=100:raise ValueError('Unbounded loop')
             loops.append([at,count]);continue
         if op==33:
-            if not loops:raise ValueError('Unmatched loop')
+            if not loops:
+                # Pinned 2.0.1 Mewtwo USP_END has an END_LOOP without LOOP.
+                # Stop this malformed tail after its two visibility events.
+                if at-4==offset(0x8055c080):
+                    omissions.append(dict(rom_offset=at-4,opcode=op,words=event,repair='terminate_unmatched_mewtwo_loop_end'))
+                    return finish(words+[0])
+                raise ValueError('Unmatched loop')
             loops[-1][1]-=1
             if loops[-1][1]:at=loops[-1][0]
             else:loops.pop()
@@ -83,6 +90,11 @@ def script(b,address,relocations=None,depth=0):
         if op==12 and relocations is not None:
             throw=list(struct.unpack_from('>7I',b,offset(event[1])))
             words.append(word);parallel.append((len(words),throw,[]));words.append(0);continue
+        # The native effect dispatcher supports these shared effects; custom
+        # Remix effect IDs still require explicit handlers and remain recorded.
+        safe_effect=op in (38,39) and ((word>>10)&511) in ({0,6,7,8,37,40,41,42,43,44,46,54,70,71,74,76,77,87,90,91}|set(range(10,35)))
+        safe_trail=op==51 and ((word>>18)&255)<23
+        if (safe_effect or safe_trail):words.extend(event);continue
         if op in omit and byte not in (0xd0,0xd1,0xd4,0xd5,0xd7,0xda):omissions.append(dict(rom_offset=at-n*4,opcode=op,words=event))
         else:
             if op in (1,2) and (word&0x3ffffff)>0:waits.append(len(words))
@@ -138,7 +150,7 @@ def extract(rom,out,selected=None):
         scripts={}; unsupported={};relative=[]
         # Marth's special hitboxes and timing flags use the same interpreter.
         # Keep their provenance separate from the normal-attack count.
-        for i in list(range(165,189))+(list(range(197,218)) if f['id']==58 else list(range(197,222)) if f['id']==74 else list(range(195,len(main))) if f['id'] in (29,30,31,32,34,38,75) else []):
+        for i in range(len(main)):
             fid,addr,flags=main[i]
             if not fid or addr in (0,0x80000000):continue
             if addr<0x100000:relative.append(i);continue
