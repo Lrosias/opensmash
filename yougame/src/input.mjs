@@ -11,11 +11,32 @@ export function createInput({allowStart=false,readTouch=()=>[0,0,0],adapter=null
     win.document?.addEventListener('visibilitychange',hide);
     cleanups.push(() => { win.removeEventListener('keydown', down,{capture:true}); win.removeEventListener('keyup', up,{capture:true}); win.removeEventListener('blur', clear);win.document?.removeEventListener('visibilitychange',hide); });
   }
-  function read() {
+  function read(pad) {
     if(adapter?.owned)return n64Pad(adapter.snapshot().ports[0],adapter.origins[0],allowStart);
+    if(pad===undefined)pad=[...(navigator.getGamepads?.() || [])].find(p => p?.connected);
     let [b,x,y]=keyboard.read();
-    const pad = [...(navigator.getGamepads?.() || [])].find(p => p?.connected);
-    if (pad) {
+    const gamepad=readGamepad(pad,allowStart);b|=gamepad[0];
+    if(gamepad[1])x=gamepad[1];if(gamepad[2])y=gamepad[2];
+    const touch=readTouch();b|=touch[0];if(touch[1]||touch[2]){x=touch[1];y=touch[2];}
+    return [allowStart?b:b & ~0x1000, Math.max(-80, Math.min(80,x)), Math.max(-80, Math.min(80,y))];
+  }
+  return {attach,destroy(){cleanups.forEach(f=>f());keyboard.clear();},read,
+    readPorts(){
+      if(!adapter?.owned){
+        // Browser indices keep local seats stable when another controller disconnects.
+        // Keyboard and touch still belong only to port 1; read() retains the
+        // first connected controller behavior for single-player/online callers.
+        const pads=navigator.getGamepads?.()||[];
+        return [read(pads[0]||null),...[1,2,3].map(i=>pads[i]?.connected?readGamepad(pads[i],allowStart):null)];
+      }
+      const snapshot=adapter.snapshot();
+      return snapshot.ports.map((p,i)=>p.connected?n64Pad(p,adapter.origins[i],allowStart):null);
+    }};
+}
+
+export function readGamepad(pad,allowStart=false){
+  let b=0,x=0,y=0;
+  if (pad?.connected) {
       const map = {0:0x8000,1:0x4000,2:8,3:8,4:0x2000,5:0x10,6:0x2000,7:0x10,9:0x1000};
       for (const [i, mask] of Object.entries(map)) if (pad.buttons[i]?.pressed) b |= mask;
       if (Math.abs(pad.axes[0] || 0) > .18) x = Math.round(pad.axes[0] * 80);
@@ -25,13 +46,5 @@ export function createInput({allowStart=false,readTouch=()=>[0,0,0],adapter=null
       if (pad.axes[2] > .5) b |= 1; if (pad.axes[2] < -.5) b |= 2;
       if (pad.axes[3] > .5) b |= 4; if (pad.axes[3] < -.5) b |= 8;
     }
-    const touch=readTouch();b|=touch[0];if(touch[1]||touch[2]){x=touch[1];y=touch[2];}
-    return [allowStart?b:b & ~0x1000, Math.max(-80, Math.min(80,x)), Math.max(-80, Math.min(80,y))];
-  }
-  return {attach,destroy(){cleanups.forEach(f=>f());keyboard.clear();},read,
-    readPorts(){
-      if(!adapter?.owned)return [read(),null,null,null];
-      const snapshot=adapter.snapshot();
-      return snapshot.ports.map((p,i)=>p.connected?n64Pad(p,adapter.origins[i],allowStart):null);
-    }};
+  return [allowStart?b:b&~0x1000,Math.max(-80,Math.min(80,x)),Math.max(-80,Math.min(80,y))];
 }
