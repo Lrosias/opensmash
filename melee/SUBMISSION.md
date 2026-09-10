@@ -8,7 +8,7 @@ persistent pipeline caching and HTTP-gzip streaming. It adds configured native
 online matches and the competitive flows in [COMPETITIVE.md](COMPETITIVE.md).
 
 - Native engine SHA256: `ec79f2015598d73f4031613634cb0ee4463e58b10290862ed67116141bc983f6`.
-- 27 unit tests pass against deployed SDK `17aafda7ae34563194700f28fc359bfa5de973f7b8f33379af16e65a7fc17316`.
+- 32 unit tests pass against deployed SDK `17aafda7ae34563194700f28fc359bfa5de973f7b8f33379af16e65a7fc17316`.
 - Independent native boots agree on RAM checksums; 240 equal input frames and
   seven-frame save/load/replay converge; a real four-stock elimination agrees.
 - Kirby/Zelda on Fountain and Sheik/Ice Climbers on Stadium verify exact selected

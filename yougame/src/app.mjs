@@ -17,8 +17,9 @@ let fighter=0, stage=6, queueKind=0, busy=false, room=null, session=null, set=nu
 let menuState={phase:0,text:'',revision:0};
 const engines=new Map(),listeners=[],rotationSeeds=new WeakMap();
 const touch=createTouch({wakeAudio:()=>{engineAudioContext((battle||menu)?.contentWindow)?.resume().catch(()=>{});},leave:()=>cleanup('YOU LEFT THE MATCH',6)});
-const competitive=createCompetitiveUI({readController:()=>readAdapterMenu(adapter),onQueue:(queue,choice)=>{fighter=choice;queueKind={casual:0,ranked:1,friends:2}[queue];online();},onBack:()=>{competitive.hide();menu?.contentWindow.focus();},onPick:choice=>{try{set?.choose(choice);}catch(e){set?.fail(e.message);}}});
-const onlineEntry=document.createElement('button');onlineEntry.id='online-entry';onlineEntry.textContent='Competitive online';onlineEntry.onclick=()=>{if(!busy){touch.clear();competitive.setup(fighter);window.focus();}};document.getElementById('play-surface').append(onlineEntry);
+const competitive=createCompetitiveUI({readController:()=>readAdapterMenu(adapter),onQueue:(queue,choice)=>{if(busy)return;fighter=choice;queueKind={casual:0,ranked:1,friends:2}[queue];online();},onJoinInvite:choice=>{if(busy)return;fighter=choice;queueKind=3;online();},onBack:choice=>{if(validFighter(choice))fighter=choice;competitive.hide();menu?.contentWindow.focus();},onPick:choice=>{try{set?.choose(choice);}catch(e){set?.fail(e.message);}}});
+const onlineEntry=document.createElement('button');onlineEntry.id='online-entry';onlineEntry.textContent='Competitive online';onlineEntry.onclick=()=>{if(!busy){touch.clear();showSetup();window.focus();}};document.getElementById('play-surface').append(onlineEntry);
+function showSetup(){competitive.setup(fighter,{invite:!!window.YouGame?.multiplayer?.invite});}
 function status(text,phase=menuState.phase){
  menuState={phase,text,revision:menuState.revision+1};
  document.getElementById('status').textContent=text;
@@ -34,7 +35,7 @@ function disconnect(){
  for(const [r,event,handler]of listeners.splice(0))r.off(event,handler);
  const old=room;room=null;old?.leave();window.YouGame?.multiplayer?.leave();busy=false;onlineEntry.hidden=false;platformLobby=false;
 }
-function cleanup(message='',phase=0){resultsPresentation=false;disconnect();showMenu();competitive.setup(fighter);if(message)competitive.notice(message);status(message,phase);}
+function cleanup(message='',phase=0){resultsPresentation=false;disconnect();showMenu();showSetup();if(message)competitive.notice(message);status(message,phase);}
 function listen(r,event,handler){r.on(event,handler);listeners.push([r,event,handler]);}
 function createEngine(params,duel=null){
  const frame=document.createElement('iframe');frame.title=duel?'OpenSmash64 online battle':'OpenSmash64 native menus';frame.allow='autoplay; gamepad; fullscreen';
@@ -50,11 +51,11 @@ function launch(fighters,duel){
 function menuAction(action,value){
  // Do not remove an engine from inside its C -> JS callback.
  setTimeout(()=>{
-  if(action===5){fighter=validFighter(value&255)?value&255:0;queueKind=(value>>8)&255;stage=(value>>16)&255;competitive.setup(fighter);window.focus();}
-  else if(action===1){fighter=validFighter(value&255)?value&255:0;queueKind=value>>8;competitive.setup(fighter);window.focus();}
+  if(action===5){fighter=validFighter(value&255)?value&255:0;queueKind=(value>>8)&255;stage=(value>>16)&255;showSetup();window.focus();}
+  else if(action===1){fighter=validFighter(value&255)?value&255:0;queueKind=value>>8;showSetup();window.focus();}
   else if(action===2)cleanup();
   else if(action===3 && room && !room.playing){status('WAITING FOR OPPONENT',5);room.ready();}
-  else if(action===4){cleanup();online();}
+  else if(action===4){cleanup();if(!window.YouGame?.multiplayer?.invite)online();}
  },0);
 }
 window.openSmashAttachEngine=win=>{
@@ -134,4 +135,4 @@ window.addEventListener('pagehide',disconnect);
 const params=engineParams();
 try{if(window.YouGame){await YouGame.ready();if(YouGame.multiplayer.invite){queueKind=3;params.set('SSB64_START_SCENE','16');params.set('SSB64_YOUGAME_INVITE','1');}}}catch(e){console.warn(e);}
 menu=createEngine(params);
-if(window.YouGame?.multiplayer?.invite)online();
+if(window.YouGame?.multiplayer?.invite){showSetup();window.focus();}

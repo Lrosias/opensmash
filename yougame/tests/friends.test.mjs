@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 import {ACTIVE_PROFILE,engineParams,validFighter} from '../src/game-profile.mjs';
 // Exercise the actual app bridge, keeping only platform/DOM/native dependencies mocked.
 async function setup(invite=null){
- const frames=[],calls=[],sets=[],tasks=[],ui={visible:false,setup(){this.visible=true;},hide(){this.visible=false;},show(){},result(){},notice(){}};let uiOptions;
+ const frames=[],calls=[],sets=[],tasks=[],ui={visible:false,setup(fighter,options){this.visible=true;this.fighter=fighter;this.options=options;},hide(){this.visible=false;},show(){},result(){},notice(){}};let uiOptions;
  const status={textContent:'',classList:{remove(){}}};
  const win={addEventListener(){},focus(){},YouGame:{ready:async()=>{},multiplayer:{invite,leave(){},open(options){return new Promise((resolve,reject)=>calls.push({options,resolve,reject}));}}}};
  const document={getElementById:id=>id==='game'?{append:f=>frames.push(f)}:id==='play-surface'?{append(){}}:status,createElement(){return{hidden:false,contentWindow:{Module:{nativeScene:16},addEventListener(){},focus(){}},remove(){}};}};
@@ -10,7 +10,7 @@ async function setup(invite=null){
  const scope={readAdapterMenu:()=>null,createMatchClock:()=>({show(){},hide(){},updateStatus(){}}),mountAdapterControls:()=>null,window:win,YouGame:win.YouGame,document,URLSearchParams,console,ACTIVE_PROFILE,engineParams,validFighter,COMPETITIVE_MODE:ACTIVE_PROFILE.mode,CompetitiveSet:Set,createCompetitiveUI:o=>{uiOptions=o;return ui;},setTimeout:fn=>tasks.push(fn),createTouch:()=>({clear(){},context(){},active:()=>false,read:()=>[0,0,0]}),engineAudioContext:()=>null,createInput:()=>({attach(){},destroy(){},read:()=>[0,0,0]})};
  const source=(await readFile(new URL('../src/app.mjs',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'');await vm.runInNewContext(`(async()=>{${source}})()`,scope);
  const bridge=win.openSmashAttachEngine(frames[0].contentWindow),flush=async()=>{while(tasks.length)tasks.shift()();await Promise.resolve();await Promise.resolve();};
- return{calls,sets,bridge,status,ui,flush,queue:async(q,f=4)=>{uiOptions.onQueue(q,f);await flush();},action:async(a,v=0)=>{bridge.menuAction(a,v);await flush();}};
+ return{calls,sets,bridge,status,ui,flush,invite:()=>win.YouGame.multiplayer.invite,back:f=>uiOptions.onBack(f),join:async(f=4)=>{uiOptions.onJoinInvite(f);await flush();},queue:async(q,f=4)=>{uiOptions.onQueue(q,f);await flush();},action:async(a,v=0)=>{bridge.menuAction(a,v);await flush();}};
 }
 function room(queue='private',isHost=true){const events=new Map();return{queue,isHost,me:'me',players:[{id:'me'},{id:'peer'}],playing:false,round:1,readyCalls:0,settingsCalls:[],leaves:0,on(e,h){if(!events.has(e))events.set(e,new Set());events.get(e).add(h);},off(e,h){events.get(e)?.delete(h);},emit(e,data){for(const h of events.get(e)||[])h(data);},ready(){this.readyCalls++;},settings(o){this.settingsCalls.push(o);},leave(){this.leaves++;}};}
 test('Friends owns Ready and Continue through the SDK without public fill',async()=>{
@@ -18,6 +18,15 @@ test('Friends owns Ready and Continue through the SDK without public fill',async
  r.playing=true;r.emit('ready',{round:1});call.resolve(r);await t.flush();assert.equal(t.sets.length,1);assert.equal(t.sets[0].fighter,4);
  r.playing=false;r.emit('result',{won:true});assert.equal(r.readyCalls,0);r.playing=true;r.round=2;r.emit('ready',{round:2});assert.equal(t.sets.length,2);
 });
-test('invite starts one SDK open and relies on its invite-first routing',async()=>{const t=await setup('friend-code');assert.equal(t.calls.length,1);const r=room('private',false);t.calls[0].options.onStatus({room:r});assert.equal(r.readyCalls,0);assert.deepEqual(r.settingsCalls,[]);await t.queue('friends');assert.equal(t.calls.length,1);});
+test('incoming invite waits for a fighter confirmation, then opens its existing SDK room once',async()=>{
+ const t=await setup('friend-code');assert.equal(t.calls.length,0);assert.equal(t.ui.visible,true);assert.equal(t.ui.options.invite,true);assert.equal(t.bridge.beforeTick(),false);
+ await t.join(8);assert.equal(t.calls.length,1);assert.equal(t.ui.visible,false);assert.equal(t.invite(),'friend-code');const call=t.calls[0];assert.equal(call.options.queue,'casual');assert.equal(call.options.mode,ACTIVE_PROFILE.mode);assert.equal(call.options.friend,undefined);
+ const r=room('private',false);call.options.onStatus({room:r});assert.equal(r.readyCalls,0);assert.deepEqual(r.settingsCalls,[]);assert.equal(t.sets.length,0);
+ await t.join(0);await t.queue('friends',0);assert.equal(t.calls.length,1);r.playing=true;r.emit('ready',{round:1});call.resolve(r);await t.flush();assert.equal(t.sets.length,1);assert.equal(t.sets[0].fighter,8);
+});
+test('invite Back and native retry never autojoin; SDK cancel returns to the chosen fighter',async()=>{
+ const t=await setup('friend-code');t.back(8);assert.equal(t.ui.visible,false);assert.equal(t.calls.length,0);await t.action(4);assert.equal(t.calls.length,0);assert.equal(t.ui.options.invite,true);assert.equal(t.ui.fighter,8);
+ await t.join(8);t.calls[0].reject(new Error('Cancelled'));await t.flush();assert.equal(t.status.textContent,'CANCELLED');assert.equal(t.ui.visible,true);assert.equal(t.ui.options.invite,true);assert.equal(t.ui.fighter,8);assert.equal(t.calls.length,1);assert.equal(t.invite(),'friend-code');await t.join(11);assert.equal(t.calls.length,2);assert.equal(t.status.textContent,'JOINING FRIEND ROOM');
+});
 test('casual and ranked each wait for SDK ready; repeated callbacks do not duplicate sets',async()=>{for(const queue of ['casual','ranked']){const t=await setup();await t.queue(queue);const call=t.calls[0],r=room(queue);assert.equal(call.options.queue,queue);assert.equal(call.options.mode,ACTIVE_PROFILE.mode);call.options.onStatus({room:r});call.options.onStatus({room:r});assert.equal(r.readyCalls,0);assert.equal(t.sets.length,0);r.playing=true;r.emit('ready',{round:1});r.emit('ready',{round:1});call.resolve(r);await t.flush();assert.equal(t.sets.length,1);}});
 test('cancel restores selection; late rooms cannot attach after a new search',async()=>{const t=await setup();await t.queue('friends');t.calls[0].reject(new Error('Cancelled'));await t.flush();assert.equal(t.status.textContent,'CANCELLED');assert.equal(t.ui.visible,true);await t.queue('friends');const stale=t.calls[1];await t.action(2);await t.queue('ranked');const r=room();stale.options.onStatus({room:r});assert.equal(r.leaves,1);assert.equal(r.readyCalls,0);assert.deepEqual(r.settingsCalls,[]);assert.equal(t.status.textContent,'SEARCHING RANKED');});

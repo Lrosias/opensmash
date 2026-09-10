@@ -11,9 +11,10 @@ export class MeleeCompetitiveRoom {
       throw Error('Competitive play requires two players and a confirmed-result engine adapter');
     this.host=this.players[0];this.local={build,rules:MELEE_RULES.id,selection,bag};this.queued=[];this.requests=0;this.seen=[0,0];this.reports=[null,null];
     this.message=e=>{try{this.receive(e);}catch(e){this.fail(e);}};
-    this.leave=()=>this.fail(Error('Your opponent disconnected. Return to the online menu.'));
-    this.result=result=>{if(result.round===this.round){this.settled=true;this.stop();this.onResult(result);}};
-    room.on('message',this.message);room.on('leave',this.leave);room.on('close',this.leave);room.on('result',this.result);
+    this.leave=player=>this.opponentLeft(player);
+    this.close=()=>this.fail(Error('The connection closed. Return to the online menu.'));
+    this.result=result=>{if(!this.settled&&result?.round===this.round){this.settled=true;this.stop();this.onResult(result);}};
+    room.on('message',this.message);room.on('leave',this.leave);room.on('close',this.close);room.on('result',this.result);
     this.timer=setInterval(()=>{if(!this.model)this.hello();},1000);
     this.deadline=setTimeout(()=>{if(!this.model)this.fail(Error('Both players could not finish set setup.'));},30000);
     this.hello();
@@ -100,9 +101,19 @@ export class MeleeCompetitiveRoom {
       this.finishing=true;
       const winner=s.scores[0]===s.scores[1]?null:this.players[s.scores[0]>s.scores[1]?0:1];
       const result={...(winner===null?{draw:true}:{winner}),scores:Object.fromEntries(this.players.map((id,i)=>[id,s.scores[i]]))};
-      Promise.resolve().then(()=>this.room.finish(result)).catch(e=>this.fail(e));
+      Promise.resolve().then(()=>this.room.finish(result)).then(this.result).catch(e=>this.fail(e));
     }
   }
+  opponentLeft(player){
+    if(this.closed||this.settled||player?.id!==this.players[1-this.seat])return;
+    if(!this.room.playing)return this.fail(Error('Your opponent left before the round started.'),false);
+    // A real platform departure is a forfeit, not an engine or transport failure.
+    // Stop immediately; a previously submitted completed set keeps its result.
+    this.stop();
+    if(this.finishing)return;
+    this.finishing=true;
+    Promise.resolve().then(()=>this.room.finish({winner:this.room.me})).then(this.result).catch(error=>this.onError(error));
+  }
   fail(error,notify=true){if(this.closed)return;if(notify){try{this.send('abort',{});}catch{}}this.stop();if(!this.settled&&!this.finishing){this.finishing=true;Promise.resolve(this.room.finish({void:true})).catch(()=>{});}this.onError(error);}
-  stop(){if(this.closed)return this.stopping;this.closed=true;clearInterval(this.timer);clearTimeout(this.deadline);this.room.off('message',this.message);this.room.off('leave',this.leave);this.room.off('close',this.leave);this.room.off('result',this.result);return this.stopping=Promise.resolve(this.adapter.stop()).catch(()=>{});}
+  stop(){if(this.closed)return this.stopping;this.closed=true;clearInterval(this.timer);clearTimeout(this.deadline);this.room.off('message',this.message);this.room.off('leave',this.leave);this.room.off('close',this.close);this.room.off('result',this.result);return this.stopping=Promise.resolve(this.adapter.stop()).catch(()=>{});}
 }

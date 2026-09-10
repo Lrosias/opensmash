@@ -1,0 +1,9 @@
+<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../src/style.css"><div id="play-surface"></div>
+<script type="module">
+import {createCompetitiveUI} from '../src/competitive-ui.mjs';
+import {PROFILES} from '../src/game-profile.mjs';
+window.joins=[];window.queues=[];window.backs=[];
+const profile=PROFILES[new URLSearchParams(location.search).get('edition')||'original'];
+const ui=createCompetitiveUI({profile,onJoinInvite:choice=>{joins.push(choice);ui.hide();},onQueue:(queue,choice)=>queues.push({queue,choice}),onBack:choice=>{backs.push(choice);ui.hide();},onPick(){}});
+window.inviteSetup=(fighter=0)=>ui.setup(fighter,{invite:true});window.normalSetup=()=>ui.setup();inviteSetup();
+</script>

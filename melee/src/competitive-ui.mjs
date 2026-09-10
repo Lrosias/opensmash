@@ -84,6 +84,11 @@ export class MeleeCompetitiveUI {
     <div class="comp-preview-actions">${button('Preview Ranked flow','preview','ranked')}${button('Preview Casual flow','preview','casual')}${button('Preview Friends flow','preview','friends')}</div></main>${this.rankCard()}</div>`;}
   playerCards(s){return `<div class="comp-players">${s.selections.map((p,i)=>`<article class="comp-player ${this.model?.actor===i?'is-turn':''}"><div><p class="comp-eyebrow">P${i+1}${this.preview?' · PREVIEW':''}</p><h2>${esc(this.names[i])}</h2><p>${esc(fighter(p?.fighter))}${p?` · Costume ${p.color+1}`:''}</p></div><strong aria-label="${esc(this.names[i])} wins">${s.scores[i]}</strong></article>`).join('')}</div>`;}
   setScreen(){
+    if(this.roundResult&&(this.roundResult.void||this.model?.state.phase!=='complete')){
+      const result=this.roundResult,title=result.void?'Set void.':result.draw?'Set drawn.':result.won?'Set won.':'Set lost.';
+      const explanation=result.void?'This set did not produce a rated result.':'The set ended before all games were completed. uGames confirmed the outcome.';
+      return `<div class="comp-heading"><p class="comp-eyebrow">ONLINE / RESULT</p><h1 tabindex="-1">${title}</h1><p>${explanation}</p><p>Use uGames’ Continue button when you’re ready for another match.</p></div>${rankPresentation(result)?this.rankCard():''}`;
+    }
     if(this.screen==='error')return '<div class="comp-heading"><h1 tabindex="-1">Set interrupted.</h1><p>Return to the online menu when you’re ready. uGames determines any rating outcome.</p></div>';
     if(!this.model)return '<div class="comp-heading"><h1 tabindex="-1">Preparing your set…</h1><p>Waiting for both players’ locked selections.</p></div>';
     const s=this.model.snapshot,actor=this.model.actor,canAct=this.preview||actor===this.session?.seat;
@@ -115,7 +120,7 @@ export class MeleeCompetitiveUI {
     return `<div class="comp-heading"><p class="comp-eyebrow">${esc(s.mode.toUpperCase())} / ${s.mode==='ranked'?'BEST OF THREE':'FRIENDLIES'} / GAME ${s.game}</p><h1 tabindex="-1">${esc(title)}</h1><p role="status">${esc(description)}</p></div>${this.playerCards(s)}${content}`;
   }
   startPreview(mode,bag=null){
-    this.session?.stop();this.session=null;this.preview=true;this.screen='set';this.notice='';this.names=['You','Practice opponent'];
+    this.session?.stop();this.session=null;this.roundResult=null;this.preview=true;this.screen='set';this.notice='';this.names=['You','Practice opponent'];
     this.model=new CompetitiveSet({mode,seed:0x534c4950,bag});this.model.apply(0,{type:'character',selection:this.selection});this.model.apply(1,{type:'character',selection:{fighter:20,color:0}});this.render();
   }
   async handle(action,value){
@@ -158,11 +163,14 @@ export class MeleeCompetitiveUI {
   }
   beginRound(){
     if(!this.room||this.session?.round===this.room.round)return;
+    const roundRoom=this.room,roundId=roundRoom.round;
+    const current=()=>this.room===roundRoom&&this.session?.round===roundId;
     const bag=this.session?.model?.state.mode!=='ranked'?this.session?.model?.snapshot.bag:null;
-    this.session?.stop();this.model=null;this.screen='set';this.root.hidden=false;this.names=this.room.players.map(p=>p.name);
+    this.session?.stop();this.model=null;this.roundResult=null;this.screen='set';this.root.hidden=false;this.names=this.room.players.map(p=>p.name);
     this.session=new MeleeCompetitiveRoom({room:this.room,build:this.build,selection:this.selection,bag:bag??null,adapter:this.adapterFactory(this.room),
-      onChange:(s,model)=>{this.model=model;this.root.hidden=s.phase==='playing';this.render();},onError:error=>{this.notice=error.message;this.screen='error';this.root.hidden=false;this.render();},
-      onResult:result=>{this.platformResult=result;this.root.hidden=false;const pick=this.model?.state.selections[this.session?.seat];if(pick)this.selection={...pick};this.render();}});
+      onChange:(s,model)=>{if(!current())return;this.model=model;this.root.hidden=s.phase==='playing';this.render();},onError:error=>{if(!current())return;this.notice=error.message;this.screen='error';this.root.hidden=false;this.render();},
+      // The SDK advances room.round before delivering the previous round's result.
+      onResult:result=>{if(!current()||result.round!==roundId)return;this.platformResult=result;this.roundResult=result;this.screen='set';this.notice='';this.root.hidden=false;const pick=this.model?.state.selections[this.session?.seat];if(pick)this.selection={...pick};this.render();}});
     this.render();
   }
 }
