@@ -1,9 +1,9 @@
 # Remix native adoption — September 10, 2026
 
 This follows the published keyboard release, Remix **v2.4**, upload
-`947a9b2bdfd047bdbf40c4b2f3d74a9c`. Publication of the native update remains
-pending hosted acceptance of the reviewed Conker fix described below. Original v1.4 and Melee v1.8 are
-outside this update's publication scope.
+`947a9b2bdfd047bdbf40c4b2f3d74a9c`. The reviewed native update is now published
+as **v2.5**, upload `83a161be757b48a8886840a1a6c36954`, after desktop and targeted
+phone acceptance passed. Original and Melee have separate publication records.
 
 ## Candidate and source
 
@@ -127,8 +127,8 @@ capacity (384 MiB total). This is not process RSS or a natural battle-to-result
 peak: that fixture injects settled SDK outcomes and never boots a battle.
 Evidence and scope are recorded in
 `yougame/test-results/native-results-candidate-v3/visual-review.md`.
-Official two-identity hosted acceptance found a release blocker on this exact
-upload: after fresh private Marth/Conker Ready, moving Conker right for 600 ms
+Official two-identity hosted acceptance found a release blocker on the superseded
+v3 upload: after fresh private Marth/Conker Ready, moving Conker right for 600 ms
 then pressing his special key while airborne froze both native game renderers.
 The first run included a periodic native heap-used observer; a clean rerun
 removed that observer and reproduced the stall immediately. No result frame
@@ -146,7 +146,71 @@ report is `/tmp/opensmash-remix-v3-blocked-report.json`; the clean interaction
 screenshot and bounded renderer stack are in
 `/tmp/opensmash-remix-v3-clean-evidence`.
 
-The current platform baseline is production `ba9e61eb-faec-4290-8ac2-e9c9656b3136`
+## Exact v4 hosted acceptance
+
+Desktop session `3a81718f5f4240d8baa771facf98fadf` passed and is closed. Fresh
+Friends selection and Ready, both natural global winners, reversed Casual seats,
+held-key result neutrality, single-Continue rematches, a natural ranked 2–0 set,
+winner-first character counterpicks, placement settlement, forfeit, and recovery
+after an intentionally aborted engine request all passed. The former Conker
+trigger passed twice, including native stage 13. The engine-load failure added
+no match settlement or rating changes. Original local menus and adapter guidance
+were preserved. All observed normal launches reached play within six seconds.
+The detailed report is `/tmp/opensmash-remix-v4-acceptance.md`.
+
+Phone session `37b8dfc4fc314000a5a3fdc84e9ffba5` is closed with an honest failed
+layout gate. Canonical touch emulation remained active throughout viewport-only
+captures. Natural native results and actual touch Continue/rematch passed in
+fullscreen portrait and landscape. After leaving fullscreen, the 375×211
+embedded viewport exposed an SDK defect: Continue at (36.5, 140.39), 302×38,
+intersects the host control reservation at (227, 150), 148×61, by 111.5×28.39 px.
+A successful center tap does not make the whole target clear. The platform owner
+is correcting shared SDK exclusion-band handling; the frozen game remains
+unchanged. The prior report did not establish touch Back-to-local completion.
+Review of its persisted action log subsequently confirmed that host-menu and
+Leave-lobby taps completed; dropped tool output had been mistaken for a stalled
+dispatch. No native or input-dispatch hang was established. All test browsers
+from that run are closed. Evidence and the targeted
+recheck scope are in `/tmp/opensmash-remix-v4-phone-gate.md`.
+
+Production intentionally stores `score_kind: points` with both leaderboard flags
+false, representing effective board kind `none`. Publication must preserve these
+flags and the existing ranked ladder; no metadata correction is required.
+
+The prior platform baseline was production `ba9e61eb-faec-4290-8ac2-e9c9656b3136`
 and testing app `d8184b38-4bc0-4bfa-b338-3326e058563e`, both with the SDK above.
 Testing rooms/cleaner are unchanged. Source pushes/merges remain subject to the
 existing automatic-approval export blocks; runtime acceptance is separate.
+
+The reviewed SDK correction `dd227ed` is now deployed as production
+`e27096f4-116c-43ac-ac40-52bdb539cd7a` and testing app
+`c30278a6-e575-4759-84da-76bad7602c48`. Both serve SDK SHA256
+`ac8fac80456c57d358feb11fd72f9ad3727ec6f614272604c651a7c716fe8b8c`.
+It applies the existing host exclusion bands to dialog padding and compacts
+short result cards while preserving ratings, series information and scrollable
+content. Independent review, 283 platform tests, typecheck/lint, input/invite
+browser regressions and ten live-SDK layout cases pass. The complete Continue
+target remains at least 38 px high and clears the reproduced host reservation.
+Root independently fetched the SDK and all 145 combined N64/Melee unit tests
+pass against it, with no skips. The frozen v4 game files are unchanged.
+
+The exact native phone recheck passed and official session
+`84dd2a76b3724d51bc30ce8ffb714e8b` is closed. At embedded 375×211, Continue is
+310×38 at (32.5, 72.59), with no host intersection, clipping or required scroll.
+Fullscreen portrait/landscape and actual touch rematch pass. Touch SDK Continue,
+Ready/lobby Leave, and authored Back restore the preserved original native menu
+(scene 16), touch controls, one menu frame and no active room. All owned browsers
+are closed. The session's optional-case aggregate remains incomplete because it
+was a targeted phone recheck, not a repeat of the desktop matrix; the requested
+phone cases pass. Evidence: `/tmp/opensmash-phone-sdk-fixed-acceptance.md`,
+`/tmp/opensmash-phone-sdk-fixed-evidence`, and
+`/tmp/opensmash-phone-sdk-fixed-return-evidence`.
+
+Publication returned version 2.5 as a minor update with zero notifications.
+The existing listing, media and ranked ladder are retained. Postpublication
+verification confirms 12 selected frontend/controller/native files match the
+tested stage apart from exact known hosting stamps, including native JS, Wasm
+and O2r. The public entry uses the reviewed upload, both score-board flags remain
+false, and public player props still enable multiplayer. Evidence:
+`build/competitive-remix-conker-v4-live.json`. Source export/merge approval
+remains separate from the successful runtime deployment.

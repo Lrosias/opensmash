@@ -1,6 +1,12 @@
 # Smash64 competitive online experience
 
-Implemented in the browser shell, using the existing native Remix engine. No deployment has been made.
+This is the historical initial prototype/design record. The competitive flows
+have since been published for Original, Remix and Melee; see the
+[verified release record](competitive-release-2026-09-10.md) and subsequent
+[Remix native release](remix-native-release-2026-09-10.md). The outstanding checks
+and platform requests below describe that earlier prototype, not current release
+status. In particular, technical failures now use non-rating void settlement,
+with hosted evidence confirming unchanged ratings after an engine-load failure.
 
 ## Flow
 
@@ -38,7 +44,7 @@ YOUGAME_SDK_PATH=/path/to/downloaded/sdk.js node --test yougame/tests/competitiv
 
 `yougame/build.mjs` already copies every authored file in `src` and fingerprints the complete source tree. The new modules require no build manifest additions, dependencies, network assets, or source-specific absolute paths. Start `yougame/tests/serve-competitive.mjs` with `YOUGAME_NATIVE_DIST` pointing to an existing build folder and optionally `PORT`. The browser verifier accepts `PLAYWRIGHT_PATH`, `YOUGAME_SDK_PATH`, and `COMPETITIVE_URL`; tests/fixtures are not packaged by the build.
 
-## uGames changes to request
+## Initial uGames requests
 
 **Non-rating technical abort/void.** The pre-existing rollback failure path reports a draw so a runtime error is not immediately treated as a forfeit. The new set controller follows that fallback for preparation timeout or disagreeing terminal reports. A draw can still change Elo; the client cannot promise otherwise. Add an authenticated set/session abort API with explicit no-rating settlement for technical failure, and distinguish it from intentional leaving/forfeiting. Do not simply leave the room: the current platform classifies mid-set departure as a loss.
 

@@ -3,17 +3,19 @@
 Original Smash64 **v1.3**, Smash Remix **v2.3** and Melee **v1.7** were published
 and verified as the competitive release recorded here. They have since received
 the [keyboard updates](keyboard-standard-release-2026-09-10.md). The subsequent
-[Remix native update](remix-native-release-2026-09-10.md) has its own acceptance
-and publication record. Runtime publication and Git source merges are tracked
+[Remix native update](remix-native-release-2026-09-10.md),
+[Original controller update](original-controller-release-2026-09-10.md), and
+[Melee native update](melee-simd-release-2026-09-10.md) have their own acceptance
+and publication records. Runtime publication and Git source merges are tracked
 separately below.
 
 ## Exact artifacts
 
 | Edition | Version/status | Upload | Local build folder |
 |---|---|---|---|
-| [Original](https://yougame.co/g/opensmash64) | v1.3 live | `c059f29d3bf84977b2107d43a1c72c4a` | `build/competitive-original-invite-layout-final` |
-| [Remix](https://yougame.co/g/opensmash64-remix) | v2.3 live | `48647ce497494966baa57efcd351800c` | `build/competitive-remix-invite-layout-final` |
-| [Melee](https://yougame.co/g/opensmash-melee) | v1.7 live | `9468c4ede9db40ea9ac10066434b5fb6` | `build/competitive-melee-complete/dist` |
+| [Original](https://yougame.co/g/opensmash64) | v1.3 initial release | `c059f29d3bf84977b2107d43a1c72c4a` | `build/competitive-original-invite-layout-final` |
+| [Remix](https://yougame.co/g/opensmash64-remix) | v2.3 initial release | `48647ce497494966baa57efcd351800c` | `build/competitive-remix-invite-layout-final` |
+| [Melee](https://yougame.co/g/opensmash-melee) | v1.7 initial release | `9468c4ede9db40ea9ac10066434b5fb6` | `build/competitive-melee-complete/dist` |
 
 Content fingerprints, respectively:
 
@@ -149,7 +151,6 @@ exports to `Lrosias/opensmash` and `Lrosias/yougame` pending explicit destinatio
 and payload authorization. Questions are pending with the user. No alternate
 push or proxy was attempted. Approved runtime deployment is not a Git merge.
 
-The separate standard-keyboard update now owns subsequent game publication and
-uses these exact three artifacts as baselines. The hardware task owns the next
-platform deployment and must retain YouGame commit `d46d17b`. Neither subsequent
-update is claimed as part of the versions recorded here.
+The subsequent standard-keyboard update used these exact three artifacts as
+baselines. The hardware/platform followup retained YouGame commit `d46d17b`.
+Those subsequent updates are recorded separately from the initial versions here.
