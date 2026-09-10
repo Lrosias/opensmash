@@ -108,11 +108,13 @@ This serves current authored files over unchanged engine/assets from the chosen
 build. It does not stage or rebuild that binary. Normal build staging already
 copies all `src` files, including these new modules and stylesheet.
 
-Native matches and complete SDK sets now pass. Remaining release checks include two hosted
-identities, real invitations, persisted rating changes, Continue/rematch,
-technical aborts, tab backgrounding, and actual host-control overlap in embedded
-and fullscreen modes. No physical controller was available; browser tests feed
-the same input path programmatically.
+Native matches, complete SDK sets and hosted two-identity tests pass, including
+real invitations, persisted rating changes, Continue/rematch and technical
+aborts. Exact upload evidence and subsequent platform fixes are recorded in
+[the release record](../docs/competitive-release-2026-09-10.md). Physical
+controllers and phone native gameplay remain unverified; browser fixtures feed
+the same input path programmatically. These results do not establish behavior
+under every background-tab suspension or network condition.
 
 ## References
 

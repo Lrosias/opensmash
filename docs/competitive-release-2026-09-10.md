@@ -1,133 +1,151 @@
-# Competitive release coordination
+# Competitive release — September 10, 2026
 
-This task owns releases of `opensmash64`, `opensmash64-remix` and
-`opensmash-melee`. Original Smash 64 v1.2 is published and verified. Final invite-flow
-corrections for both64 editions and Melee hosted acceptance are in progress. Coordinator: task `01a08885-d751-70f3-b95b-e3d8c29c5ce3`.
+Original Smash64 **v1.3**, Smash Remix **v2.3** and Melee **v1.7** are live and
+verified. Runtime publication and Git source merges are tracked separately below.
 
-## Source integration
+## Exact artifacts
 
-- Working directory: `/Users/luis/.codex/worktrees/6e4e/OpenSmash`.
-- Branch: `codex/competitive-release-20260910`.
-- `be85198`: original/Remix competitive sets, profiles, controller integration,
-  match clock, native tests, preserved source and performance changes.
-- `cb0cdff`: merges existing `b2e071a` performance history and upstream main
-  `419d195`, preserving newer competitive implementation and release history.
-- `7183e21`: reviewed platform controller facade and menu input contract.
-- `13a9f9c`: reviewed shared Melee SDK bridge handoff, extended with native match metadata.
-- Final Melee source integration reviewed; commit/publication follow exact-candidate acceptance.
-- Original dirty checkout is not reset or swept into a commit. Native runtime
-  rebuilds use exact backups when updating existing external build inputs.
-
-## 64 acceptance and staged builds
-
-Both editions pass 105 unit tests, actual two-Wasm three-game sets with character
-counterpicks, packet delays/loss/rollback and matching 2–1 results. Desktop,
-landscape and rotated-phone clock/menu tests pass. Public staged native startup
-has correct isolation, rendered menus and no JavaScript errors/failed requests.
-
-| Edition | Folder | Build | Upload |
+| Edition | Version/status | Upload | Local build folder |
 |---|---|---|---|
-| Original | `build/competitive-original-neutral` | `684e7fc13cbd95e0` | `93118f857dfd4a2da84bdc9ad4b70c0a` |
-| Remix | `build/competitive-remix-neutral` | `a867751d7f30867c` | `c9775fd73f49401faa3299b3cce63c18` |
+| [Original](https://yougame.co/g/opensmash64) | v1.3 live | `c059f29d3bf84977b2107d43a1c72c4a` | `build/competitive-original-invite-layout-final` |
+| [Remix](https://yougame.co/g/opensmash64-remix) | v2.3 live | `48647ce497494966baa57efcd351800c` | `build/competitive-remix-invite-layout-final` |
+| [Melee](https://yougame.co/g/opensmash-melee) | v1.7 live | `9468c4ede9db40ea9ac10066434b5fb6` | `build/competitive-melee-complete/dist` |
 
-Static `check_build` and uploader verdicts are ready. Public staged native
-startup passed both corrected uploads. Original’s official disposable-player
-session `3034d9c5069e4f87989209be8eb52f72` completed hosted acceptance and is closed. The earlier
-login approval block was re-reviewed and approved; credentials remain private.
-Remix now overlays exact immutable livev2.2 native assets from upload
-`47c85145b7c0407fbd3ea4df3ef50853`. The earlier clock package accidentally used
-unfinished shared native output and is explicitly superseded. See
-[verified native provenance](../yougame/NATIVE-RELEASE-PROVENANCE.md).
+Content fingerprints, respectively:
 
-## Melee acceptance and remaining release work
+- Original: `b0f5793f303a60edb7f82d04956d7ba8ab5d6ccde15c6ae44f95b0527ab71f47`.
+- Remix: `920667374a643c888f9b33d0868e38a8513b426dda78b18f22a9762717695ad3`.
+- Melee: `e911cc556344bb7bbd538361e6cb5c94b14388536f4c5e1b93e8dc8aa162dfc3`.
 
-Final engine SHA `ec79f2015598d73f4031613634cb0ee4463e58b10290862ed67116141bc983f6`
-passed deterministic independent startup, 240 identical-input frames, seven-frame
-replay, real four-stock elimination, and selected Zelda/Sheik form and stage checks.
-Two native engines plus the actual deployed SDK complete a full 2–0 ranked set,
-Fountain→Final Destination, with character counterpicks and one agreed result.
-Local transport deliberately delays/drops packets; hosted acceptance is separate.
+All final uploads have static ready verdicts. The public 64 listing entries and
+versioned index, app, competitive UI and styles match their staged artifacts
+after normalization of observed hosting stamps. The coordinator independently
+repeated those comparisons. Melee's native startup, isolation and HTTP gzip also
+pass. Its public listing resolves to the exact final upload, and all seven
+app/room/UI/adapter/style/manifest comparisons match after observed hosting-stamp
+normalization. Public COOP is same-origin and COEP is credentialless. The
+ownership-checked listing update enables local and online play and its ladder,
+preserves media/history, and leaves the mobile flag false.
 
-The shared `createMeleeSync` owns frame offsets/checkpoint lifetimes. Native match
-proxies expose actual frame, managed checkpoint operations, result metadata,
-optional bounded shader-cache persistence and immediate hung-operation teardown.
-Independent review confirmed live1.6 compiler, shader, rendering and streaming
-performance improvements remain present. HTTP compression is explicitly enabled
-in `yougame.json`. 32 unit tests, actual DOM/raw-controller menu flows and native
-startup/cancellation lifecycle tests pass. Final staged folder is
-`build/competitive-melee-forfeit-final/dist`; exact hosted acceptance remains outstanding.
+## Competitive experience
 
-Default Melee online play uses a three-frame buffer with `maxRollback:0`.
-Full native snapshots are88,833,524bytes and cost approximately20–21ms save,
-6–7ms load on this machine. Seven-frame rollback correctness is verified; full
-speed with prediction is not established. This is an explicit performance limit.
+All editions provide fighter setup before Casual, Ranked or Friends entry.
+YouGame owns matchmaking, invitations, Ready, results, Continue and connection
+errors. Incoming invitations preserve the recipient's selected fighter through
+Back and retry. The game's stage/character decisions surround that shared flow.
 
-## Platform dependency
+- Ranked plays best-of-three sets, with one placement/rating update per set.
+  Original and Remix use Dream Land and ordered character counterpicks.
+  Original has 12 fighters/four stocks; Remix has 34 fighters/three stocks.
+- Melee has 26 fighters, four stocks, eight-minute matches, five starter stages,
+  1–2–1 striking, Stadium as a counterpick, winner bans, last-win stage restriction
+  and winner-first character selection.
+- Casual and Friends use one-game rounds and a shuffled legal-stage bag.
+  Continue starts another round; it does not submit another result.
+- Native stock/time outcomes determine the result. Intentional departure is a
+  forfeit; technical startup failure is neutral and does not change ratings.
+  Captured round identities reject stale callbacks and duplicate final reports.
+- Competitive content reserves host-control space. Separate adapter pairing
+  buttons are hidden while the picker or native match owns the screen, and
+  return with the local menu.
 
-Neutral technical cancellation is now deployed and verified. YouGame PR68 merged
-as `939351bf62e4ed161def5712fc38fb98718fa5fc`; rooms version
-`170b748e-9c26-4052-a433-ec11bb45f436` deployed before web version
-`241563c5-ab30-4d2d-82b8-694f0a530949`. Public SDK SHA256
-`17aafda7ae34563194700f28fc359bfa5de973f7b8f33379af16e65a7fc17316`
-is byte-identical to reviewed source. Explicit `void:true` is serialized,
-restricted to round participants, sticky through retries/hibernation and refunds
-without ratings. Full web suite262 tests, focused26tests, typecheck/lint/rooms
-checks and actual dedicated SQL refund test passed. No production money rows or
-schema changed. The older SDK dropped void and must not be used for acceptance.
+## Runtime acceptance
 
-Melee's current listing has `play_mode: single` and `online_off: true`. A narrow,
-ownership-verified, backed-up listing update is prepared in
-`/tmp/opensmash-melee-listing.py`; apply only after the tested release version is
-live. Keep thumbnail, video, screenshots, comments and release history.
+Both 64 editions pass 105 unit tests and actual two-Wasm three-game sets with
+delayed/lost packets, rollback and agreeing 2–1 results. Hosted disposable-player
+tests separately cover natural ranked completion, rating changes, rematch,
+forfeit and startup faults with zero recorded matches or ratings.
 
-The reviewed controller handoff is integrated in both menu implementations and
-final packages. This task remains the sole game publisher. Source remote access
-is read-only upstream. The reviewed source release remains local while explicit
-permission for the public fork destination `Lrosias/opensmash` is pending.
+Exact final original session `abbd229a0cea49a38c6b41edbd8019cf` verified Ness
+selection, Ready, Fox–Ness four-stock play and actual recipient movement.
+Exact final Remix session `43c8c2276a1748c29f2a7d0ded1cdb55` verified Sonic
+selection, Back/retry, Ready, Marth–Sonic three-stock play and recipient movement.
+Both sessions are closed. Reports: `/tmp/opensmash-final-original-css-evidence`
+and `/tmp/opensmash-final-remix-css-evidence`.
 
-## Final hosted findings and candidate corrections
+All 32 Melee unit tests pass against the final deployed SDK SHA25aa. Melee's
+native engine SHA256 is
+`ec79f2015598d73f4031613634cb0ee4463e58b10290862ed67116141bc983f6`.
+Independent native boots agree on checksums, 240 input frames, seven-frame
+save/load/replay and real four-stock elimination. Selected Zelda/Sheik forms
+and stage metadata are verified. Two native engines with the real SDK finish
+a 2–0 set, Fountain→Final Destination, with character counterpicks and one
+agreed report per peer. Hosted tests separately prove actual ratings, natural
+Casual results, random-stage rematch, ranked completion, forfeit and neutral
+startup failure.
 
-- Source `13743f84fa6fb77e087b337d34b63a11301cf936` includes both the
-  `8e50dc8` Melee CSS reservation fix and the64native-startup neutral-abort fix.
-- The original frozen predecessor passed actual two-identity Casual results,
-  Continue/rematch, disconnect/forfeit, a natural ranked2–1 set with ordered
-  character counterpicks, and fresh Friends invitation acceptance. Its ranked
-  set produced one placement/rating update per player, not one per game.
-- Exact final original upload `93118f857dfd4a2da84bdc9ad4b70c0a`, official
-  session `8cd4044a663d4d04aa656e36c99b1e2d`, passed an actual post-Ready
-  native-script network fault: both players returned to error/setup, with zero
-  recorded matches, ratings or scores. Normal Casual results and Continue to
-  round2 subsequently passed. This upload is live as v1.2; its hosted JS and
-  manifest match the staged artifact after known hosting watermark normalization.
-- Final Melee upload `860c2e53c16e4476856c0b78bedba9b3` has content fingerprint
-  `7899f2cde03b2ed338ea249d9ebd0f6a85ccfab57f38b5e1059a92d18a41e82d`.
-  It differs from full-set-tested `2d759fbbf7044f03b2ecd98209fd4b48` only in
-  `style.css` and `competitive.css`; all native and JavaScript bytes agree.
-  The title Fullscreen button is now top-right, and scrollable menu content is
-  clipped above the host-control reservation. Public1440×900 and375×812
-  embedded/fullscreen checks pass. Native public startup had sustained rendering,
-  working sound, zero asset misses/errors and correct gzip/isolation headers.
-- Source Git push to `Lrosias/opensmash` was rejected by automatic approval review
-  for destination/payload authorization. An explicit user question names the
-  exact destination, reviewed source/artwork payload and binary/credential
-  exclusions. No alternate push or proxy has been attempted; approval is pending.
+Exact final Melee session `ba62b636db354559a9d5c1ecf5b2a24c` verified fresh
+invitation movement/attack without an Online click, neutral fault/retry, held-key
+clearing across natural results, clean Continue and a different rematch stage.
+It exposed one remaining platform issue: the consumed invitation redirected a
+later explicit Ranked choice back to the private room. The deployed platform fix
+passed final session `28db5c98f05e4122802d0fae1785a5ad`: invitation cancellation
+and retry retain the pending room; successful Ready consumes it; the same pages
+then enter public Ranked and Casual without a reload. Ranked stage strikes,
+native four-stock idle state, movement and attacks also pass. All sessions are
+closed. Evidence:
+`/tmp/opensmash-melee-complete-evidence`,
+`melee/test-results/complete-public*`, and the consolidated report
+`/tmp/opensmash-hosted-acceptance-report.md`.
+The focused final report is
+`/tmp/opensmash-melee-consumed-invite-final-report.json`; the live file comparison
+is `build/competitive-melee-complete/dist-live.json`.
 
-- Exact Remix upload `c9775fd73f49401faa3299b3cce63c18`, official session
-  `bd047a314e6b4010a3e5051c5cbe92ef`, passed native startup fault with zero
-  matches/ratings/scores, natural ranked2–0, ordered character counterpicks,
-  one placement and ±20 Elo, Continue to round2, and intentional forfeit.
-  Both64 editions' fresh invite acceptance exposed a forced-Mario recipient
-  selection bug. Reviewed source now shows fighter setup and one Join friend
-  action before invoking the SDK's existing invite; Back/cancel preserve choice.
- 105 unit tests and real desktop/phone invite UI fixtures pass. Corrected
-  uploads require targeted hosted recipient-selection acceptance before release.
-- Melee now distinguishes actual opponent departure (one forfeit report) from
-  technical failure (neutral). UI callbacks use the captured session round:
-  the deployed SDK increments its mutable room round before emitting results.
-  Late result/change/error callbacks cannot affect a replacement session.
- 32 unit tests pass; final content fingerprint is
-  `e8c7f73c2daa85e6c7ad00e147b27d3a3e41e9cd91ac4880e7568add005f854f`.
-  Only two authored competitive JavaScript modules differ from safe-layout.
-- Hosted phone emulation lost its touch capability after entering the platform
-  player. Public-build phone/touch fixtures passed, but full native gameplay on
-  a physical phone has not been verified. Hosted reports do not claim that pass.
+## YouGame platform fixes
+
+Technical cancellation previously lost `void:true`. YouGame PR68 is merged at
+`939351bf62e4ed161def5712fc38fb98718fa5fc` and production rooms version
+`170b748e-9c26-4052-a433-ec11bb45f436` is deployed. Neutral results are restricted
+to participants, survive retries, and do not rate the match. The dedicated SQL
+refund test passed; no production money rows or schema were changed.
+
+Local YouGame commits `ec905b3` and `d46d17b` additionally fix input suspension
+and consumed invitations. Opening a modal clears held inputs; key releases over
+editable controls still register; Controls/dialog suspension prevents gameplay
+input leakage. Invitations remain pending through cancellation and are consumed
+only after successful Ready/start. Explicit public-queue requests then bypass
+the old invitation in both the SDK and Player host page.
+
+The full platform suite passes **270 tests**, typecheck and lint (zero errors,
+three existing warnings). Actual Chrome tests exercise the full SDK through
+hosted-style and standalone fixtures. Production runtime deployment was
+separately approved and completed:
+
+- Production web: `3b5ea046-e5f0-456f-ab5c-528ce1434088`.
+- Public SDK SHA256: `25aa37a75b1d36daa03156e134da58a95adcc50b1b6ab62427c23d0666e7e4f4`, independently verified.
+- Testing web: `c2470c1d-9ed7-457b-b298-d3bc88e504e1`.
+- Testing rooms: `eccc82be-ccd6-421d-9452-b2a7418d5f42` (unchanged room logic).
+
+The invitation fix requires both updated SDK and Player. Players with an old
+host page already open must refresh that page once to receive both.
+
+## Limits and source integration
+
+Melee preserves v1.6 ThinLTO, exact FMA, Lite Fountain, shader caching and HTTP
+compression. Its default online configuration is **three-frame delay and
+`maxRollback: 0`**. Full snapshots are 88,833,524 bytes and cost approximately
+20–21 ms to save and 6–7 ms to load on the test machine. Seven-frame rollback
+correctness is verified; full-speed predictive rollback is not established.
+
+Desktop and phone-layout fixtures pass, but physical-phone native gameplay and
+official WUP-028 adapter hardware are not certified by these tests. The separate
+native-adapter update remains in progress. Remix v2.3 deliberately preserves
+the verified immutable v2.2 native payload; the newer experimental gameplay and
+native victory presentation are not part of this release. See
+[native provenance](../yougame/NATIVE-RELEASE-PROVENANCE.md).
+
+OpenSmash source is committed locally on `codex/competitive-release-20260910`
+through `eb00e0c`; the stable 64 release corresponds to `b800d23`. Existing
+upstream/performance history is integrated, and unrelated dirty media is excluded.
+The original shared checkout was not reset. YouGame changes are locally committed
+through `d46d17b` on `codex/competitive-input-release`.
+
+**GitHub merges remain blocked.** Automatic approval review rejected source
+exports to `Lrosias/opensmash` and `Lrosias/yougame` pending explicit destination
+and payload authorization. Questions are pending with the user. No alternate
+push or proxy was attempted. Approved runtime deployment is not a Git merge.
+
+The separate standard-keyboard update now owns subsequent game publication and
+uses these exact three artifacts as baselines. The hardware task owns the next
+platform deployment and must retain YouGame commit `d46d17b`. Neither subsequent
+update is claimed as part of the versions recorded here.

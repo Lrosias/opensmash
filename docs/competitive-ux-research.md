@@ -51,24 +51,27 @@ The rank flow includes placements and authoritative result presentation, while
 the game-page ladder remains platform-owned. It does not reproduce Slippi's
 rating algorithm, subscriptions, numeric thresholds or rank artwork.
 
-## uGames follow-up
+## uGames integration status and follow-up
 
-1. **Async rollback:** awaited save/load/step, separate canonical checksums, replay
-   metadata and confirmed outputs, as already specified in the Melee contract.
-2. **Neutral technical abort:** authenticated void/no-rating settlement, distinct
-   from intentional forfeit. A draw can affect Elo. Smash64 retains its existing
-   draw fallback; Melee's pending adapter stops on disagreement. Neither behavior
-   promises neutral backend settlement without this API.
-3. **Explicit game/timeline IDs:** include protocol, set/round and game identity in
-   rollback inputs/checksums so old messages cannot cross game boundaries. The
-   current Smash64 integration uses ordered transport plus a two-peer terminal
-   barrier; the new menus namespace their own messages.
-4. **Optional set metadata:** best-of, game index, game scores and rules version
+Async save/load/step, canonical checksums, replay metadata and confirmed outputs
+are integrated and tested with Melee's native engine. Both games namespace
+gameplay traffic by build, SDK round and set game. Neutral technical cancellation
+is implemented and deployed; authenticated void results do not change ratings.
+Held-input suspension and consumed-invitation routing are also fixed in the
+platform. Exact source, deployment and test records are in
+[the release record](competitive-release-2026-09-10.md).
+
+Remaining improvements:
+
+1. **Melee checkpoint performance:** reduce snapshot/save costs before enabling
+   predictive rollback by default. The release currently uses three delayed
+   frames and no prediction; correctness tests alone do not establish frame time.
+2. **Optional set metadata:** best-of, game index, game scores and rules version
    would improve platform wording and auditing. BO3 already fits one SDK round;
    this is not a blocker for set scoring.
-5. **Rank history migration and reads:** decide whether to migrate the older
+3. **Rank history migration and reads:** decide whether to migrate the older
    Smash64 mode's ratings; expose an authenticated personal ladder/placement
    snapshot if the title screen should show current rank before a first result.
-
-No uGames backend changes or production uploads were made. Test scopes and native
-versus fixture limitations are recorded in the two implementation documents.
+4. **Competitive decision enforcement:** server-enforced selection timers and
+   tournament penalties are not implemented. Peer validation does not provide
+   server-authoritative anti-cheat.

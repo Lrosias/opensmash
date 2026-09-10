@@ -1,14 +1,17 @@
 # OpenSmash Melee submission
 
-## Competitive release candidate — September 10, 2026
+## Competitive release v1.7 — September 10, 2026
 
-Current public listing remains **v1.6** until the release record below confirms
-publication. The candidate preserves live1.6 ThinLTO, exact-FMA, Lite Fountain,
+**v1.7 is live** at https://yougame.co/g/opensmash-melee, upload
+`9468c4ede9db40ea9ac10066434b5fb6`. The public versioned files match the tested
+build after known hosting stamps. The listing enables local and online play
+and the ranked ladder while preserving media and history. This release preserves
+v1.6 ThinLTO, exact-FMA, Lite Fountain,
 persistent pipeline caching and HTTP-gzip streaming. It adds configured native
 online matches and the competitive flows in [COMPETITIVE.md](COMPETITIVE.md).
 
 - Native engine SHA256: `ec79f2015598d73f4031613634cb0ee4463e58b10290862ed67116141bc983f6`.
-- 32 unit tests pass against deployed SDK `17aafda7ae34563194700f28fc359bfa5de973f7b8f33379af16e65a7fc17316`.
+- 32 unit tests pass against deployed SDK `25aa37a75b1d36daa03156e134da58a95adcc50b1b6ab62427c23d0666e7e4f4`.
 - Independent native boots agree on RAM checksums; 240 equal input frames and
   seven-frame save/load/replay converge; a real four-stock elimination agrees.
 - Kirby/Zelda on Fountain and Sheik/Ice Climbers on Stadium verify exact selected
@@ -19,11 +22,17 @@ online matches and the competitive flows in [COMPETITIVE.md](COMPETITIVE.md).
   acceptance is separately recorded by the final upload's test report.
 - Actual DOM flows, raw/standard controller focus, portrait touch, startup failure
   cleanup and immediate teardown of a hung engine pass.
+- Hosted two-identity checks verify natural ranked results and ratings, Casual
+  results/rematch, forfeit and neutral startup faults. Exact final-build checks
+  verify fresh-invite controls, held-key release across results, clean retry and
+  different rematch stages. With the final SDK and Player fix, pending-invite
+  cancellation/retry and private→Ranked→Casual transitions pass without reloading.
+  All disposable test sessions are closed.
 - Full snapshots are 88,833,524 bytes, around20–21ms save/6–7ms load on the test
   machine. Production uses `maxRollback:0`, delay3. Seven-frame rollback is a
   correctness option, not a demonstrated full-speed configuration.
 
-Final publication and exact upload evidence are tracked in
+Deployment, local source commits and exact upload evidence are tracked in
 [competitive release coordination](../docs/competitive-release-2026-09-10.md).
 Physical USB hardware, every fighter/stage combination and voice/payments are
 not covered by these local tests.
