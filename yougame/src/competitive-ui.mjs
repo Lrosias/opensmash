@@ -1,6 +1,6 @@
 import {ACTIVE_PROFILE} from './game-profile.mjs';
 import {FIGHTER_NAMES,STAGE_NAMES,ratingSummary} from './competitive-set.mjs';
-export function createCompetitiveUI({onQueue,onBack,onPick,profile=ACTIVE_PROFILE}){
+export function createCompetitiveUI({onQueue,onBack,onPick,profile=ACTIVE_PROFILE,readController=()=>null}){
  const root=document.createElement('section');root.id='competitive';root.hidden=true;root.setAttribute('aria-label','Competitive online');document.getElementById('play-surface').append(root);
  let selected=0,lastView=null;
  const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -27,6 +27,6 @@ export function createCompetitiveUI({onQueue,onBack,onPick,profile=ACTIVE_PROFIL
  const focusMove=direction=>{const buttons=[...root.querySelectorAll('button:not(:disabled)')];if(!buttons.length)return;const focused=document.activeElement;const at=buttons.indexOf(focused);buttons[at<0?(direction>0?0:buttons.length-1):(at+direction+buttons.length)%buttons.length].focus();};
  root.addEventListener('keydown',e=>{if(['ArrowRight','ArrowDown','ArrowLeft','ArrowUp'].includes(e.code)){e.preventDefault();focusMove(['ArrowLeft','ArrowUp'].includes(e.code)?-1:1);}});
  let held=false;
- function controller(){if(!root.hidden){const pad=[...(navigator.getGamepads?.()||[])].find(p=>p?.connected);const direction=pad&&(pad.buttons[13]?.pressed||pad.buttons[15]?.pressed||pad.axes[0]>.55||pad.axes[1]>.55)?1:pad&&(pad.buttons[12]?.pressed||pad.buttons[14]?.pressed||pad.axes[0]<-.55||pad.axes[1]<-.55)?-1:0;const select=pad?.buttons[0]?.pressed;const back=pad?.buttons[1]?.pressed;if(!held){if(direction)focusMove(direction);else if(select){if(root.contains(document.activeElement)&&document.activeElement.matches('button:not(:disabled)'))document.activeElement.click();else focusMove(1);}else if(back&&!lastView)onBack();}held=!!(direction||select||back);}else held=false;requestAnimationFrame(controller);}requestAnimationFrame(controller);
+ function controller(){if(!root.hidden){const adapterInput=readController();const pad=adapterInput===null?[...(navigator.getGamepads?.()||[])].find(p=>p?.connected):null;const direction=adapterInput?.direction??(pad&&(pad.buttons[13]?.pressed||pad.buttons[15]?.pressed||pad.axes[0]>.55||pad.axes[1]>.55)?1:pad&&(pad.buttons[12]?.pressed||pad.buttons[14]?.pressed||pad.axes[0]<-.55||pad.axes[1]<-.55)?-1:0);const select=adapterInput?.select??pad?.buttons[0]?.pressed;const back=adapterInput?.back??pad?.buttons[1]?.pressed;if(!held){if(direction)focusMove(direction);else if(select){if(root.contains(document.activeElement)&&document.activeElement.matches('button:not(:disabled)'))document.activeElement.click();else focusMove(1);}else if(back&&!lastView)onBack();}held=!!(direction||select||back);}else held=false;requestAnimationFrame(controller);}requestAnimationFrame(controller);
  return {setup,show,result,hide,notice,get visible(){return !root.hidden;},get view(){return lastView;}};
 }

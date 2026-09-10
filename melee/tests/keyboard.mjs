@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {RectangleInput,gameCubeInput,keyboardOptions} from '../src/keyboard.mjs';
+
+const r=new RectangleInput();
+const s={source:'keyboard',move:{x:0,y:0},aim:{x:0,y:0}};
+const set=(id,value=true)=>{s[id]=value;r.event(id,value);};
+const units=()=>gameCubeInput(s,r).slice(1,5).map(x=>Math.round(x*127));
+set('stickright');assert.deepEqual(units(),[80,0,0,0]);
+set('modx');assert.deepEqual(units(),[53,0,0,0]);
+set('modx',false);set('mody');assert.deepEqual(units(),[27,0,0,0]);
+set('stickup');assert.deepEqual(units(),[25,59,0,0]);
+set('mody',false);set('modx');assert.deepEqual(units(),[59,25,0,0]);
+set('l1');assert.deepEqual(units(),[51,30,0,0]);
+set('l1',false);set('cup');assert.deepEqual(units(),[56,41,0,80]);
+set('b');assert.deepEqual(units(),[59,43,0,80]);
+set('b',false);set('mody');assert.equal(gameCubeInput(s,r)[0]&64,64);assert.deepEqual(units().slice(2),[0,0]);
+set('modx',false);set('mody',false);set('cup',false);set('stickup',false);
+set('stickleft');assert.deepEqual(units(),[-80,0,0,0]);
+set('stickleft',false);assert.deepEqual(units(),[0,0,0,0]);
+set('light');assert.equal(gameCubeInput(s,r)[6],49/255);assert.equal(gameCubeInput(s,r)[0]&2048,0);
+set('mid');assert.equal(gameCubeInput(s,r)[6],94/255);
+const pad={...s,source:'gamepad',move:{x:.24,y:-.5},aim:{x:-.4,y:.7}};
+assert.deepEqual(gameCubeInput(pad,r).slice(1,5),[.24,.5,-.4,-.7]);
+for(const mapping of keyboardOptions.keys.slice(1))assert.ok(Object.values(mapping).every(keys=>keys.length===0));
+assert.deepEqual(keyboardOptions.keys[0].a,['KeyM']);
+assert.deepEqual(keyboardOptions.keys[0].start,['Digit7']);
+console.log('B0XX bindings, tilt/air-dodge/recovery angles, SOCD, light shield, D-pad and gamepad isolation passed.');

@@ -3,19 +3,27 @@
 export const neutralPad=()=>[0,0,0,0,0,0,0];
 export function validPad(p) {
   return Array.isArray(p)&&p.length===7&&Number.isInteger(p[0])&&p[0]>=0&&p[0]<=4095&&
-    p.slice(1,5).every(v=>Number.isFinite(v)&&v>=-1&&v<=1)&&p.slice(5).every(v=>Number.isFinite(v)&&v>=0&&v<=1);
+    p.slice(1,5).every(v=>Number.isFinite(v)&&v>=-128/127&&v<=1)&&p.slice(5).every(v=>Number.isFinite(v)&&v>=0&&v<=1);
 }
 export class NativeRollbackEngine {
   constructor(module,{timeout=30000}={}) {
     this.module=module;this.timeout=timeout;this.sequence=0;this.active=false;this.closed=false;
   }
-  receive(sequence,status,frame,handle,hash,bytes,ms) {
+  receive(sequence,status,frame,handle,hash,bytes,ms,active=0,outcome=0,stocks0=0,stocks1=0,percent0=0,percent1=0,seconds=0,gameFrame=0,packedConfig=-1) {
     const pending=this.pending;
     if(!pending||pending.sequence!==sequence)return;
     clearTimeout(pending.timer);this.pending=null;
     if(status!==1){this.closed=true;pending.reject(Error(`Melee checkpoint operation failed (${status})`));return;}
     this.frame=frame;
-    pending.resolve({frame,handle,hash:hash>>>0,bytes,ms});
+    let result=null;
+    if(active&&outcome){
+      if(outcome!==1&&outcome!==2){pending.reject(Error('Melee ended without a competitive result.'));return;}
+      const winner=stocks0!==stocks1?(stocks0>stocks1?0:1):percent0!==percent1?(percent0<percent1?0:1):null;
+      result={winner,outcome,stocks:[stocks0,stocks1],percent:[percent0,percent1],seconds,gameFrame};
+    }
+    pending.resolve({frame,handle,hash:hash>>>0,checksum:String(hash>>>0),bytes,ms,result,active:!!active,
+      match:{stocks:[stocks0,stocks1],percent:[percent0,percent1],seconds,gameFrame,outcome,
+        fighters:packedConfig<0?[]:[packedConfig&255,(packedConfig>>>8)&255],stage:packedConfig<0?-1:packedConfig>>>16}});
   }
   wait(sequence,send) {
     if(this.closed)return Promise.reject(Error('Melee rollback engine is closed'));

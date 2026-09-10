@@ -1,3 +1,4 @@
+import {readAdapterMenu} from '../../controllers/controller-menu.mjs';
 import {createMatchClock} from './match-clock.mjs';
 import {mountAdapterControls} from '../../controllers/gc-adapter-ui.mjs';
 import {ACTIVE_PROFILE,engineParams,validFighter} from './game-profile.mjs';
@@ -16,7 +17,7 @@ let fighter=0, stage=6, queueKind=0, busy=false, room=null, session=null, set=nu
 let menuState={phase:0,text:'',revision:0};
 const engines=new Map(),listeners=[],rotationSeeds=new WeakMap();
 const touch=createTouch({wakeAudio:()=>{engineAudioContext((battle||menu)?.contentWindow)?.resume().catch(()=>{});},leave:()=>cleanup('YOU LEFT THE MATCH',6)});
-const competitive=createCompetitiveUI({onQueue:(queue,choice)=>{fighter=choice;queueKind={casual:0,ranked:1,friends:2}[queue];online();},onBack:()=>{competitive.hide();menu?.contentWindow.focus();},onPick:choice=>{try{set?.choose(choice);}catch(e){set?.fail(e.message);}}});
+const competitive=createCompetitiveUI({readController:()=>readAdapterMenu(adapter),onQueue:(queue,choice)=>{fighter=choice;queueKind={casual:0,ranked:1,friends:2}[queue];online();},onBack:()=>{competitive.hide();menu?.contentWindow.focus();},onPick:choice=>{try{set?.choose(choice);}catch(e){set?.fail(e.message);}}});
 const onlineEntry=document.createElement('button');onlineEntry.id='online-entry';onlineEntry.textContent='Competitive online';onlineEntry.onclick=()=>{if(!busy){touch.clear();competitive.setup(fighter);window.focus();}};document.getElementById('play-surface').append(onlineEntry);
 function status(text,phase=menuState.phase){
  menuState={phase,text,revision:menuState.revision+1};

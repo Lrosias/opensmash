@@ -1,0 +1,125 @@
+--- a/src/runtime/dolphin_runtime.cpp
++++ b/src/runtime/dolphin_runtime.cpp
+@@ -716,11 +716,19 @@
+     recomp_source = StaticRecompModuleSource::Attached(
+         reinterpret_cast<const StaticRecompModuleDesc *>(
+             impl->config.module.descriptor));
+-  recomp_source.host_call = &ModManager::HostCall;
+-  recomp_source.host_call_contains = &ModManager::HostCallContains;
+-  recomp_source.host_call_range_contains =
+-      &ModManager::HostCallRangeContains;
+-  recomp_source.host_call_user = impl->mods.get();
++#ifdef __EMSCRIPTEN__
++  // This runtime loads its mods above, before creating the CPU core. An empty
++  // manager cannot intercept any guest address; leave callbacks null so every
++  // recompiled block need not call through empty hook and patch maps.
++  if (!impl->mods->Empty())
++#endif
++  {
++    recomp_source.host_call = &ModManager::HostCall;
++    recomp_source.host_call_contains = &ModManager::HostCallContains;
++    recomp_source.host_call_range_contains =
++        &ModManager::HostCallRangeContains;
++    recomp_source.host_call_user = impl->mods.get();
++  }
+   jit.SetStaticRecompModuleSource(std::move(recomp_source));
+ 
+   s_runtime_active = true;
+--- a/vendor/dolphin/GXRuntime/src/core/cpu_interpreter_float.c
++++ b/vendor/dolphin/GXRuntime/src/core/cpu_interpreter_float.c
+@@ -1,5 +1,12 @@
+ #include "cpu_interpreter_private.h"
+ #include <string.h>
++
++#if defined(__EMSCRIPTEN__) && MELEE_EXACT_FMA
++#include "MeleeExactFma.h"
++#define runtime_fma melee_exact_fma
++#else
++#define runtime_fma fma
++#endif
+ 
+ f64 ppc_approx_rsqrt(f64 value) {
+     u64 bits = f64_bits(value);
+@@ -289,15 +296,15 @@
+     f64 result;
+ 
+     if (!single) {
+-        result = fma(a, c, addend);
++        result = runtime_fma(a, c, addend);
+     } else {
+         f64 rounded_c = force_25_bit(c);
+-        result = fma(a, rounded_c, addend);
++        result = runtime_fma(a, rounded_c, addend);
+         u64 bits = f64_bits(result);
+         if ((bits & 0x000000001FFFFFFFull) == 0x0000000010000000ull) {
+             f64 a_prime = addend - result;
+             f64 b_prime = result + a_prime;
+-            f64 error = fma(a, rounded_c, a_prime) + (addend - b_prime);
++            f64 error = runtime_fma(a, rounded_c, a_prime) + (addend - b_prime);
+             if (error != 0.0) {
+                 if ((error > 0.0) == (result > 0.0)) bits++;
+                 else bits--;
+@@ -479,11 +486,11 @@
+     FPRes result = {0.0, 0};
+ 
+     if (!single) {
+-        result.value = fma(a, c, sub ? -b : b);
++        result.value = runtime_fma(a, c, sub ? -b : b);
+     } else {
+         f64 c_round = force_25bit_c(c);
+         f64 b_sign = sub ? -b : b;
+-        result.value = fma(a, c_round, b_sign);
++        result.value = runtime_fma(a, c_round, b_sign);
+ 
+         u64 result_bits = f64_bits(result.value);
+         const u64 D_MASK = 0x000000001FFFFFFFull;
+@@ -491,7 +498,7 @@
+         if ((result_bits & D_MASK) == EVEN_TIE) {
+             f64 a_prime = b_sign - result.value;
+             f64 b_prime = result.value + a_prime;
+-            f64 delta_a = fma(a, c_round, a_prime);
++            f64 delta_a = runtime_fma(a, c_round, a_prime);
+             f64 delta_b = b_sign - b_prime;
+             f64 error = delta_a + delta_b;
+             if (error != 0.0) {
+--- a/vendor/dolphin/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompCore_Run.cpp
++++ b/vendor/dolphin/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompCore_Run.cpp
+@@ -149,6 +149,7 @@
+ void StaticRecompCore::Run()
+ {
+   auto& core_timing = m_system.GetCoreTiming();
++  auto& system_timers = m_system.GetSystemTimers();
+   auto& power_pc = m_system.GetPowerPC();
+   auto& ppc = power_pc.GetPPCState();
+   auto& interpreter = m_system.GetInterpreter();
+@@ -303,7 +304,7 @@
+           // Use the same clock as SyncIn. Raw instruction charges do not include
+           // the CPU overclock factor and can make the guest clock run backward
+           // when the next burst resets it to the hardware timebase.
+-          m_guest.timebase = m_system.GetSystemTimers().GetFakeTimeBase();
++          m_guest.timebase = system_timers.GetFakeTimeBase();
+ 
+           // US v1.02 SelectThread waits at 0x8034B164 while RunQueueBits is zero.
+           // A newly runnable thread must execute now. Skip only while the queue
+@@ -312,14 +313,17 @@
+           const bool can_skip_idle =
+               m_guest.pc == m_idle_pc && m_idle_pc != 0 &&
+               (m_idle_pc != 0x8034B164u ||
+-               ((m_guest.msr & 0x8000u) != 0 && m_system.GetMemory().Read_U32(0x804D73D8u) == 0));
++               ((m_guest.msr & 0x8000u) != 0 && memory.Read_U32(0x804D73D8u) == 0));
+           // The verified Melee frame loop has finished its disc/card callbacks
+           // and is polling the raw pad queue. Wake at the next hardware event
+           // instead of spending host CPU on repeated empty-queue polls.
+-          const bool can_skip_pad_wait = m_strict_native && initial_game_id == "GALE01" &&
+-              SConfig::GetInstance().GetRevision() == 2 && m_guest.pc == 0x801A4DACu &&
++          // Check the rare wait address before consulting game configuration.
++          // Every normal dispatch can bypass the remaining, unchanged guards.
++          const bool can_skip_pad_wait = m_guest.pc == 0x801A4DACu &&
++              m_strict_native && initial_game_id == "GALE01" &&
++              SConfig::GetInstance().GetRevision() == 2 &&
+               m_guest.lr == 0x801A4DACu && (m_guest.msr & 0x8000u) != 0 &&
+-              ppc.Exceptions == 0 && m_system.GetMemory().Read_U8(0x804C1F7Bu) == 0;
++              ppc.Exceptions == 0 && memory.Read_U8(0x804C1F7Bu) == 0;
+           if (can_skip_idle || can_skip_pad_wait)
+           {
+             m_system.GetCoreTiming().Idle();

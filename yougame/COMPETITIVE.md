@@ -17,13 +17,17 @@ A visible countdown at the top of the play surface follows native simulation tic
 
 The existing WebUSB GameCube adapter remains available, including its fixed four-port mapping for local play and port-one input online. Gamepad, keyboard, and touch selection are preserved.
 
+The shared adapter facade also drives the competitive menu. An owned but empty/stale adapter stays neutral and never falls through to a duplicate browser gamepad; direction and button presses retain their existing single-action edges.
+
 ## Build from a preserved native release
+
+Freeze native inputs as described in `NATIVE-RELEASE-PROVENANCE.md` before packaging.
 
 Run `node yougame/package-edition.mjs original /path/to/original-build /path/to/new-original-build`, or use `remix` with an existing Remix build. The script verifies the manifest's edition, copies its existing native assets and licenses, stages all shared frontend/controller modules, assigns a fresh content-derived build identifier, and emits sibling `-check.json` / `-release.json` files. It refuses to overwrite an existing destination. The normal `yougame/build.mjs` also writes the correct profile based on its engine manifest.
 
 ## Acceptance on 2026-09-10
 
-- 97 unit tests passed with the current deployed SDK, including actual SDK rewind/loss/jitter, neutral technical settlement, immutable fighter locks, one settlement per BO3, stage bags, cross-edition validation, stale-game isolation, controller adapters and touch behavior.
+- 103 unit tests passed with the current deployed SDK, including actual SDK rewind/loss/jitter, neutral technical settlement, immutable fighter locks, one settlement per BO3, stage bags, cross-edition validation, stale-game isolation, controller adapters and touch behavior.
 - Two real Wasm clients completed a three-game ranked set in each edition. Original selected Mario/Kirby, Ness/Pikachu, Fox/Link; Remix selected Mario/Kirby, Marth/Roy, Falco/Ganondorf. Both peers independently reported the same 2–1 result exactly once. Every game exercised rollback under delayed/lost bundles. The harness also injected old-game bundles. Original ran in 26.6 seconds and Remix in 20.3 seconds; these are accelerated test durations, not latency claims.
 - Packaged desktop and landscape-mobile menus verified 12/34 fighters, keyboard/touch selection, three queue routes, cancellation recovery, and absence of browser exceptions.
 

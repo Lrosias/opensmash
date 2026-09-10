@@ -1,14 +1,11 @@
 # Melee rollback development implementation
 
-Updated September 10, 2026. The binary now supports frame-boundary checkpoints and replay,
-with an asynchronous prediction/correction timeline and a playable local latency
-lab. This is a correctness prototype, **not released Internet netplay**. Normal
-Play still uses the existing four-player local mode.
-
-The live uGames `room.rollbackAsync` integration now passes two independently
-booted Wasm engines in both buffered and rollback modes. See the
-[implemented SDK contract](YOUGAME-ROLLBACK-CONTRACT.md) for versions, ownership,
-joint verification and remaining release limits.
+September 10, 2026. The engine supports deterministic configured online matches,
+frame-boundary checkpoints and replay. The competitive release uses the shared
+uGames asynchronous SDK bridge, confirmed match results and fresh engines per
+counterpick. Online defaults to a three-frame buffer with prediction disabled:
+full-emulator snapshots currently exceed the 60 Hz save budget. The local latency
+lab below remains a development tool. Normal Play retains four-player local mode.
 
 ## Try it
 
@@ -37,13 +34,10 @@ It runs much slower than ordinary local play.
 - Dolphin's canonical in-memory serializer for CPU, RAM, DSP, timing, devices
   and video state. No raw shared-heap snapshot, worker-stack copy, disk save or
   synchronous main-thread wait is involved.
-- Twelve checkpoint frames, divided into 16 KiB pages. Exact comparison shares
+- Sixteen checkpoint frames, divided into 16 KiB pages. Exact comparison shares
   unchanged pages with the previous checkpoint; corrected snapshots replace
   their old frame. This reduces retained memory but still serializes and scans
   the entire state every save. It is **not** dirty-page tracking.
-  SDK-managed mode instead keeps each owned token valid until explicit discard,
-  including across load and same-frame saves, and fails at capacity rather than
-  silently evicting a token. The local lab retains its original automatic ring.
 - WebGL staging readback via `getBufferSubData`, replacing unsupported read
   mapping of pixel buffers. Earlier testing exposed snapshots without valid
   framebuffer data until this was fixed.
@@ -69,7 +63,7 @@ connects the timeline to the real emulator and two local controller seats.
 
 ## Verification
 
-Run `node --test melee/tests/rollback-*.test.mjs` for the eight adapter/timeline
+Run `node --test melee/tests/rollback-*.test.mjs` for the five adapter/timeline
 tests. For the actual compiled engine, with the local server running:
 
 ```sh
@@ -126,11 +120,10 @@ sustained-FPS benchmark. It clearly exceeds the 16.67 ms budget for 60 Hz play.
 3. Define deterministic startup: build/protocol/ROM revision, rules, ordered
    player seats, seed, fighters, stage and preloaded assets. Wait for both engines
    at the same initial state, verify a canonical checksum, then start the clock.
-4. The SDK now supports the [async rollback contract](YOUGAME-ROLLBACK-CONTRACT.md)
-   and the Melee adapter is verified. Connect the player-facing room lifecycle,
-   authenticated messages and confirmed match-result extraction/submission.
-   Never settle a speculative KO.
-5. Broaden the two-independently-booted-engine tests to long matches, stock loss,
+4. Make the uGames SDK support the [async rollback contract](YOUGAME-ROLLBACK-CONTRACT.md).
+   Connect room lifecycle, authenticated messages, stall/desync handling and
+   confirmed results. Never settle a speculative KO.
+5. Validate two independently booted engines, long matches, stock loss,
    projectiles, transformations, stage hazards and rematches; then test real
    identities, network impairment, background tabs and hosted-player isolation.
 

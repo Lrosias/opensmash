@@ -46,7 +46,7 @@ export async function createMeleeSync({room,engine,input,delay=3,maxRollback=0,
       if(!pads.every(validPad))throw Error('Invalid remote Melee controller input');
       const output=await engine.step([...pads,neutralPad(),neutralPad()],{replaying});
       stats.steps++;if(replaying)stats.replayed++;
-      return {checksum:output.hash,engineFrame:output.frame};
+      return {checksum:output.hash??output.checksum,engineFrame:output.frame,...('result' in output?{result:output.result}: {})};
     },
   });
   sync.on('confirmed',onConfirm);

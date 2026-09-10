@@ -5,7 +5,7 @@ import {CompetitiveSet} from '../src/competitive-set.mjs';
 import {RollbackDuelSession} from '../src/rollback-session.mjs';
 import {prepareRollbackEngine} from '../src/rollback-engine.mjs';
 import {PROFILES,engineParams} from '../src/game-profile.mjs';
-const edition=new URLSearchParams(location.search).get('edition')||'original',profile=PROFILES[edition];
+const edition=new URLSearchParams(location.search).get('edition')||'original',profile=PROFILES[edition],suffix=new URLSearchParams(location.search).get('suffix');
 const clients=[null,null],sessions=[],sets=[],errors=[],wire=[],reports=[[],[]],events=[new Map(),new Map()],games=[[],[]],rollbacks=[[],[]];let now=0;
 const fail=e=>{errors.push(String(e));};
 const rooms=[0,1].map(i=>({me:'p'+i,players:[{id:'p0'},{id:'p1'}],playing:true,ranked:true,seed:1234,
@@ -16,7 +16,7 @@ function deliver(){for(let j=0;j<wire.length;){const e=wire[j];if(e.at>now){j++;
 window.openSmashAttachEngine=win=>{
  const c=clients.find(c=>c?.frame.contentWindow===win);
  return{menuState:()=>({phase:0}),menuAction(){},beforeTick:()=>!c.session.closed,afterTick(...s){c.state=s;},
- async ready(raw){try{c.engine=await prepareRollbackEngine(raw,{getState:()=>c.state,setPads:p=>{c.pads=p;},cancelled:()=>c.session.closed});if(c.engine)c.session.attach(c.engine);}catch(e){fail(e.stack);}},error:fail,
+ async ready(raw){try{c.engine=await prepareRollbackEngine(raw,{getState:()=>c.state,setPads:p=>{c.pads=p;},cancelled:()=>c.session.closed});if(c.engine){if(c.state[2]!==profile.stocks||c.state[3]!==profile.stocks)throw Error('Native stock rules differ: '+JSON.stringify(c.state));c.session.attach(c.engine);}}catch(e){fail(e.stack);}},error:fail,
  readPorts(ptr,H){for(let i=0;i<4;i++){const b=(ptr>>2)+i*4,p=c.pads[i];H[b]=p?2:1;H[b+1]=p?.[0]||0;H[b+2]=p?.[1]||0;H[b+3]=p?.[2]||0;}}};
 };
 try{
@@ -25,7 +25,7 @@ for(let i=0;i<2;i++)sets[i]=new CompetitiveSet({room:rooms[i],round:1,fighter:i?
  games[i].push(config);const loser=config.game===2?0:1;
  sessions[i]=new RollbackDuelSession({room:rooms[i],round:1,game:config.game,fighter:config.fighters[i],expectedFighters:config.fighters,stage:config.stage,seed:config.seed,profile,build:'acceptance',status(){},stop:fail,
  readInput:()=>[0,i===loser?(i?80:-80):0,0],onGameResult:r=>{try{sets[i].completeGame(r);}catch(e){fail(e.stack);}},
- launch:(fighters,session)=>{const frame=document.createElement('iframe');clients[i]={frame,session,pads:[[0,0,0],[0,0,0]]};const params=engineParams({battle:{fighters,stage:session.stage},seed:session.seed,profile});params.set('SSB64_YOUGAME_MUTE','1');frame.src=`/build/competitive-${edition}/engine/index.html?${params}`;game.append(frame);}
+ launch:(fighters,session)=>{const frame=document.createElement('iframe');clients[i]={frame,session,pads:[[0,0,0],[0,0,0]]};const params=engineParams({battle:{fighters,stage:session.stage},seed:session.seed,profile});params.set('SSB64_YOUGAME_MUTE','1');frame.src=`/build/competitive-${edition}${suffix?'-'+suffix:''}/engine/index.html?${params}`;game.append(frame);}
  });clearInterval(sessions[i].timer);
 }});
 await Promise.resolve();
