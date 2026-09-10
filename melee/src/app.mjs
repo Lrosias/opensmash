@@ -1,7 +1,7 @@
 import {createAssetLoader} from './asset-loader.mjs';
 import {instantiateEngine} from './wasm-loader.mjs';
 import {createShaderCache} from './shader-cache.mjs';
-import {keyboardOptions,RectangleInput,gameCubeInput} from './keyboard.mjs';
+import {keyboardOptions,gameCubeInput} from './keyboard.mjs';
 import {NativeRollbackEngine} from './rollback-engine.mjs';
 import {startRollbackLab} from './rollback-lab.mjs';
 import {MeleeCompetitiveUI} from './competitive-ui.mjs';
@@ -20,7 +20,6 @@ const state = window.melee = {phase:'idle', errors:[], samples:[], module:null, 
 let input, audio, node, assetLoader, lastFrame=0;
 state.assetBlocked=false;
 state.frameGaps=[];
-const rectangles=Array.from({length:4},()=>new RectangleInput());
 state.competitive=new MeleeCompetitiveUI({root:$('competitive'),sdk:window.YouGame,readMenu:()=>readAdapterMenu(adapter),onLocal:()=>$('online').focus()});
 fetch('./engine/wasm.json').then(r=>{if(!r.ok)throw Error('The Melee build could not load.');return r.json();}).then(manifest=>{
   if(!/^[a-f0-9]{64}$/.test(manifest.sha256))throw Error('Invalid Melee build identity.');
@@ -51,8 +50,6 @@ function setupInput() {
   if(input)return;
   if(!window.YouGame?.input)throw Error('The controls could not load. Check your connection and reload.');
   input=YouGame.input.setup(keyboardOptions);
-  for(const [event,pressed] of [['press',true],['release',false]])
-    input.on(event,(id,source,seat=0)=>{if(source==='keyboard')rectangles[seat]?.event(id,pressed);});
   input.hide();
 }
 for(const id of ['welcome-controls','controls'])$(id).onclick=()=>{
@@ -81,7 +78,7 @@ $('report-dialog').addEventListener('close',()=>$('report').blur());
 function readSeat(seat,snapshot=adapter.snapshot()) {
   if(snapshot.owned)return meleePad(snapshot.ports[seat],adapter.origins[seat]);
   const s=input?.player(seat)?.state;
-  return s?gameCubeInput(s,rectangles[seat]):[0,0,0,0,0,0,0];
+  return s?gameCubeInput(s):[0,0,0,0,0,0,0];
 }
 function sampleInput() {
   state.competitive.pollInput(input?.player(0)?.state);
@@ -212,5 +209,5 @@ $('play').onclick=async()=>{
   } catch(error) { fail(error); }
 };
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden && state.module && !state.rollback?.active) for(let seat=0;seat<4;seat++){rectangles[seat].reset();state.module._melee_input(seat,0,0,0,0,0,0,0);}
+  if(document.hidden && state.module && !state.rollback?.active) for(let seat=0;seat<4;seat++){state.module._melee_input(seat,0,0,0,0,0,0,0);}
 });

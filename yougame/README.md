@@ -40,34 +40,29 @@ assets from the same game build when a match launches.
 - Leaving an active match forfeits. A connection failure during loading returns to the
   menu. A detected desync or simulation failure ends the active match as a draw.
 
-Keyboard controls use the [B0XX-AHK default layout](https://github.com/agirardeau/b0xx-ahk/blob/master/default-layout.jpg),
-a documented keyboard setup for Slippi, adapted to Smash 64. There is no single
-universal competitive keyboard layout. No AutoHotkey or driver installation is needed.
+Keyboard controls follow [Slippi Dolphin's default action layout](https://github.com/project-slippi/Ishiiruka/blob/slippi/Source/Core/Core/HW/GCPadEmu.cpp#L142),
+shared with OpenSmash Melee and Smash Remix.
 
 | Action | Keys |
 | --- | --- |
-| Left / down / right / up | 2 / 3 / 4 / ] (WASD and arrows also work) |
-| Attack / menu select | M |
-| Special / menu back | O |
-| Jump | P or 0 |
-| Shield | Q or 9 |
-| Grab | [ |
-| Start / local pause | 7 or Enter |
-| Stick modifiers | Hold V (Mod X) or B (Mod Y) with a direction |
-| Native C-up / down / left / right | K / Space / N / comma |
+| Move / character-select cursor | Arrow keys |
+| Attack / menu select | X |
+| Special / menu back | Z |
+| Jump | C or S |
+| Shield | Q or W |
+| Grab | D |
+| Start / local pause | Enter |
+| Half stick for walking / tilts | Left Shift |
+| Native C-up / down / left / right | I / K / J / L |
+| D-pad up / down / left / right | T / G / F / H |
 
-The modifiers provide reduced stick magnitudes for walking and tilts (V + up + M
-allows an up-tilt without tap-jumping). Diagonals use the documented basic B0XX
-coordinates; direction priority follows the most recent press without reactivating
-an older held opposite direction on release. Browser key repeat does not change priority. Short keyboard direction taps survive
-  for one simulation sample; only the latest pending direction is retained.
-The N64 C buttons retain their native jump / costume-selection behavior; they are not
-Melee C-stick attacks. Minus/equals also shield, since Smash 64 has no analog light-shield.
-Melee-specific airdodge and Firefox angle routines are not added. This is a two-hand
-keyboard layout; the mouse is used to focus the game, with no combat bindings.
+Opposite directions cancel. Short keyboard taps survive one simulation sample.
+Left Alt suppresses Enter's Start action. The N64 C buttons retain their native
+jump / costume-selection behavior, and shields are digital. The Melee C-stick
+modifier has no N64 equivalent.
 
-Use the movement keys to move the character-select hand, M to place the token, then
-7 or Enter to queue. Start pauses local games; online games cannot pause.
+Use arrows to move the character-select hand, X to place the token, then Enter
+to queue. Start pauses local games; online games cannot pause.
 Escape leaves an online match.
 A standard browser gamepad is supported: left stick/D-pad move, A attacks, B specials,
 X/Y jump, shoulders/triggers shield, right stick C buttons, Start in local games.

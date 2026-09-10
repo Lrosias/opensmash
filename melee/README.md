@@ -48,27 +48,32 @@ policy. Unsupported browsers show a capability message. Click Play to start audi
 and enter the roster. Use Report to capture measurements, or Controls to remap
 keys and assign controllers. Local versus supports four SDK seats.
 
-The default keyboard is the published [B0XX keyboard layout](https://github.com/agirardeau/b0xx-ahk),
-which supports Slippi. There is no universal Slippi keyboard default.
+The default keyboard follows [Slippi Dolphin's built-in bindings](https://github.com/project-slippi/Ishiiruka/blob/slippi/Source/Core/Core/HW/GCPadEmu.cpp#L142).
 
 | Action | Key |
 |---|---|
-| Left / down / right / up | 2 / 3 / 4 / ] |
-| Attack / confirm, special / back | M, O |
-| Jump X / jump Y | P / 0 |
-| Start | 7 |
-| Shield L / shield R / grab | Q / 9 / [ |
-| C-stick up / down / left / right | K / Space / N / comma |
-| Analog modifier X / Y | V / B |
-| Light shield / mid shield | minus / equals |
-| D-pad | Arrow keys |
+| Move / character-select cursor | Arrow keys |
+| Attack / confirm, special / back | X, Z |
+| Jump X / jump Y | C / S |
+| Start | Enter |
+| Shield L / shield R / grab Z | Q / W / D |
+| C-stick up / down / left / right | I / K / J / L |
+| Half main stick / half C-stick | Left Shift / Left Ctrl |
+| D-pad up / down / left / right | T / G / F / H |
 
-The preset includes tilt, air-dodge and recovery angles, last-input SOCD without
-reactivation, and modifier-based D-pad input. This is a configurable community
-preset, not certification for a particular tournament's controller rules.
-Additional players use controllers; their default keyboard bindings are empty to
-avoid conflicting with the rectangle layout. Physical controllers and mobile
-have not been validated; test controllers exercise the standard Gamepad API.
+Left Alt suppresses Enter's Start action, as in Slippi. The port retains its
+80-unit Melee keyboard stick range; each modifier halves its own stick.
+Movement uses the SDK's normal Move / Aim bindings, so Controls remapping works
+for both sticks. Opposite keyboard directions cancel. When keyboard and an ordinary gamepad are
+used together, modifiers apply to the active merged stick input; the keyboard
+D-pad and Alt/Start guard remain active. Unmodified SDK axes retain the last
+active device’s range: keyboard alone uses 80 units; mixed input can use the
+ordinary gamepad’s 127-unit range. Raw GameCube adapter input bypasses this path.
+Previously saved YouGame
+control overrides take precedence; reset those in Controls to use these defaults.
+Additional players use controllers; their default keyboard bindings are empty.
+Physical controllers and mobile have not been validated; test controllers
+exercise the standard Gamepad API.
 
 ## Build and upload
 
