@@ -42,12 +42,17 @@ try {
   await down([{x:c.x,y:c.y-c.r.height/2}]);assert.deepEqual(await native(),[0,0,0,0,1,0,0],'C-stick up');
   await up();assert.deepEqual(await native(),NEUTRAL);
   await down([{x:stick.x,y:stick.y-stick.r.height*.2},{x:a.x,y:a.y}]);
-  const both=await native();assert.equal(both[0],1);assert.equal(both[1],0);assert.ok(both[2]>.5&&both[2]<=.6,'half-tilt up with A: '+JSON.stringify(both));
+  const both=await native();assert.equal(both[0],1,'stick + A: '+JSON.stringify(both));assert.equal(both[1],0);assert.ok(both[2]>.5&&both[2]<=.6,'half-tilt up with A: '+JSON.stringify(both));
   await up();assert.deepEqual(await native(),NEUTRAL);
-  // Keyboard on the SDK seat and touch merge on port 1.
+  // A key press on a touch screen hands off to the keyboard: the held A drops with the overlay,
+  // the SDK seat's axis reaches port 1 alone, and a touch on the picture brings the overlay back.
   await down([{x:a.x,y:a.y}]);await page.keyboard.down('ArrowRight');
-  const merged=await native();assert.equal(merged[0],1);assert.ok(merged[1]>.6,'keyboard axis with a touch button: '+JSON.stringify(merged));
+  const merged=await native();assert.equal(merged[0],0,'held touch dropped on a key press: '+JSON.stringify(merged));assert.ok(merged[1]>.6,'keyboard axis: '+JSON.stringify(merged));
+  assert.equal(await page.evaluate(()=>document.body.classList.contains('pad')),true,'keyboard hides the overlay');
   await page.keyboard.up('ArrowRight');await up();assert.deepEqual(await native(),NEUTRAL);
+  await down([{x:400,y:200}]);await up();
+  await page.waitForFunction(()=>!document.body.classList.contains('pad'),null,{timeout:3000});
+  assert.equal(await page.locator('#touch-stick').isVisible(),true,'a touch on the picture brings the overlay back after keyboard use');
   assert.equal(await page.locator('#touch-reset').isVisible(),true);assert.equal(await page.locator('#touch-leave').isVisible(),false);
   await page.screenshot({path:new URL('melee-touch-engine-landscape.png',out).pathname});
   // An upright phone turns the surface; the stick still reads along the game's axes.
