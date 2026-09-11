@@ -10,7 +10,8 @@ const manifest=JSON.parse(await readFile(path.join(engine,'manifest.json'),'utf8
 if(!manifest.files.some(f=>f.path==='/BattleShip.o2r'))throw new Error('Direct-play builds require the game assets. Package the engine with PACKAGE_O2R=1.');
 await rm(out,{recursive:true,force:true});
 await mkdir(out,{recursive:true});
-for(const file of await readdir(path.join(root,'yougame/src')))if(file!=='engine.html')await cp(path.join(root,'yougame/src',file),path.join(out,file));
+const ENGINE_SRC=['engine.html','rom-extract.mjs','torch-worker.mjs'];
+for(const file of await readdir(path.join(root,'yougame/src')))if(!ENGINE_SRC.includes(file))await cp(path.join(root,'yougame/src',file),path.join(out,file));
 await writeFile(path.join(out,'game-profile.mjs'),(await readFile(path.join(out,'game-profile.mjs'),'utf8')).replace("PROFILES['YOUGAME_EDITION']","PROFILES['"+(manifest.remix?'remix':'original')+"']"));
 await cp(path.join(root,'controllers'),path.join(out,'controllers'),{recursive:true});
 for(const name of ['app.mjs','input.mjs'])await writeFile(path.join(out,name),(await readFile(path.join(out,name),'utf8')).replaceAll('../../controllers/','./controllers/'));
@@ -22,6 +23,9 @@ for(const [source,name] of [['LICENSE','OpenSmash.txt'],['BattleShip/LICENSE','B
 await mkdir(path.join(out,'engine'),{recursive:true});
 for(const file of ['BattleShip.js','BattleShip.wasm','manifest.json','files'])
  await cp(path.join(engine,file),path.join(out,'engine',file),{recursive:true});
+// The kosher edition (a YouGame patch listing) leaves the ROM-derived files out and ships the
+// browser extractor instead; see package-kosher.mjs, which turns a direct-play package into one.
+for(const file of ['rom-extract.mjs','torch-worker.mjs'])await cp(path.join(root,'yougame/src',file),path.join(out,'engine',file));
 const hash=createHash('sha256');
 async function fingerprint(dir){for(const e of (await readdir(dir,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){const f=path.join(dir,e.name);if(e.isDirectory())await fingerprint(f);else hash.update(await readFile(f));}}
 await fingerprint(path.join(root,'yougame/src'));await fingerprint(path.join(root,'controllers'));await fingerprint(path.join(out,'engine'));

@@ -64,6 +64,7 @@ window.Module = {
         FS.mkdirTree(file.path.substring(0,file.path.lastIndexOf('/')) || '/'); FS.writeFile(file.path,bytes);
         status.textContent = `Loading arena… ${++done}/${manifest.files.length}`;
       }));
+      if(archive){const {writeArchive}=await import('./rom-extract.mjs');writeArchive(FS,archive.bytes,archive.extras);}
     })().then(() => removeRunDependency('yougame-assets')).catch(e => {status.textContent=e.message; bridge.error(e.message);});
   }]
 };
@@ -77,13 +78,22 @@ document.addEventListener('visibilitychange',()=>{
 });
 Module.yougameDispose=()=>{disposed=true;stopClock?.();if(Module.yougameAudio)Module.yougameAudio.close();else audioContext()?.close().catch(()=>{});};
 window.addEventListener('pagehide',Module.yougameDispose,{once:true});
-let manifest;
+let manifest,archive=null;
 try {
   Module.yougameAudio=params.get('SSB64_YOUGAME_AUDIO')==='SDL'?null:await createAudioOutput({muted});
   if(disposed){Module.yougameAudio?.close();throw new Error("Engine closed during loading");}
   const response = await fetch('./manifest.json'); if (!response.ok) throw new Error('Engine build is missing');
   manifest = await response.json();
-  if (!manifest.files.some(f=>f.path === '/BattleShip.o2r')) throw new Error('This build is missing its game assets.');
+  if(!manifest.files.some(f=>f.path === '/BattleShip.o2r')){
+    // A YouGame patch listing (package-kosher.mjs): the game assets come from the player's own ROM
+    // (YouGame.baseGame() on the site page, this frame's parent), built by Torch in the browser and
+    // cached per ROM (rom-extract.mjs). Direct-play packages ship the archive and skip this.
+    const recipeEntry=manifest.files.find(f=>f.path==='/BattleShip.o2r.recipe');
+    const recipe=recipeEntry?(await (await fetch(recipeEntry.url)).text()).trim():'unknown';
+    const {ensureArchive}=await import('./rom-extract.mjs');
+    archive=await ensureArchive({recipe,getRom:()=>parent.YouGame.baseGame(),setStatus:t=>{status.textContent=t;}});
+    if(disposed)throw new Error("Engine closed during loading");
+  }
   const script=document.createElement('script');script.src='./BattleShip.js';script.onerror=()=>bridge.error('Could not load engine');document.body.append(script);
 } catch(e) {status.textContent=e.message;bridge.error(e.message);}
 </script></body></html>

@@ -238,3 +238,14 @@ and `PLAYWRIGHT_MODULE` to the installed Playwright module if it is outside node
 The automated protocol tests cover delayed inputs, stalled/bounded buffers, altered inputs,
 invalid packets, stale rounds, matching results, and desync aborts. Real Internet latency,
 different machines, long sessions, and all fighter matchups need broader playtesting.
+
+## Kosher edition (YouGame patch listing)
+
+`node yougame/package-kosher.mjs <package-dir> <out-dir> [web-dist]` turns a direct-play package
+into the edition that ships no ROM-derived data: `engine/files/BattleShip.o2r` and the stage
+select-screen PNGs are dropped, Torch (wasm) and `engine/torch-worker.mjs` + `engine/rom-extract.mjs`
+are added, and `engine/index.html` builds the archive in the browser from the ROM the YouGame page
+hands over through `parent.YouGame.baseGame()` (cached in the game origin's IndexedDB per recipe +
+ROM SHA-1). It is published on YouGame as a patch listing (`kind: "patch"`, only the USA NALE dump
+accepted), where the player picks their own ROM once on the site; nothing ROM-derived is hosted.
+BUILD is unchanged, so the edition is the same game as the direct-play package it came from.
