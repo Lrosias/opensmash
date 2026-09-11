@@ -46,6 +46,9 @@ std::atomic<bool> match_configured{false}, match_entered{false};
 std::array<int, 13> match_config{};
 bool match_menu_started = false;
 int menu_field = 0;
+// Diagnostic entries: 0 boot, 1 CSS, 2 SSS, 3 VS, 4 VS exit, 5 sudden death.
+// VS exit may lead to sudden death; it is not an authoritative result receipt.
+int session_phase = 0, session_battle_id = 0, session_battle_mask = 0, session_stage = -1;
 
 void advance_match_boot() {
   if (!match_menu_started) return;
@@ -104,8 +107,10 @@ void reply(int seq, int status, int handle, size_t bytes, double ms, bool hash =
     for (var f = 0; f < 8; f++) args.push(HEAP32[i + f]);
     args.push((HEAP32[i + 8] & 255) | ((HEAP32[i + 9] & 255) << 8) | (HEAP32[i + 10] << 16));
     for (var f = 11; f < 18; f++) args.push(HEAP32[i + f]);
+    if ($8) args.push({phase:$9,battleId:$10,seatMask:$8,battleMask:$11,stage:$12});
     postMessage({cmd:9,handler:'onMeleeRollback',args:args});
-  }, seq, status, frame, handle, digest, bytes, ms, &match);
+  }, seq, status, frame, handle, digest, bytes, ms, &match,
+      melee_session_mask.load(), session_phase, session_battle_id, session_battle_mask, session_stage);
 }
 int capture() {
   if (managed_history && history.size() >= HISTORY) return 0;
@@ -155,10 +160,28 @@ bool restore(int handle) {
 }
 }
 
+// The first native-menu qualification uses confirmed input only. Host lifecycle
+// metadata is not checkpointed, so predictive replay must remain unavailable.
+extern "C" EMSCRIPTEN_KEEPALIVE int melee_session_configure(unsigned mask) {
+  if (melee_main_started.load() || melee_rb_mode.load() || mask < 1 || mask > 15) return 0;
+  melee_session_mask = mask;
+  melee_rb_mode = true;
+  return 1;
+}
+extern "C" void melee_session_scene(int phase, int stage, int mask) {
+  if (!melee_session_mask.load()) return;
+  session_phase = phase;
+  if (phase == 3) {
+    ++session_battle_id;
+    session_stage = stage;
+    session_battle_mask = mask;
+  }
+}
+
 // Called before main. Each occupied participant keeps its actual controller port.
 extern "C" EMSCRIPTEN_KEEPALIVE int melee_match_configure_slots(unsigned seed, int stage, int mask,
     int f0, int c0, int f1, int c1, int f2, int c2, int f3, int c3) {
-  if (match_configured.load() || entered || mask < 1 || mask > 15 || __builtin_popcount(static_cast<unsigned>(mask)) < 2 ||
+  if (melee_main_started.load() || melee_session_mask.load() || match_configured.load() || entered || mask < 1 || mask > 15 || __builtin_popcount(static_cast<unsigned>(mask)) < 2 ||
       (stage != 2 && stage != 3 && stage != 8 && stage != 28 && stage != 31 && stage != 32)) return 0;
   const int fighters[] = {f0,f1,f2,f3}, colors[] = {c0,c1,c2,c3};
   for (int i=0;i<4;i++) if ((mask & (1<<i)) &&
@@ -185,6 +208,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int melee_rb_enable() {
   return 1;
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int melee_rb_command(int seq, int op, int arg, int replaying) {
+  if (melee_session_mask.load() && (op == 1 || op == 2 || replaying)) return 0;
   if (seq <= 0 || op < 1 || op > 8 || !waiting.load(std::memory_order_acquire) || request.load()) return 0;
   command = op; argument = arg; replay = replaying;
   request.store(seq, std::memory_order_release);

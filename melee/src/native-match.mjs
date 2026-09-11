@@ -38,3 +38,9 @@ export async function createNativeMatch(launch,onStatus=()=>{},signal) {
       show:()=>{iframe.style.visibility='visible';}};
   } catch(error){destroy();throw error;}
 }
+
+// Keep this engine alive through native CSS, stages, results and rematches.
+// Roster changes require a fresh synchronized boot; no scene rollback is exposed.
+export function createNativeSession({slots},onStatus=()=>{},signal) {
+  return createNativeMatch({nativeSession:true,slots},onStatus,signal);
+}

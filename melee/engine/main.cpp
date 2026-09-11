@@ -87,6 +87,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE void melee_save_state() { State::SaveAs(Core::Sy
 extern "C" EMSCRIPTEN_KEEPALIVE void melee_load_state() { State::LoadAs(Core::System::GetInstance(), "/checkpoint.sav"); }
 
 int main(int argc, char** argv) {
+  melee_main_started = true;
   for (int i = 2; i < argc; ++i)
     if (std::string_view(argv[i]) == "rollback") melee_rb_mode = true;
   for (int i = 2; i < argc; ++i)
@@ -131,7 +132,9 @@ int main(int argc, char** argv) {
   Config::SetBase(Config::GFX_SHADER_COMPILER_THREADS, 0);
   Config::SetBase(Config::GFX_WAIT_FOR_SHADERS_BEFORE_STARTING, false);
   for (int seat = 0; seat < 4; ++seat) {
-    Config::SetBase(Config::GetInfoForSIDevice(seat), SerialInterface::SIDEVICE_GC_CONTROLLER);
+    const unsigned mask = melee_session_mask.load();
+    Config::SetBase(Config::GetInfoForSIDevice(seat), !mask || (mask & (1u << seat)) ?
+        SerialInterface::SIDEVICE_GC_CONTROLLER : SerialInterface::SIDEVICE_NONE);
     ciface::Touch::RegisterGameCubeInputOverrider(seat);
   }
   input_ready = true;

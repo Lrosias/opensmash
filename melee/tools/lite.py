@@ -72,7 +72,13 @@ def main():
         ('chunk_1092_text1_80225140.c', '802251B4',
          'extern void melee_asset_selection(int,int); melee_asset_selection(1,ctx->gpr[3]);'),
         ('chunk_0836_text1_801A5140.c', '801A5618',
-         'extern void melee_asset_menu(void); extern void melee_match_menu(void); melee_match_menu(); melee_asset_menu();'),
+         'extern void melee_asset_menu(void); extern void melee_match_menu(void); melee_match_menu(); melee_asset_menu(); extern void melee_session_scene(int,int,int); melee_session_scene(1,-1,0);'),
+        ('chunk_0836_text1_801A5140.c', '801A5754',
+         'extern void melee_session_scene(int,int,int); melee_session_scene(2,-1,0);'),
+        ('chunk_0837_text1_801A5940.c', '801A5AF0',
+         'extern void melee_session_scene(int,int,int); melee_session_scene(4,-1,0);'),
+        ('chunk_0837_text1_801A5940.c', '801A5C3C',
+         'extern void melee_session_scene(int,int,int); melee_session_scene(5,-1,0);'),
         ('chunk_0836_text1_801A5140.c', '801A583C',
          '''extern void melee_asset_match(int,int,int,int,int);
         u32 vs = ctx->gpr[4];
@@ -122,6 +128,10 @@ def main():
             u32 player = vs + 0x68u + i * 0x24u;
             fighters[i] = mem_read8(ctx,player+1) <= 1 ? mem_read8(ctx,player) : -1;
         }
+        extern void melee_session_scene(int,int,int);
+        int mask = 0;
+        for (int i=0;i<4;i++) if (fighters[i]>=0) mask |= 1<<i;
+        melee_session_scene(3,mem_read16(ctx,vs+0x16u),mask);
         melee_asset_match(mem_read16(ctx,vs+0x16u),fighters[0],fighters[1],fighters[2],fighters[3]);'''),
     ]
     for filename, address, code in hooks:
