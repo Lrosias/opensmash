@@ -6,7 +6,7 @@ import {TouchState} from '../src/touch-state.mjs';
 import {TouchStick} from '../src/touch-stick.mjs';
 
 // Exercise the production pointer handlers, including releases outside the zone.
-async function setup(rotated){
+async function setup(rotated,pads=[]){
  const element=()=>({listeners:{},style:{setProperty(key,value){this[key]=value;}},classList:{
   values:new Set(),add(key){this.values.add(key);},remove(key){this.values.delete(key);},
   toggle(key,on){if(on)this.add(key);else this.remove(key);},contains(key){return this.values.has(key);}},
@@ -31,14 +31,15 @@ async function setup(rotated){
  const document=Object.assign(element(),{body:element(),getElementById:get});
  document.documentElement={get clientWidth(){return win.innerWidth;},get clientHeight(){return win.innerHeight;}};
  let locks=0;const orientation=Object.assign(element(),{lock(){locks++;return Promise.resolve();}});
+ const clock={now:1e6};
  const scope={TouchState,TouchStick,window:win,document,screen:{orientation},matchMedia:()=>({matches:true,addEventListener(){}}),
-  location:{search:'?touch=1'},URLSearchParams,setTimeout,clearTimeout};
+  location:{search:'?touch=1'},URLSearchParams,setTimeout,clearTimeout,navigator:{getGamepads:()=>pads},owned:false,Date:{now:()=>clock.now}};
  const source=(await readFile(process.env.TOUCH_SOURCE||new URL('../src/touch.mjs',import.meta.url),'utf8'))
   .replace(/^import .*;\n/gm,'').replace('export function createTouch','function createTouch');
- vm.runInNewContext(source+'\nthis.touch=createTouch({wakeAudio(){},leave(){}});',scope);
+ vm.runInNewContext(source+'\nthis.touch=createTouch({wakeAudio(){},leave(){},controller:()=>this.owned});',scope);
  scope.touch.context(false,22);
- return {touch:scope.touch,zone:get('touch-stick-zone'),stick:get('touch-stick'),thumb:get('stick-thumb'),win,document,button,reset,group:get('touch-top'),quit:get('touch-leave'),orientation,
-  flush(){frames.splice(0).forEach(fn=>fn());},locks:()=>locks};
+ return {touch:scope.touch,zone:get('touch-stick-zone'),stick:get('touch-stick'),thumb:get('stick-thumb'),win,document,button,reset,group:get('touch-top'),quit:get('touch-leave'),orientation,pads,
+  flush(){frames.splice(0).forEach(fn=>fn());},locks:()=>locks,own(value){scope.owned=value;scope.touch.sync();},advance(ms){clock.now+=ms;}};
 }
 
 for(const rotated of [false,true])test(`pointer sweeps and release stay straight and neutral (${rotated?'rotated':'landscape'})`,async()=>{
@@ -259,4 +260,52 @@ test('fresh Home Screen contacts retain full down and straight sides despite a v
    zone.dispatch('pointerup',1);assert.deepEqual(touch.read(),[0,0,0]);
   }
  }
+});
+
+test('the last input picks the scheme: pad input hides the overlay, a touch brings it back',async()=>{
+ const {touch,zone,button,document,win,pads,own,advance}=await setup(false);
+ assert.equal(touch.pad,false);
+ // An idle pad (phantom remote, or one nobody has touched) leaves the controls alone.
+ pads.push({connected:true,buttons:[{pressed:false}],axes:[0,0,0,0]});win.dispatch('gamepadconnected');assert.equal(touch.pad,false);
+ zone.dispatch('pointerdown',1,280,160);assert.deepEqual([...touch.read()],[0,80,0]);
+ // The first press takes over: the held stick is released with its capture, nothing latched survives.
+ pads[0].buttons[0].pressed=true;advance(60);
+ assert.deepEqual([...touch.read()],[0,0,0]);
+ assert.equal(touch.pad,true);assert.equal(document.body.classList.contains('pad'),true);
+ assert.equal(zone.captures.size,0);
+ // Releasing the button keeps the pad in charge; overlay contacts are ignored.
+ pads[0].buttons[0].pressed=false;advance(60);
+ zone.dispatch('pointerdown',2,280,160);button.dispatch('pointerdown',3);button.dispatch('pointerup',3);
+ assert.deepEqual([...touch.read()],[0,0,0]);assert.equal(touch.pad,true);
+ // A touch on the picture makes touch the last input again, with nothing replayed.
+ touch.touched();assert.equal(touch.pad,false);assert.equal(document.body.classList.contains('pad'),false);
+ assert.deepEqual([...touch.read()],[0,0,0]);
+ zone.dispatch('pointerdown',4,280,160);assert.deepEqual([...touch.read()],[0,80,0]);zone.dispatch('pointerup',4);
+ // A stick deflection counts as pad input too.
+ pads[0].axes=[0,-.8,0,0];advance(60);assert.deepEqual([...touch.read()],[0,0,0]);assert.equal(touch.pad,true);
+ // A pad that goes away without an event is noticed on the next polled read.
+ pads.length=0;assert.deepEqual([...touch.read()],[0,0,0]);assert.equal(touch.pad,true);
+ advance(60);assert.deepEqual([...touch.read()],[0,0,0]);assert.equal(touch.pad,false);
+ // A disconnected entry never counts.
+ pads.push({connected:false,buttons:[{pressed:true}],axes:[]});win.dispatch('gamepadconnected');assert.equal(touch.pad,false);
+ // An owned GameCube adapter takes over without any gamepad event, through sync(),
+ // and a touch cannot bring the overlay back while it owns the ports.
+ own(true);assert.equal(touch.pad,true);touch.touched();assert.equal(touch.pad,true);
+ own(false);assert.equal(touch.pad,false);
+});
+
+test('context changes and layout events re-check the controller while nothing reads',async()=>{
+ const {touch,win,pads,flush}=await setup(false);
+ pads.push({connected:true,buttons:[{pressed:true}],axes:[]});
+ touch.context(true,22);assert.equal(touch.pad,true);
+ pads.length=0;
+ touch.context(false,9);assert.equal(touch.pad,false);
+ pads.push({connected:true,buttons:[{pressed:true}],axes:[]});
+ win.dispatch('resize');flush();assert.equal(touch.pad,true);
+});
+
+test('a controller already in use at load hides the overlay from the first frame',async()=>{
+ const {touch,document}=await setup(true,[{connected:true,buttons:[{pressed:true}],axes:[]}]);
+ assert.equal(touch.pad,true);assert.equal(document.body.classList.contains('pad'),true);
+ assert.equal(document.body.classList.contains('rotated'),true);
 });

@@ -1,4 +1,4 @@
-// Apply the shared controller to an existing edition without rebuilding its engine.
+// Apply the shared controller (touch modules, stylesheet and app.mjs) to an existing edition without rebuilding its engine.
 // Usage: node yougame/package-touch-update.mjs <base-build> <new-output-folder>
 import {cp,mkdir,readFile,readdir,stat,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -15,12 +15,16 @@ await mkdir(path.dirname(out),{recursive:true});
 await mkdir(out); // Never overwrite a preserved release or another candidate.
 await cp(base,out,{recursive:true});
 const hash=createHash('sha256').update(previous),changed=[];
-for(const file of ['touch.mjs','touch-state.mjs','touch-stick.mjs']){
+for(const file of ['touch.mjs','touch-state.mjs','touch-stick.mjs','style.css']){
  const bytes=await readFile(new URL('./src/'+file,import.meta.url));
  await writeFile(path.join(out,file),bytes);hash.update(file).update(bytes);changed.push(file);
 }
+// app.mjs comes from src too (it wires the touch module), with the path rewrite package-edition.mjs applies.
+const app=(await readFile(new URL('./src/app.mjs',import.meta.url),'utf8')).replaceAll('../../controllers/','./controllers/');
+if(!app.includes("const BUILD = 'YOUGAME_BUILD';"))throw new Error('src/app.mjs lost its build placeholder');
+hash.update('app.mjs').update(app);
 const build=hash.digest('hex').slice(0,16);
-await writeFile(path.join(out,'app.mjs'),source.replace(`const BUILD = '${previous}';`,`const BUILD = '${build}';`));
+await writeFile(path.join(out,'app.mjs'),app.replace("const BUILD = 'YOUGAME_BUILD';",`const BUILD = '${build}';`));
 changed.push('app.mjs');
 const files=[];
 async function collect(dir,prefix=''){
