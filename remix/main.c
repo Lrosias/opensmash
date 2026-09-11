@@ -382,7 +382,9 @@ static int results_wait,results_online,results_override=-3;
 static void reset_results_online(void){results_online=0;results_override=-3;}
 static GObj *results_fighters[4];
 static void results_run(GObj *gobj){
- int taps=gSYControllerDevices[0].button_tap;
+ int controller=0;
+ if(port_yougame_session_enabled())while(controller<3&&!local_human[controller])controller++;
+ int taps=gSYControllerDevices[controller].button_tap;
  if(results_wait){results_wait--;return;}
  if(taps&(A_BUTTON|START_BUTTON)){func_800269C0_275C0(nSYAudioFGMMenuSelect);
   if(results_online){EM_ASM({if(Module.onYouGameMenu)Module.onYouGameMenu(3,0);});results_wait=30;}
