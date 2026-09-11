@@ -72,8 +72,38 @@ ordinary gamepad’s 127-unit range. Raw GameCube adapter input bypasses this pa
 Previously saved YouGame
 control overrides take precedence; reset those in Controls to use these defaults.
 Additional players use controllers; their default keyboard bindings are empty.
-Physical controllers and mobile have not been validated; test controllers
-exercise the standard Gamepad API.
+Physical controllers have not been validated; test controllers exercise the
+standard Gamepad API.
+
+## Phones
+
+`src/touch.mjs` draws the OpenSmash64 touch scheme with Melee's buttons on any
+device with a coarse pointer (`?touch=1` forces it on a desktop for layout work):
+a control stick on the left, the C-stick and A / B / Jump (X) / Grab (Z) /
+Shield (R) on the right, Taunt (D-pad up) above the stick, Start and a
+"Reset match" button (hold L+R+A and press Start, so pause first) in the top
+right. The overlay reads into port 1 beside the SDK seat in `readSeat`
+(`withTouch` in `app.mjs`): buttons merge, a deflected touch stick replaces that
+stick, and the triggers follow Shield. An upright phone turns `#play-surface`
+(the canvas, the online match iframe and the overlay) 90°, as the 64 edition
+does; the online screens cover the overlay while they are open, and in a session
+the reset gives way to a hold-to-leave. The last input picks the scheme: a
+pressed Bluetooth pad or a page-owned GameCube adapter hides the overlay and
+gives the picture the whole screen; a touch on the picture brings it back.
+
+The engine itself still needs WebAssembly promise integration, so phones run
+Melee only where their browser has it (Chrome 137+ on Android). Safari on iOS
+26.2 has no JSPI and shows the capability message at Play.
+
+Tests: `node --test melee/tests/touch-controls.test.mjs` (pointer handlers in a
+vm), `melee/tests/touch-browser.mjs` (layout, sticks, buttons and controller
+hand-off at six phone viewports without the engine) and
+`melee/tests/touch-native-browser.mjs` (a served build with the real engine;
+touch events must reach `_melee_input` on port 1). The browser tests take
+`PLAYWRIGHT_PATH` and `PLAYWRIGHT_CHROMIUM` like `keyboard-browser.mjs`.
+`melee/tools/package-touch-update.mjs <released-package> <out>` overlays this
+checkout's `melee/src` and `controllers/` on a released package without
+rebuilding the engine, for wrapper-only releases.
 
 ## Build and upload
 
