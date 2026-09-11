@@ -79,6 +79,8 @@ def main():
          'extern void melee_session_scene(int,int,int); melee_session_scene(4,-1,0);'),
         ('chunk_0837_text1_801A5940.c', '801A5C3C',
          'extern void melee_session_scene(int,int,int); melee_session_scene(5,-1,0);'),
+        ('chunk_0837_text1_801A5940.c', '801A5F50',
+         'extern void melee_session_result(unsigned); melee_session_result(ctx->gpr[31]+8u);'),
         ('chunk_0836_text1_801A5140.c', '801A583C',
          '''extern void melee_asset_match(int,int,int,int,int);
         u32 vs = ctx->gpr[4];
@@ -140,8 +142,14 @@ def main():
         marker = 'OPENSMASH_STREAM_' + address
         text = re.sub(r'    /\* '+marker+r'_BEGIN \*/.*?    /\* '+marker+r'_END \*/\n', '', original, flags=re.S)
         anchor = 'label_' + address + ':\n'
-        if text.count(anchor) != 1 or '// '+address+': mflr' not in text:
+        expected = '// 801A5F50: lwz     r0, 28(r1)' if address == '801A5F50' else '// '+address+': mflr'
+        if text.count(anchor) != 1 or expected not in text:
             raise SystemExit('Unexpected scene entry at '+address+'; refusing to patch.')
+        if address == '801A5F50' and any(instruction not in text for instruction in [
+            '// 801A5F14: or   r31, r3, r3', '// 801A5F30: addi    r4, r3, 4',
+            '// 801A5F34: lwzu     r3, 8(r4)', '// 801A5F3C: stwu     r3, 8(r5)',
+            '// 801A5F4C: stw     r0, 8(r5)']):
+            raise SystemExit('Unexpected native result copy layout; refusing to patch.')
         hook = '    /* '+marker+'_BEGIN */\n    { '+code+' }\n    /* '+marker+'_END */\n'
         text = text.replace(anchor, anchor+hook)
         if text != original: path.write_text(text)

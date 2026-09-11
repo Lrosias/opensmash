@@ -54,6 +54,6 @@ def main():
     assert str(out/'main.cpp.o') in candidate
     digest=link(candidate,out/'candidate')
     assert all(sha(Path(p))==value for p,value in inputs.items()),'Historical link inputs changed during build'
-    proof={'baseline':baseline,'candidate':digest,'sourceCommit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'sources':{str(p):sha(p) for p in [*sources,ROOT/'melee/engine/MeleeRollback.h',ROOT/'melee/tools/lite.py']},'unchangedHistoricalInputs':inputs,'artifacts':{p.name:sha(p) for p in (out/'candidate').iterdir() if p.is_file()}}
+    proof={'baseline':baseline,'candidate':digest,'sourceCommit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'sources':{str(p):sha(p) for p in [*sources,ROOT/'melee/engine/MeleeRollback.h',ROOT/'melee/engine/NativeResultReceipt.h',ROOT/'melee/tools/lite.py']},'unchangedHistoricalInputs':inputs,'artifacts':{p.name:sha(p) for p in (out/'candidate').iterdir() if p.is_file()}}
     (out/'provenance.json').write_text(json.dumps(proof,indent=2));print(json.dumps({'candidate':str(out/'candidate'),'wasm':digest}),flush=True)
 if __name__=='__main__':main()

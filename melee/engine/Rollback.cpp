@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "MeleeRollback.h"
+#include "NativeResultReceipt.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -49,6 +50,7 @@ int menu_field = 0;
 // Diagnostic entries: 0 boot, 1 CSS, 2 SSS, 3 VS, 4 VS exit, 5 sudden death.
 // VS exit may lead to sudden death; it is not an authoritative result receipt.
 int session_phase = 0, session_battle_id = 0, session_battle_mask = 0, session_stage = -1;
+MeleeNativeReceipt session_receipt;
 
 void advance_match_boot() {
   if (!match_menu_started) return;
@@ -107,10 +109,17 @@ void reply(int seq, int status, int handle, size_t bytes, double ms, bool hash =
     for (var f = 0; f < 8; f++) args.push(HEAP32[i + f]);
     args.push((HEAP32[i + 8] & 255) | ((HEAP32[i + 9] & 255) << 8) | (HEAP32[i + 10] << 16));
     for (var f = 11; f < 18; f++) args.push(HEAP32[i + f]);
-    if ($8) args.push({phase:$9,battleId:$10,seatMask:$8,battleMask:$11,stage:$12});
+    if ($8) {
+      var r = $13 >>> 2;
+      var receipt = (HEAP32[r+1] ? {battleId:HEAP32[r],kind:HEAP32[r+1]===1?'winner':'unscored',
+        winnerSlot:HEAP32[r+1]===1?HEAP32[r+2]:null,participantsMask:HEAP32[r+3],humanMask:HEAP32[r+4],
+        teamBattle:!!HEAP32[r+5],noContest:!!HEAP32[r+6],outcome:HEAP32[r+7],matchKind:HEAP32[r+8],extraParticipants:HEAP32[r+9],
+        places:[HEAP32[r+10],HEAP32[r+11],HEAP32[r+12],HEAP32[r+13]]} : null);
+      args.push({phase:$9,battleId:$10,seatMask:$8,battleMask:$11,stage:$12,receipt:receipt});
+    }
     postMessage({cmd:9,handler:'onMeleeRollback',args:args});
   }, seq, status, frame, handle, digest, bytes, ms, &match,
-      melee_session_mask.load(), session_phase, session_battle_id, session_battle_mask, session_stage);
+      melee_session_mask.load(), session_phase, session_battle_id, session_battle_mask, session_stage, &session_receipt);
 }
 int capture() {
   if (managed_history && history.size() >= HISTORY) return 0;
@@ -173,9 +182,20 @@ extern "C" void melee_session_scene(int phase, int stage, int mask) {
   session_phase = phase;
   if (phase == 3) {
     ++session_battle_id;
+    session_receipt = {};
     session_stage = stage;
     session_battle_mask = mask;
   }
+}
+extern "C" void melee_session_result(unsigned address) {
+  if (!melee_session_mask.load() || session_battle_id < 1 || session_receipt.kind) return;
+  auto& mem = Core::System::GetInstance().GetMemory();
+  // The version-checked EnterResults hook supplies its copied MatchEnd address.
+  // Reading all six native slots ensures non-controller participants stay unscored.
+  if (address < 0x80000000u || address > 0x81800000u - 0x227cu) return;
+  session_receipt = melee_native_receipt([&](unsigned offset) { return mem.Read_U8(address + offset); },
+                                        session_battle_id, melee_session_mask.load());
+  session_phase = 6;
 }
 
 // Called before main. Each occupied participant keeps its actual controller port.
