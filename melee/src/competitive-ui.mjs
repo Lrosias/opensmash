@@ -185,7 +185,7 @@ export class MeleeCompetitiveUI {
   }
   partyScreen(){
     const result=this.platformResult;
-    const title=result?(result.void?'Game cancelled':result.draw?'Draw':`${this.partyParticipants?.find(p=>p.id===result.ranking?.[0])?.name??'Winner'} wins`):this.partyPhase==='confirming'?'Recording the game…':'Preparing the game…';
+    const title=result?(result.void?'Game cancelled':result.draw?'Draw':`${this.partyParticipants?.find(p=>p.id===result.ranking?.[0])?.name??'Winner'} wins`):this.partyPhase==='interrupted'?'A player left. Waiting for the game result…':this.partyPhase==='confirming'?'Recording the game…':'Preparing the game…';
     return `<div class="comp-heading"><p class="comp-eyebrow">FRIENDS</p><h1 tabindex="-1">${esc(title)}</h1></div>${result?button('Return to lobby','return-lobby','','class="comp-primary"'):''}`;
   }
   async connect(queue){
