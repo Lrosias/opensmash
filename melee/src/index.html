@@ -10,10 +10,10 @@
   <canvas id="canvas" width="640" height="480" aria-label="OpenSmash Melee"></canvas>
   <section id="touch-controls" aria-label="Touch controller">
     <div class="touch-top">
-      <button id="touch-reset" data-mask="3105" type="button" aria-label="Reset match" title="Pause with Start, then reset the match" hidden>Reset match<span>Pause first</span></button>
-      <button id="touch-start" data-mask="32" type="button">Start</button><button id="touch-leave" type="button" hidden>Hold to leave</button>
+      <button id="touch-reset" data-mask="3105" type="button" tabindex="-1" aria-label="Reset match" title="Pause with Start, then reset the match" hidden>Reset match<span>Pause first</span></button>
+      <button id="touch-start" data-mask="32" type="button" tabindex="-1">Start</button><button id="touch-leave" type="button" tabindex="-1" hidden>Hold to leave</button>
     </div>
-    <button id="touch-taunt" data-mask="64" type="button" aria-label="Taunt">Taunt</button>
+    <button id="touch-taunt" data-mask="64" type="button" tabindex="-1" aria-label="Taunt">Taunt</button>
     <div id="touch-stick-zone" role="group" aria-label="Control stick">
     <div id="touch-stick" aria-hidden="true"><span class="stick-arrows" aria-hidden="true">＋</span><span id="stick-thumb"></span></div>
     </div>
@@ -21,13 +21,14 @@
     <div id="touch-c" aria-hidden="true"><span class="c-label" aria-hidden="true">C</span><span id="c-thumb"></span></div>
     </div>
     <div class="touch-actions">
-      <button class="touch-button jump" data-mask="4" type="button" aria-label="Jump (X)"><b>Jump</b></button>
-      <button class="touch-button special" data-mask="2" type="button" aria-label="B Special or back"><b>B</b><span>Special</span></button>
-      <button class="touch-button attack" data-mask="1" type="button" aria-label="A Attack or select"><b>A</b><span>Attack</span></button>
-      <button class="touch-button shield" data-mask="2048" type="button" aria-label="Shield (R)"><b>Shield</b></button>
-      <button class="touch-button grab" data-mask="16" type="button" aria-label="Grab (Z)"><b>Grab</b></button>
+      <button class="touch-button jump" data-mask="4" type="button" tabindex="-1" aria-label="Jump (X)"><b>Jump</b></button>
+      <button class="touch-button special" data-mask="2" type="button" tabindex="-1" aria-label="B Special or back"><b>B</b><span>Special</span></button>
+      <button class="touch-button attack" data-mask="1" type="button" tabindex="-1" aria-label="A Attack or select"><b>A</b><span>Attack</span></button>
+      <button class="touch-button shield" data-mask="2048" type="button" tabindex="-1" aria-label="Shield (R)"><b>Shield</b></button>
+      <button class="touch-button grab" data-mask="16" type="button" tabindex="-1" aria-label="Grab (Z)"><b>Grab</b></button>
     </div>
   </section>
+  <aside id="download-status" hidden aria-label="Game downloads"><strong id="download-label" role="status" aria-live="polite"></strong><progress id="download-progress" aria-label="Download progress" max="1" value="0"></progress><span id="download-detail"></span><button id="download-retry" hidden>Retry download</button></aside>
   </div>
   <header aria-label="Game tools"><output id="metrics"></output><div><button id="report">Report</button><button id="controls">Controls</button><button id="fullscreen">Fullscreen</button></div></header>
   <section id="welcome" aria-labelledby="game-title">
@@ -45,7 +46,6 @@
     </main>
   </section>
   <section id="competitive" class="competitive" aria-label="Competitive Melee" hidden></section>
-  <aside id="download-status" hidden aria-label="Game downloads"><strong id="download-label" role="status" aria-live="polite"></strong><progress id="download-progress" aria-label="Download progress" max="1" value="0"></progress><span id="download-detail"></span><button id="download-retry" hidden>Retry download</button></aside>
   <dialog id="report-dialog"><h2>Performance report</h2><p>Copy this report after playing a match to compare performance in the hosted player.</p><textarea id="report-text" readonly aria-label="Performance report"></textarea><p id="report-status" role="status"></p><div><button id="copy-report">Copy report</button><button id="close-report">Close</button></div></dialog>
   <script src="https://yougame.co/sdk.js"></script>
   <script src="./engine/melee.js"></script>

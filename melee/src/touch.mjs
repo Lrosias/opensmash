@@ -3,9 +3,9 @@ import {TouchStick} from './touch-stick.mjs';
 export function createTouch({wakeAudio,leave,controller=()=>false}){
  const $=id=>document.getElementById(id);
  const state=new TouchState(),root=$('touch-controls');
- const coarse=matchMedia('(any-pointer: coarse)');
+ const coarse=matchMedia('(pointer: coarse)');
  const forced=new URLSearchParams(location.search).get('touch')==='1';
- let quitPointer=null,context='',holdTimer=null,rotated=false,layoutFrame=null,layoutKey='',contactGeometry='',pad=false,polled=-1e9;
+ let quitPointer=null,context='',holdTimer=null,rotated=false,layoutFrame=null,layoutKey='',contactGeometry='',pad=false,keyboard=false,polled=-1e9;
  const quit=$('touch-leave'),reset=$('touch-reset');
  const buttons=[...root.querySelectorAll('[data-mask]')],pressed=new Map();
  const controlGroups=[...new Set(buttons.map(b=>b.parentElement).filter(Boolean))];
@@ -15,12 +15,12 @@ export function createTouch({wakeAudio,leave,controller=()=>false}){
   {zone:$('touch-c-zone'),knob:$('touch-c'),thumb:$('c-thumb'),gesture:new TouchStick(),pointer:null,move:(x,y)=>state.aim(x,y),end:()=>state.centerAim()},
  ];
  const active=()=>forced||coarse.matches;
- // The last input decides the scheme on a phone, as in OpenSmash64. Real input from a
- // controller (a pressed button or a moved stick on a Bluetooth pad, or a GameCube
- // adapter the page owns) hides the overlay and lets the picture fill the surface; a
- // touch on the picture brings the overlay back, and so does the pad going away. Only
- // the online leave hold stays visible either way, since a pad has no equivalent.
- // `?touch=1` on a desktop always shows the overlay for layout work.
+ // The last input decides the scheme on a touch screen, as in OpenSmash64. Real input
+ // from a controller (a pressed button or a moved stick on a Bluetooth pad, or a
+ // GameCube adapter the page owns) or a key press hides the overlay and lets the picture
+ // fill the surface; a touch on the picture brings the overlay back, and so does the pad
+ // going away. Only the online leave hold stays visible either way, since a pad has no
+ // equivalent. `?touch=1` on a desktop always shows the overlay for layout work.
  function pads(){
   // [any pad connected, any pad giving input right now]
   if(controller())return [true,true];
@@ -41,9 +41,10 @@ export function createTouch({wakeAudio,leave,controller=()=>false}){
   const now=Date.now();if(!force&&now-polled<50)return;polled=now;
   if(!coarse.matches){setPad(false);return;}
   const [connected,input]=pads();
-  setPad(pad?connected:input);
+  setPad(pad?connected||keyboard:input||keyboard);
  }
- function touched(){if(pad&&!controller())setPad(false);}
+ function touched(){keyboard=false;if(pad&&!controller())setPad(false);}
+ window.addEventListener('keydown',e=>{if(!e.repeat&&coarse.matches&&!e.metaKey&&!e.ctrlKey){keyboard=true;syncPad(true);}},true);
  function releaseCapture(target,id){try{target.releasePointerCapture(id);}catch{}}
  function clear(){
   const captures=[...pressed];

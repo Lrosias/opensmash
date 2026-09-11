@@ -1,7 +1,7 @@
 import {createAssetLoader} from './asset-loader.mjs';
 import {instantiateEngine} from './wasm-loader.mjs';
 import {createShaderCache} from './shader-cache.mjs';
-import {keyboardOptions,gameCubeInput} from './keyboard.mjs';
+import {keyboardOptions,gameCubeInput,withTouch} from './keyboard.mjs';
 import {NativeRollbackEngine} from './rollback-engine.mjs';
 import {startRollbackLab} from './rollback-lab.mjs';
 import {MeleeCompetitiveUI} from './competitive-ui.mjs';
@@ -30,9 +30,8 @@ const touch=createTouch({wakeAudio:()=>{audio?.resume().catch(()=>{});const sess
 adapter.subscribe(()=>touch.sync());
 state.touch=touch;
 $('canvas').addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')touch.touched();},true);
-// Nothing held on the overlay survives it being covered (online screens) or leaving play.
+// Nothing held on the overlay survives it being covered by the online screens.
 new MutationObserver(()=>touch.clear()).observe($('competitive'),{attributes:true,attributeFilter:['hidden']});
-new MutationObserver(()=>touch.clear()).observe(document.body,{attributes:true,attributeFilter:['class']});
 fetch('./engine/wasm.json').then(r=>{if(!r.ok)throw Error('The Melee build could not load.');return r.json();}).then(manifest=>{
   if(!/^[a-f0-9]{64}$/.test(manifest.sha256))throw Error('Invalid Melee build identity.');
   state.competitive.setNativeAdapter((room,onError)=>{
@@ -111,11 +110,6 @@ function readSeat(seat,snapshot=adapter.snapshot(),peek=false) {
   const pad=s?gameCubeInput(s):[0,0,0,0,0,0,0];
   return seat===0?withTouch(pad,touch.read(peek)):pad;
 }
-// Touch adds to port 1: buttons merge, a deflected touch stick replaces that stick.
-function withTouch(pad,t) {
-  if(!t[0]&&!t[1]&&!t[2]&&!t[3]&&!t[4])return pad;
-  return [pad[0]|t[0],t[1]||t[2]?t[1]:pad[1],t[1]||t[2]?t[2]:pad[2],t[3]||t[4]?t[3]:pad[3],t[3]||t[4]?t[4]:pad[4],Math.max(pad[5],t[5]),Math.max(pad[6],t[6])];
-}
 function sampleInput() {
   state.competitive.pollInput(input?.player(0)?.state);
   const snapshot=adapter.snapshot();
@@ -124,7 +118,8 @@ function sampleInput() {
   if (state.module && input && !state.rollback?.active) for (let seat=0; seat<4; seat++) {
     const s=input.player(seat)?.state;
     if (!s) continue;
-    state.module._melee_input(seat,...(state.assetBlocked?[0,0,0,0,0,0,0]:readSeat(seat,snapshot,online)));
+    // A blocked engine still drains touch taps, so none fires late when the download ends.
+    state.module._melee_input(seat,...(state.assetBlocked?(seat===0&&touch.read(online),[0,0,0,0,0,0,0]):readSeat(seat,snapshot,online)));
   }
   requestAnimationFrame(sampleInput);
 }
@@ -247,6 +242,5 @@ $('play').onclick=async()=>{
   } catch(error) { fail(error); }
 };
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden)touch.clear();
   if(document.hidden && state.module && !state.rollback?.active) for(let seat=0;seat<4;seat++){state.module._melee_input(seat,0,0,0,0,0,0,0);}
 });

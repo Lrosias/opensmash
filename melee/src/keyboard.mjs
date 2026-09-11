@@ -22,6 +22,14 @@ export const keyboardOptions={
     ...Array.from({length:3},()=>({...emptyKeys}))],
 };
 
+// Touch adds to port 1: buttons merge, a deflected touch stick replaces that stick,
+// the triggers take the larger value. A neutral touch pad leaves the seat's pad alone.
+export function withTouch(pad,t) {
+  if(!t.some(Boolean))return pad;
+  const main=t[1]||t[2],c=t[3]||t[4];
+  return [pad[0]|t[0],main?t[1]:pad[1],main?t[2]:pad[2],c?t[3]:pad[3],c?t[4]:pad[4],Math.max(pad[5],t[5]),Math.max(pad[6],t[6])];
+}
+
 export function gameCubeInput(s) {
   const keyboard=s.source==='keyboard';
   // Read the SDK's remappable movement axes; keyboard directions cancel when
