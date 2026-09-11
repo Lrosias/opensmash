@@ -1,5 +1,5 @@
-import {createAssetLoader} from './asset-loader.mjs';
-import {instantiateEngine} from './wasm-loader.mjs';
+import {createAssetLoader,defaultDecodeBudget} from './asset-loader.mjs';
+import {instantiateEngine,prefetchEngine} from './wasm-loader.mjs';
 import {createShaderCache} from './shader-cache.mjs';
 import {keyboardOptions,gameCubeInput,withTouch} from './keyboard.mjs';
 import {NativeRollbackEngine} from './rollback-engine.mjs';
@@ -23,6 +23,66 @@ const state = window.melee = {phase:'idle', errors:[], samples:[], module:null, 
 let input, audio, node, assetLoader, lastFrame=0;
 state.assetBlocked=false;
 state.frameGaps=[];
+const params=new URLSearchParams(location.search);
+// Menus first: the engine and the menu data start downloading while the title
+// screen is up, so Play mostly waits for what is still in flight.
+const prefetchAllowed=!navigator.connection?.saveData&&!params.has('noprefetch');
+const engineProgress={loaded:0,total:0};
+state.prefetch={engine:prefetchAllowed,menu:prefetchAllowed};
+function renderWelcome(progress) {
+  if(state.phase!=='idle'||progress?.error)return;
+  const menu=state.menuProgress||{completed:0,total:0};
+  const engineFraction=engineProgress.total?engineProgress.loaded/engineProgress.total:0;
+  const menuFraction=menu.total?menu.completed/menu.total:0;
+  const done=(!engineProgress.total||engineFraction>=1)&&menu.total&&menuFraction>=1;
+  const fraction=(engineFraction*2+menuFraction)/3;
+  $('loading').hidden=done||!(engineProgress.total||menu.total);
+  $('progress-bar').style.width=`${fraction*100}%`;
+  $('progress-detail').textContent=`${Math.round(fraction*100)}%`;
+  $('status').textContent=done?'Menus ready · fighters and stages download as you pick them':'Getting the menus ready · fighters and stages download as you pick them';
+}
+function onAssetStatus(progress) {
+  state.assetStats=progress.stats;state.assetBlocked=progress.blocked;
+  if(progress.kind==='selected'&&progress.name==='menus'||state.phase==='idle'&&progress.name==='menus')state.menuProgress={completed:progress.completed,total:progress.total};
+  const pill=$('download-status');
+  if(state.phase!=='running'&&state.phase!=='booting'){
+    pill.hidden=true;
+    $('welcome-retry').hidden=!progress.error;
+    if(progress.error)$('status').textContent=`Download paused: ${progress.error} Check your connection and retry.`;
+    else if(state.phase==='idle')renderWelcome(progress);
+    else if(state.phase==='preparing'){
+      $('progress-bar').style.width=`${progress.completed/(progress.total||1)*100}%`;
+      $('progress-detail').textContent=`${(progress.completed/1048576).toFixed(1)} / ${(progress.total/1048576).toFixed(1)} MB`;
+    }
+    return;
+  }
+  const active=!!progress.name||!!progress.error;
+  pill.hidden=!active;
+  if(!active)return;
+  const kind=progress.error?'error':progress.kind;
+  pill.dataset.kind=kind;
+  const mb=n=>(n/1048576).toFixed(1);
+  $('download-label').textContent=kind==='error'?'Download paused':kind==='preparing'?`Preloading ${progress.name}`:`Loading ${progress.name}`;
+  $('download-detail').textContent=kind==='error'?progress.error:kind==='preparing'?`${Math.round(progress.completed/(progress.total||1)*100)}%`:
+    `${mb(progress.completed)} / ${mb(progress.total)} MB${kind==='blocking'?' · starting when ready':''}`;
+  $('download-bar').style.width=`${progress.completed/(progress.total||1)*100}%`;
+  $('download-retry').hidden=kind!=='error';
+}
+function makeLoader() {
+  const ready=createAssetLoader(null,null,onAssetStatus,{decodeBudget:defaultDecodeBudget()}).then(loader=>{
+    assetLoader=loader;
+    // Data Saver also keeps the in-menu plan off; picks still download on demand.
+    loader.background=prefetchAllowed;
+    if(prefetchAllowed)void loader.group('menu',0);
+    return loader;
+  });
+  ready.catch(error=>{state.prefetch.menu=false;console.warn('Menu prefetch skipped:',error);});
+  return ready;
+}
+let loaderReady=makeLoader();
+if(prefetchAllowed)prefetchEngine((loaded,total)=>{engineProgress.loaded=loaded;engineProgress.total=total;renderWelcome();});
+$('download-retry').onclick=()=>assetLoader?.retry();
+$('welcome-retry').onclick=()=>{assetLoader?.retry();$('welcome-retry').blur();};
 state.competitive=new MeleeCompetitiveUI({root:$('competitive'),sdk:window.YouGame,readMenu:()=>readAdapterMenu(adapter),onLocal:()=>$('online').focus()});
 // Phones: the overlay in touch.mjs feeds port 1 beside the SDK seat, as OpenSmash64's does.
 const touch=createTouch({wakeAudio:()=>{audio?.resume().catch(()=>{});const session=state.competitive.session;(session?.engine??session?.adapter?.engine)?.resumeAudio?.().catch(()=>{});},
@@ -63,7 +123,9 @@ state.competitive.onNativeLeave=()=>{
 leaveOnline.onclick=()=>state.competitive.handle('back','');
 $('online').onclick=()=>{if(window.YouGame?.input)setupInput();input?.hide();state.competitive.show();};
 window.YouGame?.ui?.onChange(layout=>{
-  $('competitive').classList.toggle('host-layout-ready',['ready','standalone'].includes(layout.status));
+  const ready=['ready','standalone'].includes(layout.status);
+  $('competitive').classList.toggle('host-layout-ready',ready);
+  document.body.classList.toggle('host-layout-ready',ready);
 });
 function fail(error) {
   const message = error?.message || String(error);
@@ -91,7 +153,7 @@ $('fullscreen').onclick=async()=>{
   $('fullscreen').blur();
 };
 $('report').onclick=()=>{
-  const report={build:'opensmash-melee-progressive-assets-20260909',date:new Date().toISOString(),
+  const report={build:'opensmash-melee-jit-assets-20260911',date:new Date().toISOString(),
     engineSha256:state.engineSha256,browser:navigator.userAgent,isolated:crossOriginIsolated,phase:state.phase,
     errors:state.errors,assetPreparation:state.assetStats,frameGaps:state.frameGaps.slice(-600),samples:state.samples};
   $('report-text').value=JSON.stringify(report,null,2);$('report-status').textContent='';
@@ -140,7 +202,7 @@ if(new URLSearchParams(location.search).has('rollback')){
 }
 
 $('play').onclick=async()=>{
-  $('play').disabled=true; $('play-label').textContent='Preparing the arena'; $('loading').hidden=false;
+  $('play').disabled=true; $('play-label').textContent='Preparing the arena'; $('loading').hidden=false; $('welcome-retry').hidden=true;
   try {
     if (!crossOriginIsolated || typeof SharedArrayBuffer==='undefined')
       throw Error('This player has not enabled the browser features Melee needs. Open the game in a compatible player with shared memory enabled.');
@@ -188,23 +250,10 @@ $('play').onclick=async()=>{
     state.rollback=new NativeRollbackEngine(state.module);
     $('status').textContent='Loading the menus';
     state.phase='preparing';
-    assetLoader=await createAssetLoader(state.module,memory,progress=>{
-      state.assetStats=progress.stats;state.assetBlocked=progress.blocked;
-      const active=!!progress.name||!!progress.error;
-      $('download-status').hidden=!active;
-      $('download-status').classList.toggle('blocking',progress.blocked);
-      $('download-label').textContent=progress.error?'Download paused':progress.background?`Saving ${progress.name} for later`:`Downloading ${progress.name}…`;
-      $('download-detail').textContent=progress.error?`${progress.error} Check your connection and retry.`:
-        `${(progress.completed/1048576).toFixed(1)} / ${(progress.total/1048576).toFixed(1)} MB${progress.blocked?' · Play resumes when ready':''}`;
-      $('download-progress').max=progress.total||1;$('download-progress').value=progress.completed;
-      $('download-retry').hidden=!progress.error;
-      if(state.phase==='preparing'){
-        $('progress-bar').style.width=`${progress.completed/(progress.total||1)*100}%`;
-        $('progress-detail').textContent=$('download-detail').textContent;
-      }
-    });
+    try{assetLoader=await loaderReady;}catch{loaderReady=makeLoader();assetLoader=await loaderReady;}
+    state.assetLoader=assetLoader;
+    await assetLoader.attach(state.module,memory);
     state.assetStats=assetLoader.stats;
-    $('download-retry').onclick=()=>assetLoader.retry();
     await assetLoader.group('menu',0);
     state.menuTransferBytes=assetLoader.stats.networkBytes;
     await audio.audioWorklet.addModule('./audio-worklet.js');
@@ -212,7 +261,6 @@ $('play').onclick=async()=>{
     node.connect(audio.destination);
     $('status').textContent='Starting Melee…'; $('play').blur();
     state.phase='booting'; state.startedAt=performance.now();
-    const params=new URLSearchParams(location.search);
     if(params.get('rollback')==='boot')state.rollbackBoot=state.rollback.waitForBoot().catch(fail);
     state.module.callMain([new URL('./assets/',location.href).href,...(params.has('profile')?['profile']:[]),
       ...(params.has('native-resolution')?['native-resolution']:[]),...(params.has('rollback')?['rollback']:[]),...(params.get('rollback')==='boot'?['rollback-boot']:[])]);
@@ -229,7 +277,7 @@ $('play').onclick=async()=>{
       sample.audioUnderruns=Atomics.load(ring,2);sample.audioState=audio.state;
       sample.audioPeak=sound.reduce((peak,value)=>Math.max(peak,Math.abs(value)),0)/32768;
       state.samples.push(sample); if(state.samples.length>3600)state.samples.shift();
-      if(presents>1 && state.phase==='booting') { state.phase='running'; $('welcome').hidden=true; document.body.classList.add('playing');input.show(); }
+      if(presents>1 && state.phase==='booting') { state.phase='running'; $('welcome').hidden=true; document.body.classList.add('playing');input.show();assetLoader.status(); }
       sample.maxFrameGapMs=Math.max(0,...state.frameGaps.filter(f=>f.time>previous).map(f=>f.ms));
       $('metrics').textContent=`${sample.fps.toFixed(1)} FPS · ${Math.round(sample.speed*100)}% speed · ${Math.round(sample.heapBytes/1048576)} MB`;
       if(state.rollbackLab){

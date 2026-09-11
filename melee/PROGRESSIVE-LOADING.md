@@ -1,3 +1,73 @@
+# Just-in-time loading — September 11, 2026
+
+Engine SHA-256 unchanged: `e7e6cfaf1cc448cecc65ff34ac934c5fc7db2497e439d91c5746d25f5ccb7fa4`
+(v1.13). This is a wrapper-only release; the hooks below are the ones the engine
+already had.
+
+## Player experience
+
+- The title screen starts the engine (20.4 MB) and the menu data downloading at
+  once, so Play usually only waits for what is still in flight. Both are kept in
+  CacheStorage (`opensmash-melee-engine-v1`, `opensmash-melee-assets-v1`); a warm
+  reload needs no network for the menus or the engine. A cached engine that fails
+  to instantiate is deleted and downloaded again on the same load. `saveData` or
+  `?noprefetch` turns the page-load prefetch and the in-menu plan off; picks still
+  download on demand.
+- The menu gate is 14.1 MB instead of 22.6 MB: GALE01 (NTSC-U) opens the `.usd`
+  twin of a `.dat` file (`lbFileGetFullName`) and the `audio/us/` twin of a voice
+  bank (`lbaudio_ax`), so the other twins are dropped from every group. A full
+  roster → stage select → Onett match → pause with Bowser/Kirby produced zero
+  demand reads and zero missing reads.
+- In the menus the loader follows a plan: match essentials (6.9 MB every match
+  needs and the old code only fetched at the gate), the eight most-picked fighters,
+  the three selectable tournament stages (Yoshi's Story, Fountain, Stadium), the
+  rest of the roster, the rest of the stage select, and last the five stages the
+  local stage select keeps locked. Up to three planned blocks download at once and
+  are decoded into Wasm memory while a budget lasts (192 MB of decoded blocks in
+  total on an 8 GB machine, `defaultDecodeBudget`), then kept compressed. At 50 Mbps the whole roster is in
+  memory about 15 s after the roster appears; heap rose from 538 MB to 627 MB
+  there and to 821 MB with the earlier 256 MB budget, which is why the budget was
+  lowered.
+- Token placement fires the fighter hint (the engine's `lbDvd_80018254` scene
+  preload runs when the preload cache changes), so picked fighters jump ahead of
+  the plan at priority 1 and the three tournament stages move ahead of the
+  remaining roster, which other players may still be browsing. Planned downloads holding the slots are aborted for foreground work.
+  Worst case measured at 6 Mbps with Play pressed immediately and Bowser (last in
+  the plan) placed 3.6 s after the roster appeared: 2.0 s blocked, three planned
+  downloads aborted, then play resumed.
+- The corner pill replaces the 300 px box that covered the P4 name plate. It sits
+  top-left (in the letterbox gutter on 16:9), never over a menu option, and honours
+  `--yg-ui-top/left` once the host layout is ready. States: `Loading Bowser 0.0 /
+  0.3 MB · starting when ready` (yellow, play is blocked), `Loading Bowser 1.4 /
+  2.6 MB` (a pick downloading, play continues), `Preloading Samus · 31%` (dimmed,
+  planned work with the plan's overall progress), and `Download paused` with a
+  Retry button. Planned failures never show an error; they pause the plan for 30 s.
+
+## Verification
+
+- Nine Node tests (`node --test melee/tests/asset-loader.test.mjs`): plan start
+  and limits, a pick ahead of the plan with aborts and stage promotion, foreground
+  work joining a download after its abort (a review-found hang), the match gate, urgent vs planned failures and retry, decode budget and compressed reuse,
+  blocks fetched before the engine exists, status kinds, corrupt cache recovery.
+  Two Python tests (`python3 melee/tests/asset-groups.test.py`) still pass with the
+  trimmed groups.
+- Headless full Chromium 151 (Metal) on the local server with CDP throttling.
+  50 Mbps / 40 ms cold: title screen ready in under 9 s; Play → roster 4.6 s;
+  no blocked frames through roster, Bowser/Kirby placement, Start, Onett, match
+  and pause; match gate satisfied instantly. Warm reload: 0 network bytes, roster
+  in 4.5 s. 6 Mbps / 60 ms cold with Play at once: roster in 52 s, then the
+  blocking case above. Evidence and screenshots were captured in the session
+  scratchpad; the pill was checked at 1280×720, 1000×620, 960×720 and the title
+  screen at 375×812 (no horizontal scroll).
+
+## Follow-ups
+
+- Hover hints: the roster only tells the browser about a fighter when its token is
+  placed. A hook where the character select highlights a portrait would start the
+  download a few seconds earlier; it needs an engine rebuild (`lite.py`).
+- The local stage select keeps Dream Land, Battlefield, Final Destination and the
+  two other 64 stages locked; unlocking them is a save-flag change in `lite.py`.
+
 # Progressive loading — September 9, 2026
 
 Engine SHA-256: `df2362950db9f0bf149fe963b8953032935022eff00e01e6e4cc539e5a46a29d`.

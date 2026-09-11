@@ -27,15 +27,28 @@ STAGES=[
 # 13th community tier list (March 2021), used only as a cache warming hint.
 # https://www.ssbwiki.com/List_of_SSBM_tier_lists_(NTSC)
 TIER=[2,9,15,20,19,0,12,14,13,17,16,7,22,25,8,1,21,6,3,10,23,24,11,18,4,5]
+# Stage prefetch order for local play: the selectable tournament stages first,
+# the rest of the stage select, and last the five stages the local select keeps
+# locked (Dream Land, Battlefield, Final Destination, Yoshi's Island 64, Kongo
+# Jungle 64); online sessions load their stage directly and skip the plan.
+COMPETITIVE=[8,2,3]
+LOCKED=[28,31,32,29,30]
+def unused_twin(path,paths):
+    """GALE01 reads the .usd twin of a .dat file (lbFileGetFullName) and the audio/us/
+    twin of a voice bank (lbaudio_ax str_audio_us); the other twin is never opened."""
+    if path.endswith('.dat') and path[:-4]+'.usd' in paths: return True
+    return path.startswith('files/audio/') and not path.startswith('files/audio/us/') and 'files/audio/us/'+path.rsplit('/',1)[1] in paths
 def build(manifest):
-    files=manifest['files']; groups={}
+    paths={f['path'] for f in manifest['files']}
+    files=[f for f in manifest['files'] if not unused_twin(f['path'],paths)]; groups={}
     def group(key,name,predicate):
         chosen=[f for f in files if predicate(Path(f['path']).name,f['path'])]
         blocks=sorted({i for f in chosen for i in range(f['first'],f['first']+f['blocks'])})
         groups[key]={'name':name,'blocks':blocks}
     menu_audio={'main.ssm','nr_name.ssm','nr_select.ssm','nr_vs.ssm','nr_title.ssm','mhands.ssm','pokemon.ssm','end.ssm','smash2.sem','menu01.hps','menu02.hps','s_select.hps'}
-    group('menu','menus',lambda n,p:(p.startswith('sys/') or n.startswith(('Mn','Sd','Lb','DbCo','EfMn','NtMemAc','ItCo'))) or n in menu_audio or n in ('PlCo.dat','EfCoData.dat','IfAll.dat','IfAll.usd'))
-    group('match','match essentials',lambda n,p:n.startswith(('Pd','TyData','It','If','GmRst.','GmPause.','GmGo','EfCo','PlCo','ff_','vs_hyou')) or n in ('item_h.hps','item_s.hps','nr_vs.ssm','end.ssm'))
+    group('menu','menus',lambda n,p:(p.startswith('sys/') or n.startswith(('Mn','Sd','Lb','DbCo','EfMn','NtMemAc','ItCo'))) or n in menu_audio or n in ('PlCo.dat','EfCoData.dat','IfAll.usd'))
+    # PlMh/PlCh: leaving the rules screen preloads the hands; keep that read off the disc gate.
+    group('match','match essentials',lambda n,p:n.startswith(('Pd','TyData','It','If','GmRst.','GmPause.','GmGo','EfCo','PlCo','PlMh','PlCh','ff_','vs_hyou')) or n in ('item_h.hps','item_s.hps','nr_vs.ssm','end.ssm'))
     for i,(name,prefixes,sounds,effects) in enumerate(FIGHTERS):
         prefix=tuple('Pl'+x for x in prefixes.split())+tuple('Ef'+x for x in effects.split())+tuple('GmRstM'+x for x in prefixes.split())
         sound={x+'.ssm' for x in sounds.split()}
@@ -43,12 +56,20 @@ def build(manifest):
     for i,name,prefix,sounds in STAGES:
         sound={x+ext for x in sounds.split() for ext in ('.hps','.ssm')}
         group('stage:'+str(i),name,lambda n,p,prefix=prefix,sound=sound:n.startswith('Gr'+prefix) or n in sound)
-    return {'version':1,'groups':groups,'background':['fighter:'+str(i) for i in TIER]+['stage:'+str(i) for i in [31,32,2,3,8,28]+[s[0] for s in STAGES if s[0] not in (31,32,2,3,8,28,26)]], 'prioritySource':'https://www.ssbwiki.com/List_of_SSBM_tier_lists_(NTSC)'}
+    # Prefetch plan while the player is in the menus: what every match needs, the
+    # fighters most players pick, the stages most matches land on, then the rest.
+    tier=['fighter:'+str(i) for i in TIER]
+    competitive=['stage:'+str(i) for i in COMPETITIVE]
+    other_stages=['stage:'+str(s[0]) for s in STAGES if s[0] not in COMPETITIVE+LOCKED+[26]]+['stage:'+str(i) for i in LOCKED]
+    plan=['match']+tier[:8]+competitive+tier[8:]+other_stages
+    return {'version':2,'groups':groups,'plan':plan,'competitive':competitive,'prioritySource':'https://www.ssbwiki.com/List_of_SSBM_tier_lists_(NTSC)'}
 def main():
     dist=ROOT/'build/melee-web/dist'
     manifest=json.loads((dist/'assets-manifest.json').read_text())
     catalog=build(manifest)
     (dist/'asset-groups.json').write_text(json.dumps(catalog,separators=(',',':')))
+    mb=lambda blocks:round(sum(manifest['blocks'][i]['size'] for i in blocks)/1048576,2)
     for key in ['menu','match','fighter:2','stage:31']:
-        g=catalog['groups'][key];print(key,len(g['blocks']),round(sum(manifest['blocks'][i]['size'] for i in g['blocks'])/1048576,2),'MB')
+        g=catalog['groups'][key];print(key,len(g['blocks']),mb(g['blocks']),'MB')
+    print('plan',len(catalog['plan']),'groups',mb({i for k in catalog['plan'] for i in catalog['groups'][k]['blocks']}),'MB')
 if __name__=='__main__':main()
