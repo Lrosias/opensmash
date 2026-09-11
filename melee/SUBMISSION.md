@@ -2,7 +2,7 @@
 
 ## Just-in-time loading v1.14 — September 11, 2026
 
-**v1.14 is live** at https://yougame.co/g/opensmash-melee, upload `UPLOAD_ID`,
+**v1.14 is live** at https://yougame.co/g/opensmash-melee, upload `f0890ab382d64d30a89514de58e5a1c5`,
 a wrapper-only minor update on the v1.13 package (assets and engine
 `e7e6cfaf1cc448cecc65ff34ac934c5fc7db2497e439d91c5746d25f5ccb7fa4` unchanged).
 Details and measurements: [PROGRESSIVE-LOADING.md](PROGRESSIVE-LOADING.md).
