@@ -105,9 +105,12 @@ Publishing status and release identifiers are recorded separately under remix/me
 The VS flow uses the local Remix ROM's 30-slot portrait order, with Dark Samus,
 Lucas, Roy and Dr. Luigi directly beneath it. Portraits, selection pucks, pointer,
 player cards, mode title and background are ROM sprites; selected fighters use
-real rotating native models. D-pad, keyboard and touch input choose fighters, confirm Ready to Fight, then
-select a stage from a four-column grid. Additional local controllers join with
-Start and select their own fighters.
+real rotating native models. Fighter selection uses the native VS screen's
+controls: every human moves a free hand with the stick (keyboard arrows and the
+phone stick drive the same hand), carries their own puck, drops it on a portrait
+with A, lifts it again with A or B, and can drag a CPU's puck the same way;
+Start fights once every puck is down, holding B backs out. Additional local
+controllers join with Start. The stage is then chosen from a four-column grid.
 
 Stage selection uses the ROM's stage icons and title/cursor artwork, with a native
 3D model preview for each of the eight selected maps. This is an adaptation of
