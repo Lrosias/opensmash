@@ -217,11 +217,14 @@ static const char *names[]={"MARIO","FOX","DONKEY KONG","SAMUS","LUIGI","LINK","
 static const int stage_ids[]={6,16,9,10,11,12,13,14};
 static const char *stage_names[]={"DREAM LAND","FINAL DESTINATION","FRAYS STAGE","FIRST DESTINATION","POKEMON STADIUM","POKEMON STADIUM 2","GOOMBA ROAD","BATTLEFIELD"};
 static int cursor,phase,wait_ticks,chosen[4],stage_cursor,select_slot,confirmed,local_human[4],local_active[4];
+// Online (SESSION) select: every human moves their own hand at once, like the native VS
+// screen, so each slot keeps its own cursor and its own input debounce.
+static int cursors[4],waits[4];
 unsigned int port_remix_session_hash(void){
  unsigned int hash=2166136261u;int i;
  const int values[]={cursor,phase,wait_ticks,stage_cursor,select_slot,confirmed};
  for(i=0;i<6;i++)hash=(hash^(unsigned int)values[i])*16777619u;
- for(i=0;i<4;i++){hash=(hash^(unsigned int)chosen[i])*16777619u;hash=(hash^(unsigned int)local_human[i])*16777619u;hash=(hash^(unsigned int)local_active[i])*16777619u;}
+ for(i=0;i<4;i++){hash=(hash^(unsigned int)chosen[i])*16777619u;hash=(hash^(unsigned int)local_human[i])*16777619u;hash=(hash^(unsigned int)local_active[i])*16777619u;hash=(hash^(unsigned int)cursors[i])*16777619u;hash=(hash^(unsigned int)waits[i])*16777619u;}
  return hash;
 }
 static int local_setup_saved,local_saved_chosen[4],local_saved_human[4],local_saved_active[4],local_saved_stage;
@@ -302,7 +305,7 @@ static void draw_menu(void){
   s=menu_sprite(words,menu_images,0x3b28,25,44,0.8125F);s->sprite.scalex=0.9375F;s->sprite.scaley=0.7578125F;
   port_yougame_menu_text(words,"BONUS",65,136,0.52F,0xFFD35C);
   for(i=0;i<4;i++){
-   float px=22+69*i;int id=(phase<2&&i==select_slot)?remix_menu_layout[cursor]:chosen[i];
+   float px=22+69*i;int picking=phase<2&&(port_yougame_session_enabled()?local_human[i]&&!(confirmed&(1<<i)):i==select_slot);int id=picking?remix_menu_layout[port_yougame_session_enabled()?cursors[i]:cursor]:chosen[i];
    s=menu_sprite(words,menu_common,local_human[i]?llMNPlayersCommonRedCardSprite:llMNPlayersCommonGrayCardSprite,px,150,1);
    s->sprite.scaley=0.67F;
    if(local_active[i]){
@@ -315,12 +318,13 @@ static void draw_menu(void){
   const int pucks[]={llMNPlayersCommon1PPuckSprite,llMNPlayersCommon2PPuckSprite,llMNPlayersCommon3PPuckSprite,llMNPlayersCommon4PPuckSprite};
   for(i=0;i<4;i++)if(local_active[i]&&(confirmed&(1<<i))){index=portrait_index(chosen[i]);portrait_xy(index,&x,&y);menu_sprite(words,menu_common,local_human[i]?pucks[i]:llMNPlayersCommonCPPuckSprite,x+4+i*3,y+9,0.34F);}
   if(phase==3)port_yougame_menu_text(words,"READY TO FIGHT",93,35,0.65F,0xFFD35C);
+  else if(port_yougame_session_enabled()){for(i=0;i<4;i++)if(local_human[i]&&!(confirmed&(1<<i))){portrait_xy(cursors[i],&x,&y);menu_sprite(words,menu_common,pucks[i],x+4+i*3,y+9,0.4F);menu_sprite(words,menu_common,llMNPlayersCommonCursorHandPointSprite,x+13+i*5,y+14,0.55F);}}
   else {portrait_xy(cursor,&x,&y);menu_sprite(words,menu_common,local_human[select_slot]?pucks[select_slot]:llMNPlayersCommonCPPuckSprite,x+6,y+9,0.4F);menu_sprite(words,menu_common,llMNPlayersCommonCursorHandPointSprite,x+13,y+14,0.55F);}
 
  }
  for(i=0;i<4;i++)if(menu_previews[i])menu_previews[i]->flags=phase==2||!local_active[i]?GOBJ_FLAG_HIDDEN:0;
  for(i=0;i<4;i++)if(stage_layers[i])stage_layers[i]->flags=phase==2?0:GOBJ_FLAG_HIDDEN;
- char prompt[80];snprintf(prompt,sizeof(prompt),local_human[select_slot]?"P%d   CHOOSE YOUR FIGHTER":"P%d CPU   CHOOSE OPPONENT",select_slot+1);
+ char prompt[80];if(port_yougame_session_enabled())snprintf(prompt,sizeof(prompt),"CHOOSE YOUR FIGHTER");else snprintf(prompt,sizeof(prompt),local_human[select_slot]?"P%d   CHOOSE YOUR FIGHTER":"P%d CPU   CHOOSE OPPONENT",select_slot+1);
  port_yougame_menu_text(words,phase==3?"START   READY TO FIGHT":phase==2?"A SELECT   B BACK":prompt,22,223,0.55F,0xFFFFFF);
  EM_ASM({Module.remixMenu=({phase:$0,cursor:$1,stage:$2,p1:$3,p2:$4,hover:$5,selectSlot:$6,confirmed:$7,humans:$8,active:$9});},phase,cursor,stage_cursor,chosen[0],chosen[1],remix_menu_layout[cursor],select_slot,confirmed,local_human[0]|local_human[1]<<1|local_human[2]<<2|local_human[3]<<3,local_active[0]|local_active[1]<<1|local_active[2]<<2|local_active[3]<<3);
 }
@@ -330,8 +334,34 @@ static void menu_run(GObj *gobj){
  int controller=phase<2&&local_human[select_slot]?select_slot:menu_controller;
  int taps=gSYControllerDevices[controller].button_tap,x=gSYControllerDevices[controller].stick_range.x,y=gSYControllerDevices[controller].stick_range.y;
  if(!port_yougame_menu_context&&!port_yougame_session_enabled())for(int p=1;p<4;p++)if((gSYControllerDevices[p].button_tap&START_BUTTON)&&!local_human[p]){local_human[p]=local_active[p]=1;confirmed&=~(1<<p);select_slot=p;phase=1;cursor=portrait_index(chosen[p]);wait_ticks=12;func_800269C0_275C0(nSYAudioFGMMenuSelect);draw_menu();return;}
+ if(port_yougame_session_enabled()&&phase<2){
+  // Every human picks at once with their own controller (the native VS screen's rule): move,
+  // A/Start to place the puck, B to lift it again; the first human's B while unplaced leaves.
+  int all=1,p;
+  for(p=0;p<4;p++){
+   if(!local_human[p])continue;
+   int t=gSYControllerDevices[p].button_tap,sx=gSYControllerDevices[p].stick_range.x,sy=gSYControllerDevices[p].stick_range.y,c=cursors[p],pstep=0;
+   if(waits[p]){waits[p]--;}
+   else if(confirmed&(1<<p)){if(t&B_BUTTON){func_800269C0_275C0(nSYAudioFGMMenuDenied);confirmed&=~(1<<p);waits[p]=12;draw_menu();}}
+   else if(t&B_BUTTON){func_800269C0_275C0(nSYAudioFGMMenuDenied);if(p==menu_controller){scene(nSCKindVSMode);return;}waits[p]=12;}
+   else{
+    if(sy>35||(t&U_JPAD))pstep=c>=30?23+(c-30)-c:c>=10?-10:20;
+    else if(sy< -35||(t&D_JPAD))pstep=c<20?10:c<30?30+((c%10)<3?0:(c%10)>6?3:c%10-3)-c:3+(c-30)-c;
+    else if(sx>35||(t&R_JPAD))pstep=1;else if(sx< -35||(t&L_JPAD))pstep=-1;
+    if(pstep){func_800269C0_275C0(nSYAudioFGMMenuScroll2);cursors[p]=(c+pstep+34)%34;waits[p]=10;draw_menu();}
+    else if(t&(A_BUTTON|START_BUTTON)){func_800269C0_275C0(nSYAudioFGMMenuSelect);chosen[p]=remix_menu_layout[cursors[p]];announce_fighter(chosen[p]);confirmed|=1<<p;waits[p]=15;draw_menu();}
+   }
+   if(!(confirmed&(1<<p)))all=0;
+  }
+  if(all){phase=3;wait_ticks=15;draw_menu();}
+  return;
+ }
  int step=0,count=phase==2?8:34;
  if(wait_ticks){wait_ticks--;return;}
+ if(port_yougame_session_enabled()&&phase==3&&(taps&B_BUTTON)){
+  // Back from READY lifts only this player's puck; the others keep theirs.
+  func_800269C0_275C0(nSYAudioFGMMenuDenied);confirmed&=~(1<<menu_controller);phase=0;waits[menu_controller]=12;draw_menu();return;
+ }
  if(taps&B_BUTTON){func_800269C0_275C0(nSYAudioFGMMenuDenied);if(port_yougame_session_enabled()&&phase<2&&select_slot==menu_controller){scene(nSCKindVSMode);return;}if(phase){if(phase==2)phase=3;else{if(phase==3){select_slot=port_yougame_session_enabled()?menu_controller:1;for(int p=select_slot;p<4;p++)if(local_active[p])select_slot=p;}else if(select_slot){do{select_slot--;}while(select_slot&&!local_active[select_slot]);}phase=select_slot?1:0;confirmed&=~(1<<select_slot);cursor=portrait_index(chosen[select_slot]);}draw_menu();wait_ticks=12;}else scene(nSCKindVSMode);return;}
  if(phase==3)step=0;
  else if(y>35||(taps&U_JPAD))step=phase==2?-4:cursor>=30?23+(cursor-30)-cursor:cursor>=10?-10:20;
@@ -364,7 +394,8 @@ void port_remix_css_start(void){
   const char *slots=getenv("SSB64_BOOT_SLOTS");
   for(int p=0;p<4;p++)local_human[p]=local_active[p]=slots&&strlen(slots)==4&&slots[p]=='h';
   select_slot=0;while(select_slot<3&&!local_active[select_slot])select_slot++;
-  phase=select_slot?1:0;cursor=portrait_index(chosen[select_slot]);
+  phase=0;cursor=portrait_index(chosen[select_slot]);
+  for(int p=0;p<4;p++){cursors[p]=portrait_index(chosen[p]);waits[p]=0;}
  }
  efParticleInitAll();efManagerInitEffects();ftManagerAllocFighter(FTDATA_FLAG_SUBMOTION,4);
  {int i;for(i=0;i<4;i++){menu_previews[i]=NULL;menu_preview_kinds[i]=-1;menu_preview_heaps[i]=syTaskmanMalloc(gFTManagerFigatreeHeapSize,16);}}
