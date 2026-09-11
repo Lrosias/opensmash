@@ -37,6 +37,9 @@ export function mountAdapterControls({before=null}={}) {
     get('[data-release]').disabled=adapter.busy||(!adapter.owned&&!adapter.device&&!nativeRequired);
     rows.forEach(({label,calibrate},i)=>{const p=snapshot.ports[i];label.textContent=`Port ${i+1}: ${p.connected?p.type+' · sticks '+p.axes.join(', ')+' · L/R '+p.triggers.join(', '):'no fresh controller input'}`;calibrate.disabled=!p.connected;});
     button.textContent=adapter.owned?'GameCube controller ●':'Use a GameCube controller';
+    // The host's Controls panel owns adapter setup; a duplicate floating entry
+    // covers the game's Online button in a narrow embedded player.
+    button.hidden=adapter.hosted;
     if(adapter.owned&&snapshot.stale&&adapter.device)get('[data-status]').textContent='Waiting for fresh adapter reports; input is neutral.';
   }
   button.onclick=()=>{render();dialog.showModal();button.blur();};
