@@ -409,8 +409,20 @@ static int remix_win_music(int id){
  default:return nSYAudioBGMWinDefault;
  }
 }
+/* SESSION receipt capture initialized these native rankings after all battle
+ * and sudden-death processing. Presentation must use the same placements. */
+static unsigned int results_native_winners(SCBattleState *bs,int places[4]){
+ extern s32 mnVSResultsGetPlace(s32);
+ unsigned int mask=0;
+ for(int i=0;i<4;i++){
+  places[i]=bs->players[i].pkind==nFTPlayerKindNot?-1:mnVSResultsGetPlace(i);
+  if(!gSCManagerSceneData.is_reset&&places[i]==0)mask|=1u<<i;
+ }
+ return mask;
+}
 int port_remix_results_start(void){
  SCBattleState *bs=&gSCManagerTransferBattleState;GObj *g;char line[96];int i,j,count=0,winner=-1,tie=0,best=-9999;
+ int native_results=port_yougame_session_enabled()&&results_override==-3,places[4]={-1,-1,-1,-1},winning_team=-1;unsigned int winner_mask=0;
  if(!port_remix_enabled())return 0;
  for(i=0;i<4;i++)if(bs->players[i].pkind!=nFTPlayerKindNot){
   int score=bs->players[i].stock_count;count++;
@@ -418,33 +430,45 @@ int port_remix_results_start(void){
  }
  if(tie||gSCManagerSceneData.is_reset)winner=-1;
  if(results_override!=-3){winner=results_override;results_override=-3;}
+ winner_mask=winner>=0?1u<<winner:0;
+ if(native_results){
+  int winners=0;
+  winner_mask=results_native_winners(bs,places);winner=-1;
+  for(i=0;i<4;i++)if(winner_mask&(1u<<i)){
+   winner=i;winners++;
+   if(bs->is_team_battle){if(winning_team==-1)winning_team=bs->players[i].team;else if(winning_team!=bs->players[i].team)winning_team=-2;}
+  }
+  if(winners!=1||bs->is_team_battle)winner=-1;
+ }
  port_yougame_menu_font();results_wait=60;
  syAudioStopBGMAll();syAudioPlayBGM(0,winner>=0?remix_win_music(bs->players[winner].fkind):nSYAudioBGMResults);
- if(winner>=0){extern void mnVSResultsMakeAudioThread(void);mnVSResultsMakeAudioThread();}
+ if(winner>=0||(winning_team>=0&&winning_team<3)){extern void mnVSResultsMakeAudioThread(void);mnVSResultsMakeAudioThread();}
  efParticleInitAll();efManagerInitEffects();ftManagerAllocFighter(FTDATA_FLAG_SUBMOTION,count);
  memset(results_fighters,0,sizeof(results_fighters));
  gcMakeDefaultCameraGObj(16,GOBJ_PRIORITY_DEFAULT,100,COBJ_FLAG_ZBUFFER|COBJ_FLAG_FILLCOLOR,GPACK_RGBA8888(0x0B,0x14,0x25,0xFF));
  mnPlayersVSMakePortraitCamera();mnPlayersVSMakeFighterCamera();
  g=gcMakeGObjSPAfter(0,results_run,15,GOBJ_PRIORITY_DEFAULT);gcAddGObjDisplay(g,lbCommonDrawSObjAttr,27,GOBJ_PRIORITY_DEFAULT,~0);
  port_yougame_menu_text(g,"OPENSMASH64 REMIX",20,18,0.75F,0xF4CF68);
- port_yougame_menu_text(g,gSCManagerSceneData.is_reset?"NO CONTEST":winner<0?"MATCH COMPLETE":"WINNER",20,42,0.75F,0xFFFFFF);
- if(winner>=0){snprintf(line,sizeof(line),"%s WINS",fighter_name(bs->players[winner].fkind));port_yougame_menu_text(g,line,20,59,1.0F,0xFFD35C);announce_fighter(bs->players[winner].fkind);}
+ port_yougame_menu_text(g,gSCManagerSceneData.is_reset?"NO CONTEST":winning_team>=0?"WINNING TEAM":winner_mask&&winner<0?"WINNERS":winner<0?"MATCH COMPLETE":"WINNER",20,42,0.75F,0xFFFFFF);
+ if(winning_team>=0&&winning_team<3){const char *teams[]={"RED","BLUE","GREEN"};snprintf(line,sizeof(line),"%s TEAM WINS",teams[winning_team]);port_yougame_menu_text(g,line,20,59,1.0F,0xFFD35C);}
+ else if(winner>=0){snprintf(line,sizeof(line),"%s WINS",fighter_name(bs->players[winner].fkind));port_yougame_menu_text(g,line,20,59,1.0F,0xFFD35C);announce_fighter(bs->players[winner].fkind);}
+ else if(winner_mask)port_yougame_menu_text(g,"SHARED FIRST PLACE",20,59,0.8F,0xFFD35C);
  for(i=0,j=0;i<4;i++)if(bs->players[i].pkind!=nFTPlayerKindNot){
   FTDesc d=dFTManagerDefaultFighterDesc;GObj *f;float x=20+j*280.0F/count,scale;
   int kos=0,k;for(k=0;k<4;k++)kos+=bs->players[i].total_kos_players[k];
   ftManagerSetupFilesAllKind(bs->players[i].fkind);d.fkind=bs->players[i].fkind;d.costume=bs->players[i].costume;d.shade=bs->players[i].shade;d.player=i;d.figatree_heap=syTaskmanMalloc(gFTManagerFigatreeHeapSize,16);d.is_skip_shadow_setup=TRUE;
   f=results_fighters[i]=ftManagerMakeFighter(&d);
-  scSubsysFighterSetStatus(f,i==winner?nFTDemoStatusWin1:nFTDemoStatusLose);
+  scSubsysFighterSetStatus(f,(winner_mask&(1u<<i))?nFTDemoStatusWin1:nFTDemoStatusLose);
   scale=port_fighter_scale(d.fkind)*(count>2?0.7F:1.0F);
   DObjGetStruct(f)->translate.vec.f=(Vec3f){(j-(count-1)*0.5F)*(count>2?950:1500),-450,0};
   DObjGetStruct(f)->rotate.vec.f.y=F_CST_DTOR32(-12);
   DObjGetStruct(f)->scale.vec.f=(Vec3f){scale,scale,scale};
-  snprintf(line,sizeof(line),"%s",fighter_name(d.fkind));port_yougame_menu_text(g,line,x,174,count>2?0.42F:0.6F,i==winner?0xFFD35C:0xFFFFFF);
+  if(native_results&&!gSCManagerSceneData.is_reset&&places[i]>=0)snprintf(line,sizeof(line),"%d %s",places[i]+1,fighter_name(d.fkind));else snprintf(line,sizeof(line),"%s",fighter_name(d.fkind));port_yougame_menu_text(g,line,x,174,count>2?0.42F:0.6F,(winner_mask&(1u<<i))?0xFFD35C:0xFFFFFF);
   snprintf(line,sizeof(line),"%s%d  KO %d  FALLS %d",bs->players[i].pkind==nFTPlayerKindCom?"CPU ":"P",i+1,kos,bs->players[i].falls);port_yougame_menu_text(g,line,x,188,count>2?0.36F:0.45F,0xBDCDE1);j++;
  }
  port_yougame_menu_text(g,results_online?"A OR START   REMATCH":"A OR START   CHOOSE FIGHTERS",20,209,0.65F,0xFFFFFF);
  port_yougame_menu_text(g,"B   BACK TO VS MODE",20,225,0.5F,0xBDCDE1);
- EM_ASM({Module.remixResults=({winner:$0,fighters:[$1,$2,$3,$4].filter(x=>x>=0&&x<76),animated:true});},winner,bs->players[0].pkind!=nFTPlayerKindNot?bs->players[0].fkind:-1,bs->players[1].pkind!=nFTPlayerKindNot?bs->players[1].fkind:-1,bs->players[2].pkind!=nFTPlayerKindNot?bs->players[2].fkind:-1,bs->players[3].pkind!=nFTPlayerKindNot?bs->players[3].fkind:-1);
+ EM_ASM({Module.remixResults=({winner:$0,winnerMask:$5,places:[$6,$7,$8,$9],winningTeam:$10,fighters:[$1,$2,$3,$4].filter(x=>x>=0&&x<76),animated:true});},winner,bs->players[0].pkind!=nFTPlayerKindNot?bs->players[0].fkind:-1,bs->players[1].pkind!=nFTPlayerKindNot?bs->players[1].fkind:-1,bs->players[2].pkind!=nFTPlayerKindNot?bs->players[2].fkind:-1,bs->players[3].pkind!=nFTPlayerKindNot?bs->players[3].fkind:-1,winner_mask,places[0],places[1],places[2],places[3],winning_team);
  return 1;
 }
 /* Display only after the multiplayer service confirms a result. */
