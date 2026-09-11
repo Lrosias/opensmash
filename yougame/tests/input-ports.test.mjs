@@ -45,3 +45,18 @@ test('the keyboard still belongs to port 1 next to a pad on another index',()=>{
   assert.equal(ports[0][0],0x4000,'B from the keyboard on port 1');
   assert.deepEqual(ports.slice(1),[null,null,null],'the idle pad on index 1 is port 1, not port 2');
 });
+test('on YouGame the platform seats the pads and the ports follow those seats',()=>{
+  const input=createInput();
+  const previous=globalThis.YouGame;
+  globalThis.YouGame={controllers:{seats:()=>[null,{index:2,id:'Pad 2'},{index:0,id:'Pad 0'},null]}};
+  try{
+    const ports=withPads([pad(0),null,pad(2),null],()=>input.readPorts());
+    assert.equal(ports[0][0],0,'seat 1 is empty: keyboard only');
+    assert.equal(ports[1][0]&A,A,'seat 2 reads the pad on index 2');
+    assert.equal(ports[2][0]&A,A,'seat 3 reads the pad on index 0');
+    assert.equal(ports[3],null);
+    // A stale seat (the pad went away, or another pad took its index) reads as empty.
+    globalThis.YouGame.controllers.seats=()=>[{index:1,id:'Pad 1'},null,null,null];
+    assert.equal(withPads([pad(0),pad(1,false),null,null],()=>input.readPorts())[0][0],0);
+  }finally{if(previous===undefined)delete globalThis.YouGame;else globalThis.YouGame=previous;}
+});
