@@ -1,4 +1,4 @@
-// Apply the shared controller (touch modules, stylesheet and app.mjs) to an existing edition without rebuilding its engine.
+// Apply the shared controller (touch and input modules, stylesheet and app.mjs) to an existing edition without rebuilding its engine.
 // Usage: node yougame/package-touch-update.mjs <base-build> <new-output-folder>
 import {cp,mkdir,readFile,readdir,stat,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -15,8 +15,9 @@ await mkdir(path.dirname(out),{recursive:true});
 await mkdir(out); // Never overwrite a preserved release or another candidate.
 await cp(base,out,{recursive:true});
 const hash=createHash('sha256').update(previous),changed=[];
-for(const file of ['touch.mjs','touch-state.mjs','touch-stick.mjs','style.css']){
- const bytes=await readFile(new URL('./src/'+file,import.meta.url));
+for(const file of ['touch.mjs','touch-state.mjs','touch-stick.mjs','input.mjs','keyboard.mjs','style.css']){
+ // Modules import the shared controllers from the repo root; a package keeps them beside the wrapper.
+ const bytes=Buffer.from((await readFile(new URL('./src/'+file,import.meta.url),'utf8')).replaceAll('../../controllers/','./controllers/'));
  await writeFile(path.join(out,file),bytes);hash.update(file).update(bytes);changed.push(file);
 }
 // app.mjs comes from src too (it wires the touch module), with the path rewrite package-edition.mjs applies.

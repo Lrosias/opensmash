@@ -11,9 +11,28 @@ export function createInput({allowStart=false,readTouch=()=>[0,0,0],adapter=null
     win.document?.addEventListener('visibilitychange',hide);
     cleanups.push(() => { win.removeEventListener('keydown', down,{capture:true}); win.removeEventListener('keyup', up,{capture:true}); win.removeEventListener('blur', clear);win.document?.removeEventListener('visibilitychange',hide); });
   }
+  // Ports follow the console: a pad keeps the port it was given for as long as it stays
+  // connected, and a newly connected pad takes the lowest free port. The browser's gamepad
+  // index is not the port: Chrome numbers pads by first sighting, so a lone controller can sit
+  // at index 1 (after another device came and went, or a controller that shows up twice), and
+  // online only port 1 is this player's seat. Port 1 also carries the keyboard and touch.
+  const portOf=new Map(); // browser gamepad index -> port
+  function ports() {
+    const live=new Map();
+    for(const p of navigator.getGamepads?.()||[])if(p?.connected)live.set(p.index,p);
+    for(const index of [...portOf.keys()])if(!live.has(index))portOf.delete(index);
+    for(const index of [...live.keys()].sort((a,b)=>a-b)){
+      if(portOf.has(index))continue;
+      const taken=new Set(portOf.values());
+      for(let port=0;port<4;port++)if(!taken.has(port)){portOf.set(index,port);break;}
+    }
+    const out=[null,null,null,null];
+    for(const [index,port] of portOf)out[port]=live.get(index);
+    return out;
+  }
   function read(pad) {
     if(adapter?.owned)return n64Pad(adapter.snapshot().ports[0],adapter.origins[0],allowStart);
-    if(pad===undefined)pad=[...(navigator.getGamepads?.() || [])].find(p => p?.connected);
+    if(pad===undefined)pad=ports()[0];
     let [b,x,y]=keyboard.read();
     const gamepad=readGamepad(pad,allowStart);b|=gamepad[0];
     if(gamepad[1])x=gamepad[1];if(gamepad[2])y=gamepad[2];
@@ -23,11 +42,8 @@ export function createInput({allowStart=false,readTouch=()=>[0,0,0],adapter=null
   return {attach,destroy(){cleanups.forEach(f=>f());keyboard.clear();},read,
     readPorts(){
       if(!adapter?.owned){
-        // Browser indices keep local seats stable when another controller disconnects.
-        // Keyboard and touch still belong only to port 1; read() retains the
-        // first connected controller behavior for single-player/online callers.
-        const pads=navigator.getGamepads?.()||[];
-        return [read(pads[0]||null),...[1,2,3].map(i=>pads[i]?.connected?readGamepad(pads[i],allowStart):null)];
+        const [first,...rest]=ports();
+        return [read(first||null),...rest.map(p=>p?readGamepad(p,allowStart):null)];
       }
       const snapshot=adapter.snapshot();
       return snapshot.ports.map((p,i)=>p.connected?n64Pad(p,adapter.origins[i],allowStart):null);
