@@ -32,7 +32,7 @@ try {
   const up=()=>cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   const native=async()=>{await page.waitForTimeout(80);return page.evaluate(()=>__pad);};
   const center=async sel=>{const r=await page.locator(sel).boundingBox();return {x:r.x+r.width/2,y:r.y+r.height/2,r};};
-  for(const [sel,mask,l,r] of [['.attack',1,0,0],['.special',2,0,0],['.jump',4,0,0],['.grab',16,0,0],['.shield',2048,0,1],['#touch-taunt',64,0,0],['#touch-start',32,0,0]]){
+  for(const [sel,mask,l,r] of [['.attack',1,0,0],['.special',2,0,0],['.jump',4,0,0],['.grab',16,0,0],['.shield',2048,0,1],['#touch-taunt',64,0,0],['#touch-start',32,0,0],['#touch-reset',3105,1,1]]){
     await down([await center(sel)]);assert.deepEqual(await native(),[mask,0,0,0,0,l,r],sel);
     await up();assert.deepEqual(await native(),NEUTRAL,sel+' released');
   }

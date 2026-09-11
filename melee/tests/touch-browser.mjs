@@ -12,7 +12,10 @@ const server=http.createServer(async(req,res)=>{
   if(name==='index.html')content=content.replace('<script src="https://yougame.co/sdk.js"></script>','').replace('<script src="./engine/melee.js"></script>','')
    .replace('<script type="module" src="./app.mjs"></script>',`<script type="module">
     import {createTouch} from './touch.mjs';
+    import {RESET_CHORD} from './touch-state.mjs';
+    window.RESET_CHORD=RESET_CHORD;
     document.getElementById('welcome').hidden=true;document.body.classList.add('playing');
+    document.getElementById('download-status').hidden=false;document.getElementById('download-label').textContent='Downloading Fox…';
     window.touch=createTouch({wakeAudio(){},leave(){window.left=(window.left||0)+1;}});touch.context(false);
    </script>`);
   res.setHeader('Content-Type',name.endsWith('.html')?'text/html':name.endsWith('.css')?'text/css':'text/javascript');res.end(content);
@@ -33,7 +36,7 @@ try{
   return document.body.classList.contains('rotated')===(height>width)&&Math.abs(r.width-width)<1&&Math.abs(r.height-height)<1;
  },viewport,{timeout:5000});
  const read=()=>page.evaluate(()=>[...touch.read()]);
- const boxes=async()=>page.evaluate(()=>Object.fromEntries(['#touch-stick','#touch-c','#touch-taunt','.attack','.special','.jump','.grab','.shield','#touch-start','#touch-reset','#canvas'].map(s=>{const r=document.querySelector(s).getBoundingClientRect();return [s,{x:r.x,y:r.y,w:r.width,h:r.height}];})));
+ const boxes=async()=>page.evaluate(()=>Object.fromEntries(['#touch-stick','#touch-c','#touch-taunt','.attack','.special','.jump','.grab','.shield','#touch-start','#touch-reset','#download-status','#touch-stick-zone','#touch-c-zone','#canvas'].map(s=>{const r=document.querySelector(s).getBoundingClientRect();return [s,{x:r.x,y:r.y,w:r.width,h:r.height}];})));
  const overlap=(a,b)=>a.x+2<b.x+b.w&&b.x+2<a.x+a.w&&a.y+2<b.y+b.h&&b.y+2<a.y+a.h;
  for(const viewport of [{width:390,height:844},{width:844,height:390},{width:852,height:393},{width:393,height:852},{width:667,height:375},{width:360,height:780}]){
   await page.setViewportSize(viewport);await settled(viewport);
@@ -41,10 +44,14 @@ try{
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight),true,'no page overflow');
   const b=await boxes();
   // Every control is on screen and the controls never cover each other or the picture.
-  const controls=Object.entries(b).filter(([k])=>k!=='#canvas'&&k!=='#touch-reset');
+  const controls=Object.entries(b).filter(([k])=>!['#canvas','#download-status','#touch-stick-zone','#touch-c-zone'].includes(k));
   for(const [k,r] of controls){assert.ok(r.w>0&&r.h>0,k+' laid out');assert.ok(r.x>=-1&&r.y>=-1&&r.x+r.w<=viewport.width+1&&r.y+r.h<=viewport.height+1,`${k} inside ${JSON.stringify(viewport)}: ${JSON.stringify(r)}`);}
   for(let i=0;i<controls.length;i++)for(let j=i+1;j<controls.length;j++)assert.ok(!overlap(controls[i][1],controls[j][1]),`${controls[i][0]} overlaps ${controls[j][0]} at ${JSON.stringify(viewport)}`);
-  for(const [k,r] of controls)assert.ok(!overlap(r,b['#canvas']),`${k} covers the picture at ${JSON.stringify(viewport)}`);
+  for(const [k,r] of [...controls,['#touch-stick-zone',b['#touch-stick-zone']],['#touch-c-zone',b['#touch-c-zone']]])assert.ok(!overlap(r,b['#canvas']),`${k} covers the picture at ${JSON.stringify(viewport)}`);
+  // The download toast turns with the surface and sits over the picture's bottom edge, clear of the thumbs.
+  for(const [k,r] of controls)assert.ok(!overlap(r,b['#download-status']),`${k} under the download toast at ${JSON.stringify(viewport)}`);
+  assert.ok(overlap(b['#download-status'],b['#canvas']),'download toast over the picture');
+  assert.ok(rotated?b['#download-status'].w<b['#download-status'].h:b['#download-status'].w>b['#download-status'].h,'download toast turned with the surface');
   assert.ok((rotated?b['#canvas'].h:b['#canvas'].w)<span-300&&(rotated?b['#canvas'].w:b['#canvas'].h)>depth-2,'picture is inset between the controls');
   // Sticks: a contact beyond the visible circle inside the zone still drives the stick.
   for(const [sel,index] of [['#touch-stick',1],['#touch-c',3]]){
@@ -57,6 +64,8 @@ try{
    }
   }
   await page.locator('#touch-start').click();assert.deepEqual(await read(),[32,0,0,0,0,0,0]);
+  assert.equal(await page.evaluate(()=>Number(document.getElementById('touch-reset').dataset.mask)===RESET_CHORD),true,'reset button carries L+R+A+Start');
+  await page.locator('#touch-reset').click();assert.deepEqual(await read(),[3105,0,0,0,0,1,1]);
   await page.locator('.shield').click();assert.deepEqual(await read(),[2048,0,0,0,0,0,1]);
   const cdp=await page.context().newCDPSession(page);
   const stick=await page.locator('#touch-stick').boundingBox(),a=await page.locator('.attack').boundingBox();

@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {TouchState,NEUTRAL,RESET_CHORD} from '../src/touch-state.mjs';
 import {TouchStick} from '../src/touch-stick.mjs';
+import {withTouch} from '../src/keyboard.mjs';
 
 // Exercise the production pointer handlers against a minimal DOM, as OpenSmash64's test does.
 async function setup(rotated=false,pads=[]){
@@ -111,7 +112,7 @@ test('the leave hold fires after 1.2 s and a released hold never fires',async()=
 });
 
 test('a controller giving input hides the overlay; touching the picture brings it back',async()=>{
- const {touch,zone,document,pads,own,advance,a}=await setup();
+ const {touch,zone,document,pads,own,advance,a,win}=await setup();
  zone.dispatch('pointerdown',1,280,160);assert.equal(read(touch)[1],1);
  pads.push({connected:true,buttons:[{pressed:false}],axes:[0,0,0,0]});touch.sync();
  assert.equal(document.body.classList.contains('pad'),false,'an idle pad leaves the overlay');
@@ -130,6 +131,20 @@ test('a controller giving input hides the overlay; touching the picture brings i
  // The page's own GameCube adapter counts as a controller; touching the picture does not override it.
  own(true);assert.equal(document.body.classList.contains('pad'),true);touch.touched();assert.equal(document.body.classList.contains('pad'),true);
  own(false);assert.equal(document.body.classList.contains('pad'),false);
+ // A key press on a touch-screen laptop hands off too, until the picture is touched.
+ win.dispatch('keydown',0,0,0,{repeat:false,code:'KeyX'});assert.equal(document.body.classList.contains('pad'),true);
+ advance(60);read(touch);assert.equal(document.body.classList.contains('pad'),true,'keyboard keeps the scheme without a pad');
+ touch.touched();assert.equal(document.body.classList.contains('pad'),false);
+});
+
+test('withTouch merges buttons, replaces a deflected stick, keeps the larger trigger',()=>{
+ const seat=[2,.5,0,0,-.3,0,0];
+ assert.equal(withTouch(seat,[...NEUTRAL]),seat,'a neutral touch pad leaves the seat pad alone');
+ assert.deepEqual(withTouch(seat,[1,0,0,0,0,0,0]),[3,.5,0,0,-.3,0,0]);
+ assert.deepEqual(withTouch(seat,[0,-1,.2,0,0,0,0]),[2,-1,.2,0,-.3,0,0],'touch main stick replaces the seat stick');
+ assert.deepEqual(withTouch(seat,[0,0,0,0,1,0,0]),[2,.5,0,0,1,0,0],'touch C-stick replaces the seat C-stick');
+ assert.deepEqual(withTouch([0,0,0,0,0,.4,0],[2048,0,0,0,0,0,1]),[2048,0,0,0,0,.4,1]);
+ assert.deepEqual(withTouch(seat,[0,0,0,0,0,1,0]),[2,.5,0,0,-.3,1,0],'a trigger alone still counts');
 });
 
 test('rotation and layout changes drop held contacts and re-measure the surface',async()=>{

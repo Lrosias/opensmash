@@ -84,7 +84,8 @@ Shield (R) on the right, Taunt (D-pad up) above the stick, Start and a
 "Reset match" button (hold L+R+A and press Start, so pause first) in the top
 right. The overlay reads into port 1 beside the SDK seat in `readSeat`
 (`withTouch` in `app.mjs`): buttons merge, a deflected touch stick replaces that
-stick, and the triggers follow Shield. An upright phone turns `#play-surface`
+stick, and the triggers follow Shield (there is no L: light shield and L-cancel
+use R on the overlay). An upright phone turns `#play-surface`
 (the canvas, the online match iframe and the overlay) 90°, as the 64 edition
 does; the online screens cover the overlay while they are open, and in a session
 the reset gives way to a hold-to-leave. The last input picks the scheme: a
