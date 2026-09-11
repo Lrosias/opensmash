@@ -78,3 +78,21 @@ PNGs, `/tmp/opensmash-lobby-native-sparse.json`, and
 fixture is `yougame/tests/player-ports-native.html`, served at the build root.
 Production platform migration/SDK deployment and hosted multi-account smoke
 remain parent-task gates; physical hardware/WAN behavior is not asserted.
+
+## Actual two-client network acceptance
+
+After review, all three editions were exercised with the staged native build,
+actual candidate YouGame SDK, an isolated local Rooms Worker, and two independent
+Chromium contexts. Each device claimed two participants; the real fighter-selection
+buttons and game-owned Ready/Start launched four native human ports. Original
+agreed on 91 common simulation frames, Remix on 92, and Melee on 51 confirmed
+frames. Both clients progressed and no browser errors were observed. This combines
+real engines and real WebSocket transport; ticket identities and result callbacks
+were local fixtures. It does not assert WAN performance or hosted authentication.
+
+Local evidence: `/private/tmp/opensmash-native-network-result.json`,
+`/private/tmp/opensmash-remix-network-result.json`, and
+`/private/tmp/opensmash-melee-network-result.json`, with corresponding screenshots.
+The platform generic network acceptance separately completed casual/private matches
+and a three-game ranked report sequence, observed one final callback, and verified
+both ranked clients disconnected while casual/private lobbies remained usable.
