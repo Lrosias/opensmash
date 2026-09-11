@@ -15,7 +15,7 @@ try{browser=await chromium.launch({headless:true,timeout:15000,args:['--mute-aud
   await page.route('https://yougame.co/sdk.js',route=>route.fulfill({path:path.join(root,'yougame/tests/native-room-sdk-fixture.js'),contentType:'text/javascript'}));
   await page.route('**/game-profile.mjs',async route=>route.fulfill({body:(await readFile(path.join(root,'yougame/src/game-profile.mjs'),'utf8')).replace('YOUGAME_EDITION',edition),contentType:'text/javascript'}));
   await page.goto(`http://127.0.0.1:${server.address().port}/yougame/src/index.html`);
-  await page.getByRole('button',{name:'Competitive online',exact:true}).click();await page.getByRole('button',{name:/^Friends/}).click();
+  await page.evaluate(()=>document.querySelector('iframe').contentWindow.bridge.menuAction(6,2));
   await page.waitForFunction(()=>nativeRoomFixture.syncs[0]?.running);
   assert.equal(await page.locator('#competitive').isVisible(),false,'Casual/Friends has no custom fighter or readiness UI');
   assert.equal(await page.evaluate(()=>nativeRoomFixture.beginCalls),1);

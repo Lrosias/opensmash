@@ -53,19 +53,16 @@ try{
   await native.getByRole('button',{name:'Casual',exact:true}).waitFor();
   assert.equal(await page.locator('#competitive').isVisible(),false);
   assert.equal(await page.evaluate(()=>sockets.every(s=>s.closed)),true);
-  // The optional accessible browser entry still returns to the menu it came from.
-  const entry=page.getByRole('button',{name:'Competitive online',exact:true}),entryBox=await entry.boundingBox();await entry.click({position:{x:entryBox.width-10,y:entryBox.height-10}});
-  await page.getByRole('button',{name:/^Casual/}).click();
-  await page.getByRole('button',{name:'Cancel',exact:true}).click();
-  await page.getByRole('heading',{name:'Play together',exact:true}).waitFor();
-  await page.getByRole('button',{name:'Back to local play',exact:true}).click();
+  // The native scene is the only online entry; the old browser button is gone.
+  assert.equal(await page.getByRole('button',{name:'Competitive online',exact:true}).count(),0,'No separate browser online entry');
+  assert.equal(await page.locator('#online-entry').count(),0);
   await native.getByRole('button',{name:'Casual',exact:true}).click();
   await page.getByRole('button',{name:'Cancel',exact:true}).click();
   await native.getByRole('button',{name:'Casual',exact:true}).waitFor();
   assert.equal(await page.locator('#competitive').isVisible(),false,'A later native entry must restore native ownership');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   assert.deepEqual(errors,[]);await page.screenshot({path:path.join(out,`cancel-${edition}-${width}.png`)});
-  evidence.push({edition,width,realSdk:true,nativeBridgeFixture:true,casualRankedCancelRetry:true,friendsPendingLeave:true,originalMenuPreserved:true,customEntryPreserved:true,errors});await context.close();
+  evidence.push({edition,width,realSdk:true,nativeBridgeFixture:true,casualRankedCancelRetry:true,friendsPendingLeave:true,originalMenuPreserved:true,browserEntryRemoved:true,errors});await context.close();
  }
  await writeFile(path.join(out,'verification.json'),JSON.stringify({scope:'Actual app and real SDK with mocked network/native bridge; no hosted or native gameplay claim',evidence},null,2));console.log(JSON.stringify({passed:evidence.length,out}));
 }catch(error){if(currentPage&&!currentPage.isClosed()){await currentPage.screenshot({path:path.join(out,'failure.png')});console.log(await currentPage.evaluate(()=>({text:document.body.innerText,sockets:sockets.map(s=>({url:s.url,closed:s.closed})),phase:document.querySelector('iframe')?.contentWindow.bridge?.menuState()})));}throw error;}finally{clearTimeout(watchdog);await browser?.close();await new Promise(resolve=>server.close(resolve));}

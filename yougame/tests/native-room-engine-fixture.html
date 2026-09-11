@@ -3,7 +3,7 @@
 const native=new URLSearchParams(location.search).has('SSB64_YOUGAME_SESSION');
 const fixture=parent.nativeRoomFixture,record={native,steps:0,ports:[],disposed:false};fixture.engines.push(record);
 window.Module={nativeScene:native?16:9,yougameDispose(){record.disposed=true;}};
-const bridge=parent.openSmashAttachEngine(window);
+const bridge=window.bridge=parent.openSmashAttachEngine(window);
 if(native){
  Module.yougameSession={scene:16,frame:0,battleId:0,battleTicks:0,hash:11,seatMask:5,mask:0,stage:6};
  const raw={step(){if(!bridge.beforeTick())throw Error('Raw native fixture stepped outside ownership');record.steps++;const heap=new Int32Array(16);bridge.readPorts(0,heap);record.ports=Array.from(heap);const m=Module.yougameSession;m.frame++;

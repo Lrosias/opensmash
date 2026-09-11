@@ -28,9 +28,8 @@ try{
   await page.evaluate(()=>{resultFixture.held=true;window.focus();});
   await page.waitForFunction(()=>resultFixture.frames[0].ports[1]!==0&&resultFixture.frames[0].ports[2]>0);
   await page.evaluate(()=>{resultFixture.held=false;});
-  await page.getByRole('button',{name:'Competitive online',exact:true}).click();
-  await page.locator(`[data-fighter="${seat===0?58:59}"]`).click();
-  await page.getByRole('button',{name:/^Casual /}).click();
+  // Native Online scene: Casual through the menu bridge, no browser picker.
+  await page.evaluate(()=>document.querySelector('iframe').contentWindow.fixtureBridge.menuAction(6,0));
   await page.waitForFunction(()=>resultFixture.syncs[0]?.started);
   assert.equal(await page.evaluate(()=>resultFixture.exports.length),0,'No presentation before native result');
   await page.evaluate(()=>resultFixture.advance());
@@ -83,7 +82,7 @@ try{
   if(outcome==='void')await page.waitForFunction(()=>typeof resultFixture.releaseResultBoot==='function');else await page.waitForFunction(()=>resultFixture.exports.length===2);
   await page.evaluate(async()=>{document.querySelector('#sdk-result-fixture').remove();if(resultFixture.deferResults){resultFixture.duringResultBoot=()=>resultFixture.room.emit('leave',{});await resultFixture.releaseResultBoot();}else resultFixture.room.emit('leave',{});});
   assert.equal(await page.evaluate(()=>resultFixture.exports.length),outcome==='void'?1:2,'Late boot after Leave must not export');
-  await page.getByRole('button',{name:'Back to local play',exact:true}).click();
+  await page.locator('#competitive').waitFor({state:'hidden'});
   assert.equal(await page.locator('iframe').count(),1);
   assert.equal(await page.locator('#competitive').isVisible(),false);
   assert.deepEqual(await page.evaluate(()=>{const m=document.querySelector('iframe').contentWindow.Module;return {same:m===resultFixture.originalMenu,roster:m.savedRoster,ports:m.savedPorts,exports:resultFixture.frames[0].exports,scene:m.nativeScene};}),{same:true,roster:[58,59,7,11],ports:['human','cpu','off','human'],exports:0,scene:7});
