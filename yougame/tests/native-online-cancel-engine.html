@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{background:#234;color:white;font:20px system-ui}button{font:inherit;margin:8px}</style></head><body>
+<p>Native menu bridge fixture (no game simulation)</p><h1>Online</h1><div id="modes"><button data-queue="0">Casual</button><button data-queue="1">Ranked</button><button data-queue="2">Friends</button></div><button id="back">Back</button><p id="state"></p>
+<script>
+window.Module={nativeScene:16,yougameDispose(){window.disposed=true;}};
+window.bridge=parent.openSmashAttachEngine(window);bridge.ready({});
+for(const button of document.querySelectorAll('[data-queue]'))button.onclick=()=>bridge.menuAction(6,Number(button.dataset.queue));
+document.querySelector('#back').onclick=()=>bridge.menuAction(2,0);
+window.ticks=0;
+function render(){if(window.disposed)return;if(bridge.beforeTick()){ticks++;const state=bridge.menuState();document.querySelector('#state').textContent=state.text;document.querySelector('#modes').hidden=state.phase!==0;}requestAnimationFrame(render);}render();
+</script></body></html>
