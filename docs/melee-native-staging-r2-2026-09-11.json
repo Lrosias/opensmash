@@ -1,22 +1,22 @@
 {
   "scope": "Local immutable staging only; native/hosted runtime qualification is separate",
   "sourceCommit": "f9a79a77d832a98e664936a724f2d8585dbd1fec",
-  "engineSourceCommit": "529a63ebaa63fea24051676a155216523a26003c",
+  "engineSourceCommit": "9389ce126c3addf841374ca89f4e6aa6e6332027",
   "release": "/Volumes/OpenSmashBuilds/publisher/build/melee-friends-departure-20260911",
   "releaseTreeSha256": "e6199c393318ef01ae2682b6b48cce7b823c1b62d59bdb9299317e46c0b264a9",
-  "candidate": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-session-20260911-card-r1/candidate",
-  "enginePackage": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-qa-20260911-card-r1/stage/engine",
+  "candidate": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-session-20260911-card-r2/candidate",
+  "enginePackage": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-qa-20260911-card-r2/stage/engine",
   "nativeProvenance": {
-    "path": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-session-20260911-card-r1/provenance.json",
-    "sha256": "0ce19e48df59e8d8864719c6db4032532b748b456c78b0c52bc5515fea735e1c",
-    "size": 12991
+    "path": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-session-20260911-card-r2/provenance.json",
+    "sha256": "4f758f22771879ae9d167ec1dd58f40d223fe8527d3537e08760f9dd0f8d562e",
+    "size": 14008
   },
   "loader": {
     "codec": "http-gzip",
     "path": "melee.wasm.gz",
-    "sha256": "9e48682ea0370512b14b43be4b174369fa5b9c741a911301cd355f5c8854ee86",
-    "transferBytes": 20440117,
-    "decodedBytes": 138047519
+    "sha256": "e7e6cfaf1cc448cecc65ff34ac934c5fc7db2497e439d91c5746d25f5ccb7fa4",
+    "transferBytes": 20440251,
+    "decodedBytes": 138047568
   },
   "compression": "Existing HTTP gzip package; no Brotli sidecars",
   "runtimePaths": [
@@ -28,8 +28,8 @@
     "native-room-session.mjs",
     "rollback-engine.mjs"
   ],
-  "directory": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-room-final-app-20260911-r1/melee",
-  "treeSha256": "66f3787bc4266ba7c09b8ded7bd1386c68e334cda70f276bd1a25b12a3e82ac6",
+  "directory": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-room-final-app-20260911-r2/melee",
+  "treeSha256": "267f577bcf46734ff7b482b991687f0126353e916e52373cdc03d9c42683d068",
   "fileCount": 1244,
   "unchangedFileCount": 1234,
   "changed": [
@@ -50,12 +50,12 @@
     },
     {
       "path": "engine/melee.wasm.gz",
-      "sha256": "59c436584f72a439c1e59e4de2abe4b8076b3431a177c7569912150da32e31b3",
-      "size": 20440117
+      "sha256": "bfb39920830d6103ba3575111720b487df58ac173bfbfa58e25abf50b4042adc",
+      "size": 20440251
     },
     {
       "path": "engine/wasm.json",
-      "sha256": "43d5286263b8f6b44c98a1f771c5eb613e4ac041a6b182e755fe3ee98082e830",
+      "sha256": "8386a015047a36d1008b4080d5d74c2479b6e89e70b6afb500b2cf50bc35c3f7",
       "size": 170
     },
     {
