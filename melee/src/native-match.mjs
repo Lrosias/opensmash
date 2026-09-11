@@ -29,7 +29,7 @@ export async function createNativeMatch(launch,onStatus=()=>{},signal) {
       abortLoad=()=>{clearTimeout(timer);reject(Error('The Melee match has closed.'));};
       iframe.onload=()=>{clearTimeout(timer);iframe.contentWindow.postMessage({kind:'melee-native-port'},location.origin,[channel.port2]);resolve();};
       iframe.onerror=()=>{clearTimeout(timer);reject(Error('The Melee match could not load.'));};
-      document.body.append(iframe);
+      (document.getElementById('play-surface')||document.body).append(iframe);
     });
     const initial=await call('boot',[launch]);
     return {initial,get frame(){return frame;},get active(){return !closed;},get closed(){return closed;},get pending(){return pending.size>0;},

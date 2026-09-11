@@ -11,6 +11,7 @@ import {MeleeNativeRoomSession} from './native-room-session.mjs';
 import {mountAdapterControls} from '../../controllers/gc-adapter-ui.mjs';
 import {readAdapterMenu} from '../../controllers/controller-menu.mjs';
 import {meleePad} from '../../controllers/gc-adapter.mjs';
+import {createTouch} from './touch.mjs';
 const $ = id => document.getElementById(id);
 const adapter=mountAdapterControls({before:$('controls')});
 $('controls').previousElementSibling.classList.add('melee-adapter-entry');
@@ -23,6 +24,15 @@ let input, audio, node, assetLoader, lastFrame=0;
 state.assetBlocked=false;
 state.frameGaps=[];
 state.competitive=new MeleeCompetitiveUI({root:$('competitive'),sdk:window.YouGame,readMenu:()=>readAdapterMenu(adapter),onLocal:()=>$('online').focus()});
+// Phones: the overlay in touch.mjs feeds port 1 beside the SDK seat, as OpenSmash64's does.
+const touch=createTouch({wakeAudio:()=>{audio?.resume().catch(()=>{});const session=state.competitive.session;(session?.engine??session?.adapter?.engine)?.resumeAudio?.().catch(()=>{});},
+  leave:()=>state.competitive.handle('back','').catch(()=>{}),controller:()=>!!adapter?.owned});
+adapter.subscribe(()=>touch.sync());
+state.touch=touch;
+$('canvas').addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')touch.touched();},true);
+// Nothing held on the overlay survives it being covered (online screens) or leaving play.
+new MutationObserver(()=>touch.clear()).observe($('competitive'),{attributes:true,attributeFilter:['hidden']});
+new MutationObserver(()=>touch.clear()).observe(document.body,{attributes:true,attributeFilter:['class']});
 fetch('./engine/wasm.json').then(r=>{if(!r.ok)throw Error('The Melee build could not load.');return r.json();}).then(manifest=>{
   if(!/^[a-f0-9]{64}$/.test(manifest.sha256))throw Error('Invalid Melee build identity.');
   state.competitive.setNativeAdapter((room,onError)=>{
@@ -95,18 +105,26 @@ $('copy-report').onclick=async()=>{
 $('close-report').onclick=()=>{$('report-dialog').close();$('close-report').blur();$('report').blur();};
 $('report-dialog').addEventListener('close',()=>$('report').blur());
 
-function readSeat(seat,snapshot=adapter.snapshot()) {
+function readSeat(seat,snapshot=adapter.snapshot(),peek=false) {
   if(snapshot.owned)return meleePad(snapshot.ports[seat],adapter.origins[seat]);
   const s=input?.player(seat)?.state;
-  return s?gameCubeInput(s):[0,0,0,0,0,0,0];
+  const pad=s?gameCubeInput(s):[0,0,0,0,0,0,0];
+  return seat===0?withTouch(pad,touch.read(peek)):pad;
+}
+// Touch adds to port 1: buttons merge, a deflected touch stick replaces that stick.
+function withTouch(pad,t) {
+  if(!t[0]&&!t[1]&&!t[2]&&!t[3]&&!t[4])return pad;
+  return [pad[0]|t[0],t[1]||t[2]?t[1]:pad[1],t[1]||t[2]?t[2]:pad[2],t[3]||t[4]?t[3]:pad[3],t[3]||t[4]?t[4]:pad[4],Math.max(pad[5],t[5]),Math.max(pad[6],t[6])];
 }
 function sampleInput() {
   state.competitive.pollInput(input?.player(0)?.state);
   const snapshot=adapter.snapshot();
+  // An online session consumes touch taps through readPorts; the local engine only peeks then.
+  const online=!!state.competitive.session;touch.context(online);
   if (state.module && input && !state.rollback?.active) for (let seat=0; seat<4; seat++) {
     const s=input.player(seat)?.state;
     if (!s) continue;
-    state.module._melee_input(seat,...(state.assetBlocked?[0,0,0,0,0,0,0]:readSeat(seat,snapshot)));
+    state.module._melee_input(seat,...(state.assetBlocked?[0,0,0,0,0,0,0]:readSeat(seat,snapshot,online)));
   }
   requestAnimationFrame(sampleInput);
 }
@@ -229,5 +247,6 @@ $('play').onclick=async()=>{
   } catch(error) { fail(error); }
 };
 document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)touch.clear();
   if(document.hidden && state.module && !state.rollback?.active) for(let seat=0;seat<4;seat++){state.module._melee_input(seat,0,0,0,0,0,0,0);}
 });
