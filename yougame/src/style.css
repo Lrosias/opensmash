@@ -8,8 +8,9 @@ body.touch{--stick-gutter:clamp(110px,calc(16 * var(--play-vw)),168px);--stick-i
 #touch-controls button{color:#eee;background:#242424;border:1px solid #666;font:600 12px system-ui;min-height:44px;min-width:44px;border-radius:10px;touch-action:none;pointer-events:auto;-webkit-tap-highlight-color:transparent}
 #touch-controls button.pressed{background:#777;transform:scale(.94)}
 #touch-controls button[hidden]{display:none}
-.touch-top{position:absolute;top:max(8px,var(--safe-top));right:calc(var(--safe-right) + 8px);display:flex;justify-content:flex-end;pointer-events:none}
+.touch-top{position:absolute;top:max(8px,var(--safe-top));right:calc(var(--safe-right) + 8px);display:flex;gap:8px;justify-content:flex-end;pointer-events:none}
 .touch-top button{padding:0 10px}
+#touch-reset span{display:block;font-size:10px;font-weight:400;color:#bbb}
 #touch-start,#touch-leave{position:relative}
 #touch-stick-zone{position:absolute;left:0;top:64px;bottom:var(--safe-bottom);width:calc(var(--safe-left) + var(--left) + 64px);pointer-events:auto;touch-action:none}
 #touch-stick{position:absolute;left:calc(var(--safe-left) + var(--stick-inset) + 10px);bottom:30px;width:calc(var(--stick-gutter) - 20px);height:calc(var(--stick-gutter) - 20px);border-radius:50%;background:#222b;border:1px solid #666;pointer-events:none;display:grid;place-items:center}

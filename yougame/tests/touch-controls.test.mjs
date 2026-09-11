@@ -11,12 +11,20 @@ async function setup(rotated){
   values:new Set(),add(key){this.values.add(key);},remove(key){this.values.delete(key);},
   toggle(key,on){if(on)this.add(key);else this.remove(key);},contains(key){return this.values.has(key);}},
   addEventListener(type,fn){(this.listeners[type]??=[]).push(fn);},
-  dispatch(type,pointerId,x=160,y=160,extra={}){for(const fn of this.listeners[type]||[])fn({type,pointerId,clientX:x,clientY:y,preventDefault(){},...extra});},
-  setPointerCapture(){},querySelectorAll:()=>[],
+  dispatch(type,pointerId,x=160,y=160,extra={}){
+   const stick=get('touch-stick'),r=stick.getBoundingClientRect(),turn=document.body.classList.contains('rotated');
+   const dx=x-r.left-r.width/2,dy=y-r.top-r.height/2;
+   const offsetX=stick.offsetLeft+stick.offsetWidth/2+(turn?dy:dx);
+   const offsetY=stick.offsetTop+stick.offsetHeight/2+(turn?-dx:dy);
+   for(const fn of this.listeners[type]||[])fn({type,pointerId,target:this,clientX:x,clientY:y,offsetX,offsetY,preventDefault(){},...extra});
+  },
+  captures:new Set(),setPointerCapture(id){this.captures.add(id);},releasePointerCapture(id){this.captures.delete(id);},querySelectorAll:()=>[],
   getBoundingClientRect:()=>({left:100,top:100,width:120,height:120})});
  const elements=new Map(),get=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);};
- const button=get('touch-start');button.dataset={mask:'4096'};
- get('touch-controls').querySelectorAll=selector=>selector==='[data-mask]'?[button]:[button].filter(b=>b.classList.contains('pressed'));
+ Object.assign(get('touch-stick'),{offsetLeft:100,offsetTop:100,offsetWidth:120,offsetHeight:120});
+ const button=get('touch-start');button.dataset={mask:'4096'};button.parentElement=get('touch-top');
+ const reset=get('touch-reset');reset.dataset={mask:'57360'};reset.parentElement=get('touch-top');
+ get('touch-controls').querySelectorAll=selector=>selector==='[data-mask]'?[button,reset]:[button,reset].filter(b=>b.classList.contains('pressed'));
  const frames=[];
  const win=Object.assign(element(),{innerWidth:rotated?390:844,innerHeight:rotated?844:390,
   visualViewport:element(),requestAnimationFrame(fn){frames.push(fn);return frames.length;}});
@@ -25,11 +33,11 @@ async function setup(rotated){
  let locks=0;const orientation=Object.assign(element(),{lock(){locks++;return Promise.resolve();}});
  const scope={TouchState,TouchStick,window:win,document,screen:{orientation},matchMedia:()=>({matches:true,addEventListener(){}}),
   location:{search:'?touch=1'},URLSearchParams,setTimeout,clearTimeout};
- const source=(await readFile(new URL('../src/touch.mjs',import.meta.url),'utf8'))
+ const source=(await readFile(process.env.TOUCH_SOURCE||new URL('../src/touch.mjs',import.meta.url),'utf8'))
   .replace(/^import .*;\n/gm,'').replace('export function createTouch','function createTouch');
  vm.runInNewContext(source+'\nthis.touch=createTouch({wakeAudio(){},leave(){}});',scope);
  scope.touch.context(false,22);
- return {touch:scope.touch,zone:get('touch-stick-zone'),thumb:get('stick-thumb'),win,document,button,orientation,
+ return {touch:scope.touch,zone:get('touch-stick-zone'),stick:get('touch-stick'),thumb:get('stick-thumb'),win,document,button,reset,group:get('touch-top'),quit:get('touch-leave'),orientation,
   flush(){frames.splice(0).forEach(fn=>fn());},locks:()=>locks};
 }
 
@@ -55,6 +63,35 @@ for(const rotated of [false,true])test(`pointer sweeps and release stay straight
   event(zone,'pointerdown',3,-3);assert.deepEqual(touch.read(),[0,-80,32]);
   event(zone,release,3,-3);assert.deepEqual(touch.read(),[0,0,0]);
  }
+});
+
+test('mobile reset sends the native chord without held Start or stick input',async()=>{
+ const {touch,zone,button,reset}=await setup(false);
+ button.dispatch('pointerdown',1);zone.dispatch('pointerdown',2,280,160);
+ reset.dispatch('pointerdown',3);
+ assert.equal(button.captures.size,0);assert.equal(zone.captures.size,0);
+ assert.deepEqual(touch.read(),[0xe010,0,0]);
+ reset.dispatch('pointerup',3);assert.deepEqual(touch.read(),[0,0,0]);
+ // A quick tap is still consumed exactly once by the game.
+ reset.dispatch('pointerdown',4);reset.dispatch('pointerup',4);
+ assert.deepEqual(touch.read(),[0xe010,0,0]);assert.deepEqual(touch.read(),[0,0,0]);
+});
+
+test('mobile reset is local-battle-only and cannot leak across context changes',async()=>{
+ const {touch,reset}=await setup(false);
+ for(const scene of [22,52,53]){
+  touch.context(false,scene);assert.equal(reset.hidden,false);
+  reset.dispatch('pointerdown',1);touch.context(true,scene);
+  assert.equal(reset.hidden,true);assert.equal(reset.captures.size,0);
+  reset.dispatch('pointerdown',2);assert.deepEqual(touch.read(),[0,0,0]);
+ }
+ for(const scene of [7,9,16,21,24,54]){
+  touch.context(false,scene);assert.equal(reset.hidden,true);
+  reset.dispatch('pointerdown',3);assert.deepEqual(touch.read(),[0,0,0]);
+ }
+ touch.context(false,22);reset.dispatch('pointerdown',4);
+ touch.context(false,54);assert.equal(reset.captures.size,0);
+ assert.deepEqual(touch.read(),[0,0,0]);
 });
 
 for(const rotated of [false,true])test(`outside-circle taps work in all scenes (${rotated?'portrait':'landscape'})`,async()=>{
@@ -126,4 +163,100 @@ test('touch fallback preserves quick button taps and independent fingers',async(
  assert.deepEqual(touch.read(),[0,0,0]);assert.equal(button.classList.contains('pressed'),false);
  button.dispatch('pointerdown',5);win.dispatch('blur');button.dispatch('pointerdown',6);
  button.dispatch('pointerup',6);assert.equal(button.classList.contains('pressed'),false);
+});
+
+test('late geometry settlement cancels held stick/buttons and releases capture before resuming',async()=>{
+ for(const rotated of [false,true]){
+  const {touch,zone,stick,button,orientation,flush}=await setup(rotated);
+  orientation.dispatch('change');flush(); // Browser event precedes final layout.
+  zone.dispatch('pointerdown',1,rotated?160:280,rotated?280:160);
+  button.dispatch('pointerdown',2);
+  assert.deepEqual(touch.read(),[4096,80,0]);
+  assert.equal(zone.captures.has(1),true);assert.equal(button.captures.has(2),true);
+  // Same viewport, later safe-area/compositor layout; no second resize event.
+  stick.getBoundingClientRect=()=>({left:150,top:120,width:120,height:120});
+  assert.deepEqual(touch.read(),[0,0,0]);
+  assert.equal(zone.captures.size,0);assert.equal(button.captures.size,0);
+  zone.dispatch('pointermove',1,210,180,{buttons:1});
+  assert.deepEqual(touch.read(),[0,0,0]);
+  zone.dispatch('pointerdown',3,210,180);assert.deepEqual(touch.read(),[0,0,0]);
+  zone.dispatch('pointermove',3,rotated?210:330,rotated?300:180,{buttons:1});
+  assert.deepEqual(touch.read(),[0,80,0]);
+ }
+});
+
+test('a pointermove before the queued resize frame cannot use the previous rotation',async()=>{
+ const {touch,zone,win}=await setup(true);
+ zone.dispatch('pointerdown',1,160,280);assert.deepEqual(touch.read(),[0,80,0]);
+ win.innerWidth=844;win.innerHeight=390;
+ zone.dispatch('pointermove',1,280,160,{buttons:1});
+ assert.deepEqual(touch.read(),[0,0,0]);
+ assert.equal(zone.captures.size,0);
+ zone.dispatch('pointerdown',2,280,160);assert.deepEqual(touch.read(),[0,80,0]);
+});
+
+test('rotation recovery accepts full down immediately without a center tap',async()=>{
+ for(const rotated of [false,true]){
+  const {touch,zone,stick,orientation,flush}=await setup(rotated);
+  zone.dispatch('pointerdown',1,rotated?160:280,rotated?280:160);
+  assert.deepEqual(touch.read(),[0,80,0]);
+  orientation.dispatch('change');flush();
+  assert.deepEqual(touch.read(),[0,0,0]);
+  // Geometry settles after the event; the first new touch is at full down,
+  // with no intervening center contact to repair the gesture's origin.
+  stick.getBoundingClientRect=()=>({left:150,top:120,width:120,height:120});
+  zone.dispatch('pointermove',1,210,180,{buttons:1});
+  assert.deepEqual(touch.read(),[0,0,0]);
+  zone.dispatch('pointerup',1);
+  zone.dispatch('pointerdown',2,rotated?90:210,rotated?180:300);
+  assert.deepEqual(touch.read(),[0,0,-80]);
+  zone.dispatch('pointerup',2);assert.deepEqual(touch.read(),[0,0,0]);
+ }
+});
+
+test('same-size turns, viewport scroll, fullscreen exit/reentry cancel every owned pointer',async()=>{
+ const {touch,zone,button,orientation,document,win,flush}=await setup(false);
+ for(let turn=0;turn<3;turn++)for(const [target,event] of [[orientation,'change'],[win,'orientationchange'],[win.visualViewport,'scroll'],[document,'fullscreenchange'],[document,'webkitfullscreenchange']]){
+  zone.dispatch('pointerdown',1,280,160);button.dispatch('pointerdown',2);
+  assert.deepEqual(touch.read(),[4096,80,0]);
+  target.dispatch(event);flush();
+  assert.deepEqual(touch.read(),[0,0,0]);
+  assert.equal(zone.captures.size,0);assert.equal(button.captures.size,0);
+  assert.equal(button.classList.contains('pressed'),false);
+ }
+});
+
+test('new stick contact cannot adopt a button held across delayed right-side layout',async()=>{
+ const {touch,zone,button,group}=await setup(false);
+ button.dispatch('pointerdown',1);assert.deepEqual(touch.read(),[4096,0,0]);
+ group.getBoundingClientRect=()=>({left:150,top:100,width:120,height:120});
+ zone.dispatch('pointerdown',2,160,160);
+ assert.deepEqual(touch.read(),[0,0,0]);assert.equal(button.captures.size,0);
+ zone.dispatch('pointermove',2,280,160,{buttons:1});assert.deepEqual(touch.read(),[0,80,0]);
+});
+
+test('rotation cancels leave hold and releases its capture without throwing on lost contact',async()=>{
+ const {touch,quit,orientation,flush}=await setup(false);
+ quit.dispatch('pointerdown',9);assert.equal(quit.captures.has(9),true);
+ orientation.dispatch('change');flush();
+ assert.equal(quit.captures.size,0);assert.equal(quit.classList.contains('holding'),false);
+ quit.setPointerCapture=()=>{throw Error('Contact already ended');};
+ assert.doesNotThrow(()=>quit.dispatch('pointerdown',10));touch.clear();
+});
+
+test('fresh Home Screen contacts retain full down and straight sides despite a viewport coordinate offset',async()=>{
+ for(const rotated of [false,true]){
+  const {touch,zone,orientation,flush}=await setup(rotated),radius=120*.36,bias=40;
+  orientation.dispatch('change');flush();
+  for(const [dx,dy] of [[0,0],[0,1],[1,0],[-1,0],[0,-1]]){
+   // Model the reported mismatch, not a physically reproduced WebKit defect:
+   // viewport/client coordinates disagree, but target-local hit coordinates do not.
+   const local={offsetX:160+dx*radius,offsetY:160+dy*radius};
+   const x=rotated?160-dy*radius+bias:160+dx*radius;
+   const y=rotated?160+dx*radius:160+dy*radius-bias;
+   zone.dispatch('pointerdown',1,x,y,local);
+   assert.deepEqual(touch.read(),[0,dx*80||0,-dy*80||0]);
+   zone.dispatch('pointerup',1);assert.deepEqual(touch.read(),[0,0,0]);
+  }
+ }
 });
