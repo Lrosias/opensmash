@@ -16,7 +16,7 @@ try {
   await page.addInitScript(()=>{// Browsers report four slots; a missing pad is null, never a short list.
   window.__pads=[null,null,null,null];Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>window.__pads});});
   await page.goto((process.env.MELEE_URL||'http://127.0.0.1:8073')+'/?touch=1');
-  await page.locator('#play').tap();
+  /* the page boots on load */await page.waitForFunction(()=>['running','error'].includes(window.melee?.phase),null,{timeout:240000});
   await page.waitForFunction(()=>window.melee?.samples?.at(-1)?.presents>180,null,{timeout:180000});
   await page.evaluate(()=>{
     window.__pad=null;const original=melee.module._melee_input;

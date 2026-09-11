@@ -139,7 +139,7 @@ export class MeleeNativeRoomSession {
   for(const event of ['desync','timeout'])this.sync.on(event,()=>this.fail('The native game could not stay synchronized.'));
   this.pulse();
  });}
- startIfArmed(){if(this.sync&&!this.running&&this.connections.filter(id=>id!==this.room.me).every(id=>this.peers.get(id)?.armed===this.scope)){this.running=true;this.onStatus('ONLINE · 3-FRAME INPUT BUFFER');this.sync.start();}}
+ startIfArmed(){if(this.sync&&!this.running&&this.connections.filter(id=>id!==this.room.me).every(id=>this.peers.get(id)?.armed===this.scope)){this.running=true;this.onStatus('ONLINE - 3 FRAME INPUT BUFFER');this.sync.start();}}
  async step(frame,inputs,{replaying=false}={}){
   if(this.terminal||this.closed)throw Error('Melee native timeline is stopped');
   if(replaying)throw Error('Melee native menu replay is not qualified');

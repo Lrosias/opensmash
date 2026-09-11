@@ -60,7 +60,7 @@ set_property(SOURCE "${DOLPHIN}/GXRuntime/src/core/cpu_interpreter_float.c"
 set_property(SOURCE "${DOLPHIN}/GXRuntime/src/core/cpu_interpreter_float.c"
   APPEND PROPERTY COMPILE_DEFINITIONS "MELEE_EXACT_FMA=$<BOOL:${MELEE_EXACT_FMA}>")
 
-add_executable(melee main.cpp Assets.cpp)
+add_executable(melee main.cpp Assets.cpp Menu.cpp)
 if(MELEE_GAME_THIN_LTO)
   target_link_options(melee PRIVATE -flto=thin -Wl,--lto-O2
     "-Wl,--thinlto-cache-dir=${CMAKE_CURRENT_BINARY_DIR}/thinlto-cache")
@@ -83,8 +83,8 @@ target_link_options(melee PRIVATE
   -sSTACK_SIZE=4194304 -sDEFAULT_PTHREAD_STACK_SIZE=4194304
   "SHELL:--embed-file ${DOLPHIN}/Data/Sys/GC@/dolphin-sys/GC"
   -sMODULARIZE=1 -sEXPORT_NAME=createMelee -sENVIRONMENT=web,worker
-  "-sINCOMING_MODULE_JS_API=['canvas','wasmMemory','noInitialRun','locateFile','print','printErr','instantiateWasm','onAbort','onMeleeFrame','onMeleeRollback','onMeleeAssetRequest','onMeleeAssetSelection','onMeleeAssetMenu','onMeleeAssetMatch']"
-  "-sEXPORTED_FUNCTIONS=['_main','_melee_input','_melee_stats','_melee_downloaded_bytes','_melee_prepare_assets','_melee_asset_pointer','_melee_asset_commit','_melee_asset_match_ready','_melee_asset_misses','_melee_shader_count','_melee_shader_millis','_melee_shader_max','_melee_shader_cache_format','_melee_lite_effects','_melee_set_lite_effects','_melee_audio_ring','_melee_frame_ack','_melee_speed','_melee_vps','_melee_save_state','_melee_load_state','_melee_match_configure','_melee_match_configure_slots','_melee_session_configure','_melee_rb_enable','_melee_rb_command','_malloc','_free']"
+  "-sINCOMING_MODULE_JS_API=['canvas','wasmMemory','noInitialRun','locateFile','print','printErr','instantiateWasm','onAbort','onMeleeFrame','onMeleeRollback','onMeleeAssetRequest','onMeleeAssetSelection','onMeleeAssetMenu','onMeleeAssetMatch','onMeleeMenu']"
+  "-sEXPORTED_FUNCTIONS=['_main','_melee_input','_melee_stats','_melee_downloaded_bytes','_melee_prepare_assets','_melee_asset_pointer','_melee_asset_commit','_melee_asset_match_ready','_melee_asset_misses','_melee_shader_count','_melee_shader_millis','_melee_shader_max','_melee_shader_cache_format','_melee_lite_effects','_melee_set_lite_effects','_melee_audio_ring','_melee_frame_ack','_melee_speed','_melee_vps','_melee_save_state','_melee_load_state','_melee_match_configure','_melee_match_configure_slots','_melee_session_configure','_melee_rb_enable','_melee_rb_command','_melee_menu_status','_melee_menu_active','_melee_menu_layout','_malloc','_free']"
   "-sEXPORTED_RUNTIME_METHODS=['FS','callMain','ccall','UTF8ToString']")
 set_target_properties(melee PROPERTIES SUFFIX ".js"
   RUNTIME_OUTPUT_DIRECTORY "${ROOT}/build/melee-web/engine")

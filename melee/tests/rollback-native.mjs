@@ -13,7 +13,7 @@ page.on('console',m=>{if(m.type()==='error'||m.type()==='warning')events.push(m.
 if(process.env.YOUGAME_SDK_PATH)await page.route('https://yougame.co/sdk.js',r=>r.fulfill({path:process.env.YOUGAME_SDK_PATH,contentType:'text/javascript'}));
 try {
   await page.goto(process.env.MELEE_URL||'http://127.0.0.1:8197/?rollback');
-  await page.locator('#play').click();
+  /* the page boots on load */await page.waitForFunction(()=>['running','error'].includes(window.melee?.phase),null,{timeout:240000});
   await page.waitForFunction(()=>melee.displayedFrames>60||melee.errors.length,null,{timeout:120000});
   assert.deepEqual(await page.evaluate(()=>melee.errors),[]);
   const enabled=await page.evaluate(()=>melee.rollback.enable());

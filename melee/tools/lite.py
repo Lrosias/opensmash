@@ -24,6 +24,7 @@ def main():
         u32 save = mem_read32(ctx, ctx->gpr[13] - 30656u);
         mem_write16(ctx, save + 0x1868u, 0xFFFFu);
     }
+    { extern void melee_menu_major(void); melee_menu_major(); }
     /* OPENSMASH_LITE_END */
 '''
     updated = text.replace(anchor, anchor + hook)
@@ -72,13 +73,19 @@ def main():
         ('chunk_1092_text1_80225140.c', '802251B4',
          'extern void melee_asset_selection(int,int); melee_asset_selection(1,ctx->gpr[3]);'),
         ('chunk_0836_text1_801A5140.c', '801A5618',
-         'extern void melee_asset_menu(void); extern void melee_match_menu(void); melee_match_menu(); melee_asset_menu(); extern void melee_session_scene(int,int,int); melee_session_scene(1,-1,0);'),
+         'extern void melee_asset_menu(void); extern void melee_match_menu(void); melee_match_menu(); melee_asset_menu(); extern void melee_session_scene(int,int,int); melee_session_scene(1,-1,0); extern void melee_menu_css(void); melee_menu_css();'),
         ('chunk_0836_text1_801A5140.c', '801A5754',
          'extern void melee_session_scene(int,int,int); melee_session_scene(2,-1,0);'),
         ('chunk_0837_text1_801A5940.c', '801A5AF0',
          'extern void melee_session_scene(int,int,int); melee_session_scene(4,-1,0);'),
         ('chunk_0837_text1_801A5940.c', '801A5C3C',
          'extern void melee_session_scene(int,int,int); melee_session_scene(5,-1,0);'),
+        ('chunk_1861_text1_803A5940.c', '803A6048',
+         '''// The versus character select sizes the SIS text pool for its own name
+        // tags; the native mode menu draws with the same renderer (Menu.cpp).
+        extern unsigned melee_menu_sis_pool(unsigned); ctx->gpr[3] = melee_menu_sis_pool(ctx->gpr[3]);'''),
+        ('chunk_1768_text1_80377140.c', '8037750C',
+         'extern void melee_menu_tick(void*); melee_menu_tick(ctx);'),
         ('chunk_0837_text1_801A5940.c', '801A5F50',
          'extern void melee_session_result(unsigned); melee_session_result(ctx->gpr[31]+8u);'),
         ('chunk_0836_text1_801A5140.c', '801A583C',

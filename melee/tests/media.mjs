@@ -38,7 +38,7 @@ const events=[];
 page.on('console',m=>events.push({type:m.type(),text:m.text()}));
 page.on('pageerror',e=>events.push({type:'pageerror',text:String(e)}));
 await page.goto(process.env.MELEE_URL||'http://127.0.0.1:8073');
-await page.locator('#play').click();
+/* the page boots on load */await page.waitForFunction(()=>['running','error'].includes(window.melee?.phase),null,{timeout:240000});
 console.log('Started. JSON commands: {key,hold,wait,screenshot,stats,close}.');
 try {
 for await(const line of readline.createInterface({input:process.stdin})){

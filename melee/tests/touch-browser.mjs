@@ -7,14 +7,14 @@ const {chromium}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_PATH||'pl
 const server=http.createServer(async(req,res)=>{
  try{
   const name=req.url.split('?')[0].slice(1)||'index.html';
-  if(!['index.html','style.css','competitive.css','touch.mjs','touch-state.mjs','touch-stick.mjs'].includes(name))throw Error();
+  if(!['index.html','style.css','touch.mjs','touch-state.mjs','touch-stick.mjs'].includes(name))throw Error();
   let content=await readFile(new URL('../src/'+name,import.meta.url),'utf8');
   if(name==='index.html')content=content.replace('<script src="https://yougame.co/sdk.js"></script>','').replace('<script src="./engine/melee.js"></script>','')
    .replace('<script type="module" src="./app.mjs"></script>',`<script type="module">
     import {createTouch} from './touch.mjs';
     import {RESET_CHORD} from './touch-state.mjs';
     window.RESET_CHORD=RESET_CHORD;
-    document.getElementById('welcome').hidden=true;document.body.classList.add('playing');
+    document.body.classList.add('playing');
     document.getElementById('download-status').hidden=false;document.getElementById('download-label').textContent='Downloading Fox…';
     window.touch=createTouch({wakeAudio(){},leave(){window.left=(window.left||0)+1;}});touch.context(false);
    </script>`);
@@ -111,11 +111,9 @@ try{
   await page.evaluate(()=>{const gone=__pads[0];__pads.length=0;const e=new Event('gamepaddisconnected');Object.defineProperty(e,'gamepad',{value:gone});dispatchEvent(e);});
   assert.equal(await page.evaluate(()=>document.body.classList.contains('pad')),false,'the pad going away hands back');
  }
- // The header and the SDK's own overlay stay out of the way; a covered overlay reads nothing.
- assert.equal(await page.locator('header').isVisible(),false,'page header hidden while playing on touch');
- await page.evaluate(()=>{document.getElementById('competitive').hidden=false;});
- assert.equal(await page.locator('#touch-controls').isVisible(),false,'online screens cover the overlay');
- await page.evaluate(()=>{document.getElementById('competitive').hidden=true;});
+ // The adapter entry stays out of the way on a phone; a native match iframe covers the overlay.
+ await page.evaluate(()=>{const b=document.createElement('button');b.className='melee-adapter-entry';b.textContent='Use a GameCube controller';document.body.append(b);});
+ assert.equal(await page.locator('.melee-adapter-entry').isVisible(),false,'adapter entry hidden while playing on touch');
  assert.deepEqual(errors,[]);
  console.log('Browser passed: Melee touch layout, sticks, buttons, online context, controller hand-off at six viewports.');
 }finally{await browser?.close();server.close();}

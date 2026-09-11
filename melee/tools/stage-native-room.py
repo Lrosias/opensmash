@@ -12,7 +12,7 @@ import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
-RUNTIME = ('app.mjs', 'competitive-ui.mjs', 'native-launch.mjs',
+RUNTIME = ('app.mjs', 'native-launch.mjs',
            'native-match-host.mjs', 'native-match.mjs',
            'native-room-session.mjs', 'rollback-engine.mjs')
 ENGINE = ('melee.js', 'melee.wasm.gz', 'wasm.json')

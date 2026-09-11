@@ -15,6 +15,9 @@
 #include "GLContextWeb.h"
 #include "WebSound.h"
 #include "Core/System.h"
+#include "Common/Logging/ConsoleListener.h"
+#include "Common/Logging/LogManager.h"
+#include <memory>
 #include "Core/State.h"
 #include "MeleeRollback.h"
 #include "VideoCommon/PerformanceMetrics.h"
@@ -61,9 +64,11 @@ EM_ASYNC_JS(void, melee_yield_frame, (), {
   });
 });
 
+extern "C" int melee_menu_capture(int, int, float, float);
 extern "C" EMSCRIPTEN_KEEPALIVE void melee_input(int seat, int buttons, float x, float y,
                                                 float cx, float cy, float l, float r) {
   if (seat < 0 || seat > 3 || !input_ready.load()) return;
+  if (melee_menu_capture(seat, buttons, x, y)) { buttons = 0; x = y = cx = cy = l = r = 0; }
   auto lock = ControllerEmu::EmulatedController::GetStateLock();
   for (int i = 0; i < 12; ++i)
     ciface::Touch::SetControlState(seat, static_cast<ciface::Touch::ControlID>(i), (buttons >> i) & 1);
@@ -117,6 +122,15 @@ int main(int argc, char** argv) {
   auto created = moderngekko::Runtime::Create(std::move(config));
   if (!created) { std::fprintf(stderr, "Melee initialization failed: %s\n", created.error->message.c_str()); return 1; }
   Config::SetBase(Config::MAIN_STATICRECOMP_IDLE_PC, 0x8034B164u);
+  for (int i = 2; i < argc; ++i)
+    if (std::string_view(argv[i]) == "log")
+      // `?log`: the game's own OSReport lines (assertions, panics) reach the console.
+      if (auto* log = Common::Log::LogManager::GetInstance()) {
+        log->RegisterListener(Common::Log::LogListener::CONSOLE_LISTENER, std::make_unique<ConsoleListener>());
+        log->EnableListener(Common::Log::LogListener::CONSOLE_LISTENER, true);
+        log->SetEnable(Common::Log::LogType::OSREPORT_HLE, true);
+        log->SetConfigLogLevel(Common::Log::LogLevel::LNOTICE);
+      }
   Config::SetBase(Config::MAIN_FAST_DISC_SPEED, true);
   Config::SetBase(Config::MAIN_CPU_THREAD, !melee_rb_mode.load());
   if (melee_rb_mode) {

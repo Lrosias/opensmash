@@ -4,7 +4,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>OpenSmash Melee</title>
 <link rel="stylesheet" href="./style.css">
-<link rel="stylesheet" href="./competitive.css">
 <body>
   <div id="play-surface">
   <canvas id="canvas" width="640" height="480" aria-label="OpenSmash Melee"></canvas>
@@ -30,24 +29,7 @@
   </section>
   <aside id="download-status" hidden aria-label="Game downloads"><span id="download-icon" aria-hidden="true"></span><span id="download-label" role="status" aria-live="polite"></span><span id="download-detail"></span><button id="download-retry" hidden>Retry</button><i id="download-bar" aria-hidden="true"></i></aside>
   </div>
-  <header aria-label="Game tools"><output id="metrics"></output><div><button id="report">Report</button><button id="controls">Controls</button><button id="fullscreen">Fullscreen</button></div></header>
-  <section id="welcome" aria-labelledby="game-title">
-    <img class="title-art" src="./opening-v3.jpg" alt="" fetchpriority="high">
-    <h1 id="game-title" class="sr-only">OpenSmash Melee</h1>
-    <main class="menu-content">
-      <p class="mode-label">LOCAL VERSUS <span aria-hidden="true">·</span> 1–4 PLAYERS</p>
-      <div class="play-area">
-        <button id="play"><span aria-hidden="true">▶</span><span id="play-label">Play Melee</span></button>
-        <button id="online">Online · Casual / Ranked / Friends</button>
-        <button id="welcome-controls">Set up controls</button>
-        <div id="loading" hidden><div class="progress-track"><div id="progress-bar"></div></div><p id="progress-detail"></p></div>
-        <p id="status" role="status">Menus first · fighters and stages download as you pick them</p>
-        <button id="welcome-retry" hidden>Retry download</button>
-      </div>
-    </main>
-  </section>
-  <section id="competitive" class="competitive" aria-label="Competitive Melee" hidden></section>
-  <dialog id="report-dialog"><h2>Performance report</h2><p>Copy this report after playing a match to compare performance in the hosted player.</p><textarea id="report-text" readonly aria-label="Performance report"></textarea><p id="report-status" role="status"></p><div><button id="copy-report">Copy report</button><button id="close-report">Close</button></div></dialog>
+  <p id="status" role="status" class="sr-only">Loading OpenSmash Melee</p>
   <script src="https://yougame.co/sdk.js"></script>
   <script src="./engine/melee.js"></script>
   <script type="module" src="./app.mjs"></script>

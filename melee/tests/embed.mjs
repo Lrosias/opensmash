@@ -28,13 +28,11 @@ try {
    await frame.locator('.title-art').evaluate(img=>img.decode());
    await page.screenshot({path:new URL(prefix+'-opening.png',out).pathname});
  }
- await frame.locator('#play').click();
+ await frame.waitForFunction(()=>['running','error'].includes(window.melee?.phase),null,{timeout:240000});
  const child=page.frames().find(f=>f.url().startsWith(new URL(target).origin));
  await child.waitForFunction(()=>window.melee?.samples?.at(-1)?.presents>180,{},{timeout:240000});
- await frame.getByRole('button',{name:'Report',exact:true}).click();
- const performanceReport=JSON.parse(await frame.locator('#report-text').inputValue());
+ const performanceReport=await frame.evaluate(()=>({engineSha256:window.melee.engineSha256,samples:window.melee.samples,phase:window.melee.phase}));
  if(!performanceReport.engineSha256||!performanceReport.samples.length)throw Error('Performance report is incomplete');
- await frame.getByRole('button',{name:'Close',exact:true}).click();
  if(await child.evaluate(()=>document.activeElement?.id==='report'))throw Error('Report retained keyboard focus');
  await frame.locator('#canvas').click();
  await page.keyboard.press('m');

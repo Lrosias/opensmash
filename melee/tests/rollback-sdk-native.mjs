@@ -35,7 +35,7 @@ try {
   }
   await Promise.all(pages.map(async page=>{
     await page.goto(process.env.MELEE_URL||'http://127.0.0.1:8197/?rollback=boot');
-    await page.locator('#play').click();
+    /* the page boots on load */await page.waitForFunction(()=>['running','error'].includes(window.melee?.phase),null,{timeout:240000});
     await page.waitForFunction(()=>window.melee?.rollbackBoot||window.melee?.errors.length,null,{timeout:120000});
   }));
   report.initial=await Promise.all(pages.map(p=>p.evaluate(()=>melee.rollbackBoot)));

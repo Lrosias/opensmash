@@ -25,7 +25,7 @@ const events=[];
 page.on('console',m=>events.push({type:m.type(),text:m.text()}));
 page.on('pageerror',e=>events.push({type:'error',text:String(e)}));
 try {
-  await page.goto('http://127.0.0.1:8073');await page.locator('#play').click();
+  await page.goto('http://127.0.0.1:8073');/* the page boots on load */await page.waitForFunction(()=>['running','error'].includes(window.melee?.phase),null,{timeout:240000});
   await page.waitForTimeout(28000);
   const {targetInfos}=await cdp.send('Target.getTargets');
   const sessions=[];
