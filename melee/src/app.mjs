@@ -6,7 +6,8 @@ import {NativeRollbackEngine} from './rollback-engine.mjs';
 import {startRollbackLab} from './rollback-lab.mjs';
 import {MeleeCompetitiveUI} from './competitive-ui.mjs';
 import {MeleeMatchAdapter} from './competitive-adapter.mjs';
-import {createNativeMatch} from './native-match.mjs';
+import {createNativeMatch,createNativeSession} from './native-match.mjs';
+import {MeleeNativeRoomSession} from './native-room-session.mjs';
 import {mountAdapterControls} from '../../controllers/gc-adapter-ui.mjs';
 import {readAdapterMenu} from '../../controllers/controller-menu.mjs';
 import {meleePad} from '../../controllers/gc-adapter.mjs';
@@ -15,7 +16,8 @@ const adapter=mountAdapterControls({before:$('controls')});
 $('controls').previousElementSibling.classList.add('melee-adapter-entry');
 const matchSound=document.createElement('button');matchSound.textContent='Enable sound';matchSound.hidden=true;
 $('controls').before(matchSound);
-matchSound.onclick=()=>state.competitive.session?.adapter?.engine?.resumeAudio?.().catch(()=>{});
+matchSound.onclick=()=>{const session=state.competitive.session;(session?.engine??session?.adapter?.engine)?.resumeAudio?.().catch(()=>{});};
+const leaveOnline=document.createElement('button');leaveOnline.textContent='Leave online';leaveOnline.hidden=true;$('controls').before(leaveOnline);
 const state = window.melee = {phase:'idle', errors:[], samples:[], module:null, displayedFrames:0};
 let input, audio, node, assetLoader, lastFrame=0;
 state.assetBlocked=false;
@@ -23,6 +25,19 @@ state.frameGaps=[];
 state.competitive=new MeleeCompetitiveUI({root:$('competitive'),sdk:window.YouGame,readMenu:()=>readAdapterMenu(adapter),onLocal:()=>$('online').focus()});
 fetch('./engine/wasm.json').then(r=>{if(!r.ok)throw Error('The Melee build could not load.');return r.json();}).then(manifest=>{
   if(!/^[a-f0-9]{64}$/.test(manifest.sha256))throw Error('Invalid Melee build identity.');
+  state.competitive.setNativeAdapter((room,onError)=>{
+    setupInput();$('welcome').hidden=true;document.body.classList.add('playing');leaveOnline.hidden=false;input.show();
+    return new MeleeNativeRoomSession({room,build:manifest.sha256,createEngine:createNativeSession,
+      readPorts:()=>{const snapshot=adapter.snapshot();return Array.from({length:4},(_,i)=>readSeat(i,snapshot));},onError,
+      onStatus:status=>{
+        if(typeof status==='string'){$('metrics').textContent=status;return;}
+        if(status.event==='audio')matchSound.hidden=status.running;
+        if(status.event==='download'&&status.name)$('metrics').textContent=`${status.name} · ${Math.round(status.loaded/(status.total||1)*100)}%`;
+        else if(status.event==='stall')$('metrics').textContent='Waiting for the connection…';
+        else if(status.event==='overload')$('metrics').textContent='This device is running below game speed';
+        else if(['resume','recovered'].includes(status.event))$('metrics').textContent='Online · 3-frame input buffer';
+      }});
+  });
   state.competitive.setAdapter(room=>{setupInput();return new MeleeMatchAdapter({room,build:manifest.sha256,createEngine:createNativeMatch,
     input:(_frame,localIndex=0)=>readSeat(localIndex),onStatus:status=>{
       if(status.event==='audio')matchSound.hidden=status.running;
@@ -32,6 +47,11 @@ fetch('./engine/wasm.json').then(r=>{if(!r.ok)throw Error('The Melee build could
       else if(['resume','recovered'].includes(status.event))$('metrics').textContent='Online · 3-frame input buffer';
     }});},manifest.sha256);
 }).catch(error=>{state.competitive.notice=error.message;state.competitive.render();});
+state.competitive.onNativeLeave=()=>{
+  leaveOnline.hidden=true;matchSound.hidden=true;input?.hide();
+  if(!state.module){$('welcome').hidden=false;document.body.classList.remove('playing');}
+};
+leaveOnline.onclick=()=>state.competitive.handle('back','');
 $('online').onclick=()=>{if(window.YouGame?.input)setupInput();input?.hide();state.competitive.show();};
 window.YouGame?.ui?.onChange(layout=>{
   $('competitive').classList.toggle('host-layout-ready',['ready','standalone'].includes(layout.status));

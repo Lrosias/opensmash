@@ -1,0 +1,87 @@
+{
+  "scope": "Local immutable staging only; native/hosted runtime qualification is separate",
+  "sourceCommit": "f9a79a77d832a98e664936a724f2d8585dbd1fec",
+  "engineSourceCommit": "9389ce126c3addf841374ca89f4e6aa6e6332027",
+  "release": "/Volumes/OpenSmashBuilds/publisher/build/melee-friends-departure-20260911",
+  "releaseTreeSha256": "e6199c393318ef01ae2682b6b48cce7b823c1b62d59bdb9299317e46c0b264a9",
+  "candidate": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-session-20260911-card-r2/candidate",
+  "enginePackage": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-qa-20260911-card-r2/stage/engine",
+  "nativeProvenance": {
+    "path": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-session-20260911-card-r2/provenance.json",
+    "sha256": "4f758f22771879ae9d167ec1dd58f40d223fe8527d3537e08760f9dd0f8d562e",
+    "size": 14008
+  },
+  "loader": {
+    "codec": "http-gzip",
+    "path": "melee.wasm.gz",
+    "sha256": "e7e6cfaf1cc448cecc65ff34ac934c5fc7db2497e439d91c5746d25f5ccb7fa4",
+    "transferBytes": 20440251,
+    "decodedBytes": 138047568
+  },
+  "compression": "Existing HTTP gzip package; no Brotli sidecars",
+  "runtimePaths": [
+    "app.mjs",
+    "competitive-ui.mjs",
+    "native-launch.mjs",
+    "native-match-host.mjs",
+    "native-match.mjs",
+    "native-room-session.mjs",
+    "rollback-engine.mjs"
+  ],
+  "directory": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-room-final-app-20260911-r2/melee",
+  "treeSha256": "267f577bcf46734ff7b482b991687f0126353e916e52373cdc03d9c42683d068",
+  "fileCount": 1244,
+  "unchangedFileCount": 1234,
+  "changed": [
+    {
+      "path": "app.mjs",
+      "sha256": "4be8b4066a12a695a4ab5e42a266015311b458310a6524fe788c37e63f2fdbaa",
+      "size": 15064
+    },
+    {
+      "path": "competitive-ui.mjs",
+      "sha256": "fd72321137369c72f8f4448ebe2f53e59ab7acbfece7234dc25a2a42c30b4500",
+      "size": 25546
+    },
+    {
+      "path": "engine/melee.js",
+      "sha256": "ad299abdc13ac7f59db3ec706d4c047c1523830bf192cb0af80254bf56f95b7c",
+      "size": 360281
+    },
+    {
+      "path": "engine/melee.wasm.gz",
+      "sha256": "bfb39920830d6103ba3575111720b487df58ac173bfbfa58e25abf50b4042adc",
+      "size": 20440251
+    },
+    {
+      "path": "engine/wasm.json",
+      "sha256": "8386a015047a36d1008b4080d5d74c2479b6e89e70b6afb500b2cf50bc35c3f7",
+      "size": 170
+    },
+    {
+      "path": "native-launch.mjs",
+      "sha256": "e8b7c0859948bc2929df26b4af4bafa0177d691cf023350c0dc4b9b3a72ee8a2",
+      "size": 998
+    },
+    {
+      "path": "native-match-host.mjs",
+      "sha256": "955149e2a4598b44d29232d7cd3fc096f594d9294aa5f6d0a0b4468609dadce3",
+      "size": 4635
+    },
+    {
+      "path": "native-match.mjs",
+      "sha256": "2afed49501852d8a7023d87d362959b98c0e81fb9c53d7bc5e7d81e8f49dee0a",
+      "size": 2981
+    },
+    {
+      "path": "native-room-session.mjs",
+      "sha256": "e1cab0533ff70edd7957febfc4d5874ef5cd4a40a1bdc3c98c4c157cd26e75ff",
+      "size": 16060
+    },
+    {
+      "path": "rollback-engine.mjs",
+      "sha256": "342f5a1969c532cf8093472f6967eb71fefd15a0540b7bc0c3dee529a890461d",
+      "size": 4850
+    }
+  ]
+}

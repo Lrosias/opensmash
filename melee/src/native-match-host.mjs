@@ -2,12 +2,12 @@ import {createAssetLoader} from './asset-loader.mjs';
 import {instantiateEngine} from './wasm-loader.mjs';
 import {createShaderCache} from './shader-cache.mjs';
 import {NativeRollbackEngine} from './rollback-engine.mjs';
-import {STAGES,validSelection} from './competitive-rules.mjs';
+import {nativeLaunch} from './native-launch.mjs';
 let module,engine,loader,audio,port,booted=false,shaderCache,engineSha256,failed;
 const status=value=>port.postMessage({status:value});
 async function boot(launch) {
   if(booted)throw Error('A Melee match can only boot once.');booted=true;
-  if(!launch||!STAGES.some(s=>s.id===launch.stage)||!Array.isArray(launch.selections)||launch.selections.length<2||launch.selections.length>4||!launch.selections.every(validSelection))throw Error('Invalid Melee match configuration.');
+  const {session,slots,mask,groups}=nativeLaunch(launch);
   if(!crossOriginIsolated||!WebAssembly.Suspending||!WebAssembly.promising)throw Error('Online Melee requires Chrome with shared memory and WebAssembly promise integration.');
   const canvas=document.getElementById('canvas'),display=canvas.getContext('bitmaprenderer');
   const memory=new WebAssembly.Memory({initial:4096,maximum:32768,shared:true});
@@ -26,22 +26,23 @@ async function boot(launch) {
   shaderCache=createShaderCache(module,engineSha256);await shaderCache.restore();
   loader=await createAssetLoader(module,memory,p=>status({event:'download',name:p.name,loaded:p.completed,total:p.total,error:p.error}));
   loader.background=false;
-  await Promise.race([failed,Promise.all(['menu','match','stage:'+launch.stage,...launch.selections.map(s=>'fighter:'+s.fighter)].map(key=>loader.group(key,0)))]);
-  const slots=launch.slots??launch.selections.map((_,i)=>i);
-  if(slots.length!==launch.selections.length||new Set(slots).size!==slots.length||slots.some(s=>!Number.isInteger(s)||s<0||s>3))throw Error('Invalid Melee controller ports.');
-  const choices=Array.from({length:4},()=>({fighter:0,color:0}));
-  slots.forEach((slot,i)=>{choices[slot]=launch.selections[i];});
-  const mask=slots.reduce((m,slot)=>m|(1<<slot),0);
-  if(typeof module._melee_match_configure_slots!=='function'||!module._melee_match_configure_slots(launch.seed,launch.stage,mask,...choices.flatMap(p=>[p.fighter,p.color])))throw Error('The Melee engine rejected the player slots.');
+  await Promise.race([failed,Promise.all(groups.map(key=>loader.group(key,0)))]);
+  if(session) {
+    if(typeof module._melee_session_configure!=='function'||!module._melee_session_configure(mask))throw Error('The Melee engine rejected the native session ports.');
+  } else {
+    const choices=Array.from({length:4},()=>({fighter:0,color:0}));
+    slots.forEach((slot,i)=>{choices[slot]=launch.selections[i];});
+    if(typeof module._melee_match_configure_slots!=='function'||!module._melee_match_configure_slots(launch.seed,launch.stage,mask,...choices.flatMap(p=>[p.fighter,p.color])))throw Error('The Melee engine rejected the player slots.');
+  }
   audio=new AudioContext({sampleRate:48000,latencyHint:'interactive'});
   await audio.audioWorklet.addModule('./audio-worklet.js');
   new AudioWorkletNode(audio,'melee-audio',{outputChannelCount:[2],processorOptions:{memory,pointer:module._melee_audio_ring()}}).connect(audio.destination);
   // Autoplay permission must never hold the simulation's startup barrier.
   void audio.resume().then(()=>status({event:'audio',running:audio.state==='running'})).catch(()=>{});
   status({event:'audio',running:audio.state==='running'});
-  status({event:'boot',name:'Starting your match'});
-  const initial=engine.enable();
-  module.callMain([new URL('./assets/',location.href).href,'rollback']);
+  status({event:'boot',name:session?'Starting native menus':'Starting your match'});
+  const initial=session?engine.waitForBoot():engine.enable();
+  module.callMain([new URL('./assets/',location.href).href,session?'rollback-boot':'rollback']);
   return Promise.race([initial,failed]);
 }
 window.addEventListener('message',event=>{

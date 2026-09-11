@@ -5,6 +5,9 @@
 
 // Host control is deliberately outside serialized emulation state.
 inline std::atomic<bool> melee_rb_mode{false};
+// Immutable session ports are configured before main; zero preserves legacy mode.
+inline std::atomic<unsigned> melee_session_mask{0};
+inline std::atomic<bool> melee_main_started{false};
 inline std::atomic<bool> melee_rb_enabled{false};
 inline std::atomic<bool> melee_rb_replaying{false};
 // Mixer serialization updates fields read by the browser audio producer.

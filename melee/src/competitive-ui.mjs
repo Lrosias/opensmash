@@ -1,6 +1,7 @@
 import {CompetitiveSet,FIGHTERS,STAGES,MELEE_RULES,COMPETITIVE_PROTOCOL,rankPresentation} from './competitive-rules.mjs';
 import {MeleeCompetitiveRoom} from './competitive-room.mjs';
 import {MeleePartyMatch} from './party-match.mjs';
+import {NATIVE_MENU_PROTOCOL} from './native-room-session.mjs';
 import {GameLobby} from '../../controllers/online-lobby.mjs';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fighter=id=>FIGHTERS.find(f=>f.id===id)?.name??'Choosing…';
@@ -24,6 +25,7 @@ export class MeleeCompetitiveUI {
   }
   // Production wiring is explicit: an awaited SDK alone cannot initialize Melee.
   setAdapter(factory,build){if(typeof factory!=='function'||typeof build!=='string'||!build)throw Error('Supply a match adapter and exact build identity');this.adapterFactory=factory;this.build=build;this.render();if(this.invited&&!this.room)this.connect('friends');}
+  setNativeAdapter(factory){if(typeof factory!=='function')throw Error('Supply a native menu adapter');this.nativeFactory=factory;}
   show(){this.root.hidden=false;this.render();this.root.querySelector('h1')?.focus();}
   hide(){this.root.hidden=true;this.onLocal();}
   moveFocus(dx,dy){
@@ -58,6 +60,7 @@ export class MeleeCompetitiveUI {
     else if(!this.padAt||now-this.padAt>220){this.moveFocus(Math.abs(x)>Math.abs(y)?Math.sign(x):0,Math.abs(y)>=Math.abs(x)?Math.sign(y):0);this.padAt=now;}
   }
   render(){
+    if(this.screen==='native'){this.root.innerHTML='';this.root.hidden=true;return;}
     const focused=this.root.contains(document.activeElement)?document.activeElement.dataset.key:null;
     let body;
     if(this.screen==='setup')body=this.setup();
@@ -80,12 +83,12 @@ export class MeleeCompetitiveUI {
   rankCard(){const rank=rankPresentation(this.platformResult);return `<aside class="comp-panel comp-rank"><p class="comp-eyebrow">YOUR RANK</p><h2>${esc(rank?.label??'Make your mark.')}</h2><p>${esc(rank?.detail??'Complete 5 rated sets to earn your first rank. Your existing rank is available on the uGames ladder.')}</p><p class="comp-muted">Bronze → Silver → Gold → Platinum → Diamond → Challenger</p><p class="comp-muted">Ranked sets affect your rating once. Casual and Friends never show a competitive rating.</p></aside>`;}
   queues(){const unavailable=!this.adapterFactory;return `<div class="comp-heading"><p class="comp-eyebrow">ONLINE / FIND A MATCH</p><h1 tabindex="-1">Your next set starts here.</h1><p>Join a lobby, then choose your fighters together.</p></div>
     <div class="comp-columns"><main><div class="comp-modes">${[
-      ['casual','Casual','Find your rhythm.','Random competitive stages. Keep playing, or change your fighter.'],
+      ['casual','Casual','Find your rhythm.','Choose fighters, rules and stages in Melee. Keep playing through its normal results screen.'],
       ['ranked','Ranked','Play the set.','Best of three. Stage strikes, counterpicks, and a rating that follows your results.'],
       ['friends','Friends','Run it back together.','Invite a friend through uGames. Private games never change your rating.'],
     ].map(([id,name,line,detail])=>`<article class="comp-mode"><p class="comp-eyebrow">${name.toUpperCase()}</p><h2>${line}</h2><p>${detail}</p>${button(name,'queue',id,`class="comp-primary" ${unavailable||this.connecting?'disabled':''}`)}</article>`).join('')}</div>
     ${unavailable?'<p class="comp-notice">Online play is being upgraded. Explore the full competitive flow below while the match connection is prepared.</p>':''}
-    <div class="comp-preview-actions">${button('Preview Ranked flow','preview','ranked')}${button('Preview Casual flow','preview','casual')}${button('Preview Friends flow','preview','friends')}</div></main>${this.rankCard()}</div>`;}
+    <div class="comp-preview-actions">${button('Preview Ranked flow','preview','ranked')}</div></main>${this.rankCard()}</div>`;}
   playerCards(s){return `<div class="comp-players">${s.selections.map((p,i)=>`<article class="comp-player ${this.model?.actor===i?'is-turn':''}"><div><p class="comp-eyebrow">P${i+1}${this.preview?' · PREVIEW':''}</p><h2>${esc(this.names[i])}</h2><p>${esc(fighter(p?.fighter))}${p?` · Costume ${p.color+1}`:''}</p></div><strong aria-label="${esc(this.names[i])} wins">${s.scores[i]}</strong></article>`).join('')}</div>`;}
   setScreen(){
     if(this.roundResult&&(this.roundResult.void||this.model?.state.phase!=='complete')){
@@ -167,7 +170,7 @@ export class MeleeCompetitiveUI {
   }
   perform(action){if(this.preview)this.model.apply(this.model.actor,action);else this.session?.action(action);}
   leaveLobby(){
-    this.session?.stop();this.session=null;this.lobby?.destroy();this.lobby=null;
+    this.session?.stop();this.session=null;this.onNativeLeave?.();this.lobby?.destroy();this.lobby=null;
     if(this.room&&this.roomClose)this.room.off('close',this.roomClose);
     this.room?.leave();this.room=null;this.model=null;this.connecting=false;
     this.sdk.multiplayer?.leave?.();
@@ -190,17 +193,27 @@ export class MeleeCompetitiveUI {
   }
   async connect(queue){
     if(!this.adapterFactory||this.connecting)return;
+    if(queue!=='ranked'&&!this.nativeFactory){this.notice='Native online play is still loading.';this.render();return;}
     this.connecting=true;this.preview=false;const attempt=this.attempt=(this.attempt??0)+1;this.render();
     try {
-      const room=await this.sdk.multiplayer.joinLobby({players:queue==='friends'?4:2,minPlayers:2,maxLocalPlayers:queue==='friends'?4:1,mode:COMPETITIVE_PROTOCOL,compatibility:this.build,queue});
+      const room=await this.sdk.multiplayer.joinLobby({players:queue==='friends'?4:2,minPlayers:2,maxLocalPlayers:queue==='friends'?4:1,mode:queue==='ranked'?COMPETITIVE_PROTOCOL:NATIVE_MENU_PROTOCOL,compatibility:this.build,queue});
       if(attempt!==this.attempt){room.leave();return;}
       this.room=room;this.invited=false;this.screen='lobby';this.root.hidden=false;
       this.roomClose=()=>{
         this.lobby?.destroy();
         if(this.platformResult)return;
-        this.session?.stop();this.session=null;this.room=null;this.screen='queues';this.notice='You left the lobby.';this.root.hidden=false;this.render();
+        this.session?.stop();this.session=null;this.onNativeLeave?.();this.room=null;this.screen='queues';this.notice='You left the lobby.';this.root.hidden=false;this.render();
       };
       room.on('close',this.roomClose);
+      if(queue!=='ranked'){
+        this.screen='native';this.model=null;this.platformResult=null;this.roundResult=null;this.render();
+        this.session=this.nativeFactory(room,error=>{
+          if(this.room!==room)return;
+          this.leaveLobby();this.screen='queues';this.notice=error?.message||String(error);this.root.hidden=false;this.render();
+        });
+        return;
+      }
+      // Ranked retains its existing rules/striking path until native integration.
       this.lobby=new GameLobby({room,protocol:COMPETITIVE_PROTOCOL+':lobby',validSelection:p=>p&&Number.isInteger(p.fighter)&&FIGHTERS.some(f=>f.id===p.fighter)&&Number.isInteger(p.color)&&p.color>=0&&p.color<4,
         onChange:()=>{if(this.screen==='lobby')this.render();},onError:error=>{this.notice=error.message;this.render();},onStart:participants=>this.beginRound(participants)});
       for(const p of room.localParticipants??[])this.lobby.pick(p.id,this.selection);
