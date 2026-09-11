@@ -1,5 +1,7 @@
 # Competitive online: original Smash64 and Smash64 Remix
 
+Since 2026-09-11 the native Online scene is the only entry: the browser "Competitive online" button and its mode picker were removed (see `docs/native-online-entry-removal-2026-09-11.md`). Evidence below about the browser picker's keyboard/touch fighter selection and queue routes predates that removal.
+
 Both editions share the same online lifecycle: select a fighter, choose Casual / Ranked / Friends, connect through the uGames lobby and Ready barrier, play, agree on confirmed game results, and use the platform result card's Continue action for another set. Ranked is best of three; after a game the winner locks their fighter first and the loser counterpicks second. Dream Land is the only ranked stage. Tied ranked games replay with locked characters. Casual/Friends play one game and use a deterministic shuffled stage bag before repeats. Ranks and placements come from platform result events; casual ratings are hidden.
 
 The built-in profile controls the complete edition, including native launch flags, legal inputs, queue identity, and number of stocks:

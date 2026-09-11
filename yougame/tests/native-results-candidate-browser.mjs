@@ -53,8 +53,8 @@ try{
   await page.evaluate(()=>{resultFixture.rawPads=[0,256];});await page.waitForFunction(()=>nativeEvidence.original.remixMenu.humans===3);
   await page.evaluate(()=>{resultFixture.rawPads=[0,0];nativeEvidence.savedMenu=structuredClone(nativeEvidence.original.remixMenu);});
   await page.screenshot({path:path.join(out,`${mobile?'phone':'desktop'}-local-before.png`)});
-  await page.getByRole('button',{name:'Competitive online',exact:true}).click();assert.equal(await gc.isVisible(),false);
-  await page.locator('[data-fighter="58"]').click();await page.getByRole('button',{name:/^Casual /}).click();
+  // Native Online scene through the engine's menu bridge; no browser picker exists.
+  await page.evaluate(()=>document.querySelector('iframe').contentWindow.Module.onYouGameMenu(6,0));
   await page.waitForFunction(()=>resultFixture.syncs.length===1);
   const cases=[];
   for(const [index,winner] of [0,1,-1,-2].entries()){
@@ -74,7 +74,7 @@ try{
    cases.push({winner,call:await page.evaluate(()=>nativeEvidence.calls.at(-1)),animatedImage:true,layout});
    if(index<3){await page.evaluate(()=>resultFixture.room.ready());await page.waitForFunction(n=>resultFixture.syncs.length===n,index+2);}
   }
-  await page.evaluate(()=>resultFixture.room.emit('leave',{}));await page.getByRole('button',{name:'Back to local play',exact:true}).click();assert.equal(await gc.isVisible(),true);
+  await page.evaluate(()=>resultFixture.room.emit('leave',{}));await gc.waitFor({state:'visible'});assert.equal(await gc.isVisible(),true);
   assert.equal(await page.locator('iframe').count(),1);assert.equal(await page.locator('#competitive').isVisible(),false);
   assert.deepEqual(await page.evaluate(()=>{const m=document.querySelector('iframe').contentWindow.Module;return {same:m===nativeEvidence.original,menu:m.remixMenu,saved:nativeEvidence.savedMenu,exports:nativeEvidence.originalExports,results:m.remixResults||null};}),await page.evaluate(()=>({same:true,menu:nativeEvidence.savedMenu,saved:nativeEvidence.savedMenu,exports:0,results:null})));
   // The native CSS intentionally debounces the preceding port-join selection.
