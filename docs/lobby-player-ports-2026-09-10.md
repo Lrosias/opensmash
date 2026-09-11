@@ -1,8 +1,8 @@
 # OpenSmash64 game-owned online lobby
 
 Implementation is isolated in `codex/lobby-player-ports` from release-source
-`791f280`. Runtime candidates are staged, not published. No source export,
-listing write, or production API/migration has been performed by this owner.
+`791f280`. The reviewed source was merged as `d572058` in Lrosias/opensmash
+(PR 1), and all three runtime editions were published after explicit user approval.
 
 Friends joins YouGame membership immediately at the native mode selection.
 The game renders character selection, live participant slots, local readiness
@@ -96,3 +96,31 @@ Local evidence: `/private/tmp/opensmash-native-network-result.json`,
 The platform generic network acceptance separately completed casual/private matches
 and a three-game ranked report sequence, observed one final callback, and verified
 both ranked clients disconnected while casual/private lobbies remained usable.
+
+
+## Published release
+
+Original 1.7 uses upload `25569caff2024fa19e2d51162243bc32`; Remix 2.6 uses
+`79374f449f9443338581be17aa11b900`; Melee 1.10 uses
+`4ab160a4970b4c9987c3211c64e89175`. These are minor updates retaining game IDs,
+origins, listings and ranked ladders. The platform migration, web and Rooms
+Workers were deployed before publishing the games; plugin 1.17.0 is published.
+
+Hosted game modules match the reviewed candidates, and native Wasm executable
+sections match after allowing YouGame hosting marks. Exact engine, app, BUILD
+and SDK hashes are in
+`/Users/luis/Documents/YouGame-Library-Lobby-Retrofit-20260911/opensmash-release.json`.
+The source build directory remains isolated while external-drive migration is
+coordinated. Future controller updates must preserve this release's native
+four-port exports, frozen participant ownership and game-owned lobby flow.
+
+
+A hosted follow-up found that the game-side GameCube adapter entry overlapped
+Online in a narrow embedded player. It is now hidden when the platform owns
+controller setup; YouGame Controls remains available and standalone setup remains.
+Independent review and nine hosted checks (all three editions at 375, 1000 and
+1280 pixels) confirmed normal pointer activation of Online/Friends into the
+alone game lobby, with no errors. These are narrow desktop viewports, not an
+assertion of physical mobile hardware. Native engines and input mappings are
+unchanged by this UI patch. The actual hosted Original match separately passed
+four humans across two sandbox accounts with 92 agreeing native frames.
