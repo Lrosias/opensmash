@@ -2,7 +2,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 index aa14103..7ac3450 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -926,13 +926,10 @@ elseif (EMSCRIPTEN)
+@@ -926,13 +926,12 @@ elseif (EMSCRIPTEN)
          -sMAX_WEBGL_VERSION=2
          -sGL_ENABLE_GET_PROC_ADDRESS=1
          -sALLOW_MEMORY_GROWTH=1
@@ -17,6 +17,8 @@ index aa14103..7ac3450 100644
 +        # 256 MiB upload buffer. Start at 192 MiB; keep growth enabled for
 +        # larger scenes and measure the high-water mark in browser tests.
 +        -sINITIAL_MEMORY=192MB
++        # SESSION mode uses a frame-derived clock; existing modes forward it.
++        -Wl,--wrap=osGetTime,--wrap=osGetCount,--wrap=scVSBattleStartScene
          -sSTACK_SIZE=8388608
          -sFORCE_FILESYSTEM=1
          -sEXPORTED_RUNTIME_METHODS=FS,callMain

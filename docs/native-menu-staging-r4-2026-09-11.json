@@ -1,0 +1,36 @@
+{
+  "scope": "Local staging only; no upload or publication",
+  "sourceCommit": "f3f7cec1b8d7b2e1971778395527c240f83b7459",
+  "fingerprint": "SHA-256 of sorted relative paths plus NUL and bytes, with app BUILD placeholder before substitution; includes every staged asset",
+  "editions": {
+    "remix": {
+      "directory": "/Volumes/OpenSmashBuilds/publisher/build/native-menu-session-app-20260911-r4/remix",
+      "base": "/Volumes/OpenSmashBuilds/lobby/build/lobby-remix",
+      "candidate": "/Volumes/OpenSmashBuilds/publisher/build/native-menu-session-20260911/remix-result-places-r1/candidate",
+      "build": "947f62553b1ce1c5",
+      "files": 90,
+      "changed": [
+        {
+          "path": "app.mjs",
+          "sha256": "0d0aa1154717736a134d9e0ff555b28b45867718e0accbc663092be597881f65",
+          "size": 15538
+        },
+        {
+          "path": "engine/BattleShip.js",
+          "sha256": "6281563e7972eebad551444e6e610547472b6f8e3ebc78fad6700718cf5c4c66",
+          "size": 411859
+        },
+        {
+          "path": "engine/BattleShip.wasm",
+          "sha256": "3994e4f59942ea671af6fcdea5e0823e6057541fdcc1e51629b3812b9eb0549f",
+          "size": 8292453
+        },
+        {
+          "path": "native-room-session.mjs",
+          "sha256": "2e25f77987d65477e08bd4a34c0fe2ddd523f1b66a062f4f5f6dc60a092a7f13",
+          "size": 12724
+        }
+      ]
+    }
+  }
+}

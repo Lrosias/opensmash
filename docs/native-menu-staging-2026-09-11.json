@@ -1,0 +1,65 @@
+{
+  "scope": "Local staging only; no upload or publication",
+  "sourceCommit": "fb84dc9",
+  "fingerprint": "SHA-256 of sorted relative paths plus NUL and bytes, with app BUILD placeholder before substitution; includes every staged asset",
+  "editions": {
+    "original": {
+      "directory": "/Volumes/OpenSmashBuilds/publisher/build/native-menu-session-app-20260911/original",
+      "base": "/Volumes/OpenSmashBuilds/lobby/build/lobby-original",
+      "candidate": "/Volumes/OpenSmashBuilds/publisher/build/native-menu-session-20260911/original/candidate",
+      "build": "8f9eb0a284c95a2d",
+      "files": 62,
+      "changed": [
+        {
+          "path": "app.mjs",
+          "sha256": "78d9c83008ed1aa61a743025745f30e618c7b0a8462aa806bd0d340074e7fc2c",
+          "size": 15538
+        },
+        {
+          "path": "engine/BattleShip.js",
+          "sha256": "290396061feb43813acfe6f5511e41dee88eb36e2c976bccc2f01c3d2a98749b",
+          "size": 409620
+        },
+        {
+          "path": "engine/BattleShip.wasm",
+          "sha256": "1480d4fe20b9d7f5e228b42329a564c2c6068bdb27a91443156879416f716691",
+          "size": 8408928
+        },
+        {
+          "path": "native-room-session.mjs",
+          "sha256": "e83e9447460319d7af2d74bdaa10ab375c8a446c10a1b64b1e77eee3bb00ac91",
+          "size": 11220
+        }
+      ]
+    },
+    "remix": {
+      "directory": "/Volumes/OpenSmashBuilds/publisher/build/native-menu-session-app-20260911/remix",
+      "base": "/Volumes/OpenSmashBuilds/lobby/build/lobby-remix",
+      "candidate": "/Volumes/OpenSmashBuilds/publisher/build/native-menu-session-20260911/remix-r2/candidate",
+      "build": "530cde43b398422b",
+      "files": 90,
+      "changed": [
+        {
+          "path": "app.mjs",
+          "sha256": "aa51801f93b5058af7c97f0271fb127374559c425a158fd2a9111b82ad6110d1",
+          "size": 15538
+        },
+        {
+          "path": "engine/BattleShip.js",
+          "sha256": "5185098dcfa074857710ba16505be2f64e947f0e859a91d1618a83fb0d53a14d",
+          "size": 411392
+        },
+        {
+          "path": "engine/BattleShip.wasm",
+          "sha256": "bd7ccdfba04c8db6c3a886435bdaa621ac543d57c54faf2800097f9f3e4a1dde",
+          "size": 8289655
+        },
+        {
+          "path": "native-room-session.mjs",
+          "sha256": "e83e9447460319d7af2d74bdaa10ab375c8a446c10a1b64b1e77eee3bb00ac91",
+          "size": 11220
+        }
+      ]
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import {NativeRoomSession,nativeSessionParams,prepareNativeSessionEngine} from './native-room-session.mjs';
 import {GameLobby} from '../../controllers/online-lobby.mjs';
 import {readAdapterMenu} from '../../controllers/controller-menu.mjs';
 import {createMatchClock} from './match-clock.mjs';
@@ -17,11 +18,12 @@ const matchClock=createMatchClock();
 document.title=ACTIVE_PROFILE.title+' · uGames';
 let lobby=null,matchParticipants=null,lastResult=null;
 let fighter=0, stage=6, queueKind=0, busy=false, room=null, session=null, set=null, menu=null, battle=null, presentation=null, generation=0, platformLobby=false,resultsPresentation=false;
+let onlineMenu='custom';
 let menuState={phase:0,text:'',revision:0};
 const engines=new Map(),listeners=[],rotationSeeds=new WeakMap(),settledRounds=new WeakMap();
 const touch=createTouch({wakeAudio:()=>{engineAudioContext((battle||menu)?.contentWindow)?.resume().catch(()=>{});},leave:()=>cleanup('YOU LEFT THE MATCH',6)});
-const competitive=createCompetitiveUI({readController:()=>readAdapterMenu(adapter),onQueue:queue=>{if(busy)return;queueKind={casual:0,ranked:1,friends:2}[queue];online();},onJoinInvite:()=>{queueKind=3;online();},onBack:()=>{cleanup();competitive.hide();menu?.contentWindow.focus();},onPick:choice=>{try{set?.choose(choice);}catch(e){set?.fail(e.message);}},onSelection:(id,choice)=>lobby?.pick(id,choice),onReady:id=>lobby?.toggleReady(id),onStart:()=>lobby?.start(),onReturnLobby:event=>{clearPresentation();if(event.ranked||!room){cleanup();showSetup();return;}lastResult=null;set?.destroy();set=null;showMenu();lobby?.resume();}});
-const onlineEntry=document.createElement('button');onlineEntry.id='online-entry';onlineEntry.textContent='Competitive online';onlineEntry.onclick=()=>{if(!busy){touch.clear();showSetup();window.focus();}};document.getElementById('play-surface').append(onlineEntry);
+const competitive=createCompetitiveUI({readController:()=>readAdapterMenu(adapter),onQueue:queue=>{if(busy)return;queueKind={casual:0,ranked:1,friends:2}[queue];online('custom');},onJoinInvite:()=>{queueKind=3;online();},onBack:()=>{cleanup();competitive.hide();menu?.contentWindow.focus();},onPick:choice=>{try{set?.choose(choice);}catch(e){set?.fail(e.message);}},onSelection:(id,choice)=>lobby?.pick(id,choice),onReady:id=>lobby?.toggleReady(id),onStart:()=>lobby?.start(),onReturnLobby:event=>{clearPresentation();if(event.ranked||!room){cleanup();showSetup();return;}lastResult=null;set?.destroy();set=null;showMenu();lobby?.resume();}});
+const onlineEntry=document.createElement('button');onlineEntry.id='online-entry';onlineEntry.textContent='Competitive online';onlineEntry.onclick=()=>{if(!busy){onlineMenu='custom';touch.clear();showSetup();window.focus();}};document.getElementById('play-surface').append(onlineEntry);
 function showSetup(){competitive.setup();}
 function status(text,phase=menuState.phase){
  menuState={phase,text,revision:menuState.revision+1};
@@ -39,11 +41,13 @@ function disconnect(){
  const old=room;room=null;old?.leave();window.YouGame?.multiplayer?.leave();busy=false;onlineEntry.hidden=false;platformLobby=false;
 }
 function clearPresentation(){const old=presentation;presentation=null;resultsPresentation=false;document.body.classList.remove('native-results');removeEngine(old);if(menu)menu.hidden=false;}
-function cleanup(message='',phase=0){clearPresentation();disconnect();showMenu();showSetup();if(message)competitive.notice(message);status(message,phase);}
+// The native online scene already owns its mode picker. Resume that same scene
+// when it started the search; the optional browser entry keeps its own picker.
+function cleanup(message='',phase=0){clearPresentation();disconnect();if(onlineMenu==='native')competitive.hide();showMenu();if(onlineMenu!=='native'){showSetup();if(message)competitive.notice(message);}status(message,phase);}
 function listen(r,event,handler){r.on(event,handler);listeners.push([r,event,handler]);}
 function createEngine(params,duel=null,result=null){
  const frame=document.createElement('iframe');frame.title=duel?'OpenSmash64 online battle':result?'OpenSmash64 native results':'OpenSmash64 native menus';frame.allow='autoplay; gamepad; fullscreen';
- const input=createInput({adapter,allowStart:!duel,readTouch:()=>touch.read(),enabled:()=>!competitive.visible&&!platformLobby});input.attach(window);
+ const input=createInput({adapter,allowStart:!duel||duel.nativeMenu,readTouch:()=>touch.read(),enabled:()=>!competitive.visible&&!platformLobby});input.attach(window);
  engines.set(frame,{input,duel,result});frame.src=`./engine/index.html?${params}`;document.getElementById('game').append(frame);return frame;
 }
 function launch(fighters,duel){
@@ -52,15 +56,19 @@ function launch(fighters,duel){
  const params=engineParams({battle:{fighters,stage:duel.stage,participants:duel.participants},seed:duel.seed});
  battle=createEngine(params,duel);status('LOADING MATCH',3);
 }
+function launchNative(owner,token){
+ clearPresentation();competitive.hide();touch.clear();removeEngine(battle);menu.hidden=true;engineAudioContext(menu.contentWindow)?.suspend().catch(()=>{});
+ battle=createEngine(nativeSessionParams({participants:owner.participants,seed:owner.seed,profile:ACTIVE_PROFILE}),owner);engines.get(battle).bootToken=token;status('LOADING ONLINE CHARACTER SELECT',1);
+}
 function menuAction(action,value){
  if(resultsPresentation||(platformLobby&&menuState.phase===4))return;
  const token=generation;
  // Do not remove an engine from inside its C -> JS callback.
  setTimeout(()=>{
   if(token!==generation||resultsPresentation||(platformLobby&&menuState.phase===4))return;
-  if(action===6){queueKind=value;online();window.focus();}
-  else if(action===5){queueKind=(value>>8)&255;online();window.focus();}
-  else if(action===1){queueKind=value>>8;online();window.focus();}
+  if(action===6){queueKind=value;online('native');window.focus();}
+  else if(action===5){queueKind=(value>>8)&255;online('native');window.focus();}
+  else if(action===1){queueKind=value>>8;online('native');window.focus();}
   else if(action===2)cleanup();
   else if(action===3 && room && !room.playing){status('WAITING FOR OPPONENT',5);room.ready();}
   else if(action===4){cleanup();if(!window.YouGame?.multiplayer?.invite)online();}
@@ -69,7 +77,7 @@ function menuAction(action,value){
 window.openSmashAttachEngine=win=>{
  const frame=[...engines.keys()].find(f=>f.contentWindow===win);
  if(!frame)throw new Error('Unexpected game frame');
- const {input,duel,result}=engines.get(frame);let pads=[[0,0,0],[0,0,0]],nativeState=null;input.attach(win);
+ const {input,duel,result,bootToken}=engines.get(frame);let pads=[[0,0,0],[0,0,0]],nativeState=null;input.attach(win);
  const resumeAudio=()=>engineAudioContext(win)?.resume().catch(()=>{});
  win.addEventListener('pointerdown',resumeAudio,true);win.addEventListener('keydown',resumeAudio,true);
  // Own controller mapping in menus too; SDL must not also interpret the same keys.
@@ -77,8 +85,12 @@ window.openSmashAttachEngine=win=>{
  for(const kind of ['keydown','keyup'])win.addEventListener(kind,e=>{e.preventDefault();e.stopImmediatePropagation();},true);
  return {
   menuState:()=>menuState,
-  menuAction:result?()=>{}:menuAction,
+  menuAction:result||duel?.nativeMenu?()=>{}:menuAction,
   async ready(raw){
+   if(duel?.nativeMenu){
+    try{const driver=await prepareNativeSessionEngine(raw,{owner:duel,cancelled:()=>duel.closed||bootToken!==duel.bootToken,getState:()=>nativeState,getMeta:()=>win.Module.yougameSession,setPads:p=>{pads=p;}});if(driver)duel.attach(driver,bootToken);}catch(error){duel.fail(error.message);}
+    if(!duel.closed)win.focus();return;
+   }
    if(result){
     if(frame!==presentation||room!==result.room||set?.round!==result.round)return;
     // callMain yields before the first menu scene is initialized. Let that
@@ -100,7 +112,7 @@ window.openSmashAttachEngine=win=>{
    if(duel)try{const driver=await prepareRollbackEngine(raw,{getState:()=>nativeState,setPads:p=>{pads=p;},cancelled:()=>duel.closed});if(driver)duel.attach(driver);}catch(e){duel.fail(e.message);}
    if(!duel?.closed&&!touch.active()&&!competitive.visible&&!platformLobby)win.focus();
   },
-  beforeTick(){if(result)return frame===presentation&&(result.booting||resultsPresentation&&!frame.hidden);if(!duel){onlineEntry.hidden=busy||![7,9,16].includes(win.Module.nativeScene);if(competitive.visible&&!resultsPresentation)return false;if(platformLobby&&busy&&!room?.playing&&!resultsPresentation)return false;if(!frame.hidden)touch.context(false,win.Module.nativeScene);return !frame.hidden;}return !duel.closed;},
+  beforeTick(){if(result)return frame===presentation&&(result.booting||resultsPresentation&&!frame.hidden);if(!duel){onlineEntry.hidden=busy||![7,9,16].includes(win.Module.nativeScene);if(competitive.visible&&!resultsPresentation)return false;if(platformLobby&&busy&&!room?.playing&&!resultsPresentation)return false;if(!frame.hidden)touch.context(false,win.Module.nativeScene);return !frame.hidden;}if(duel.nativeMenu){touch.context(false,win.Module.nativeScene);return !duel.closed&&duel.stepping;}return !duel.closed;},
   afterTick(...args){nativeState=args;},
   readPorts(ptr,H){const local=duel?null:(result||competitive.visible||platformLobby||resultsPresentation)?[[0,0,0],[0,0,0],null,null]:input.readPorts();for(let i=0;i<4;i++){
    const p=duel?pads[i]:local[i];const base=(ptr>>2)+i*4;
@@ -127,6 +139,9 @@ function startRound(r,round,participants=matchParticipants){
 }
 function bind(r){
  if(room===r)return;room=r;
+ if(r.queue!=='ranked'){
+  competitive.hide();session=new NativeRoomSession({room:r,build:BUILD,profile:ACTIVE_PROFILE,launch:launchNative,readPorts:()=>engines.get(battle)?.input.readPorts()||[],onStatus:text=>status(text,1),onError:message=>cleanup(message,6)});return;
+ }
  lobby=new GameLobby({room:r,protocol:COMPETITIVE_MODE+':lobby-v1',validSelection:validFighter,onChange:view=>{view.capacity=r.queue==='private'?4:2;if((!r.playing||view.waitingNext)&&!lastResult)competitive.lobby(view);},onStart:participants=>{matchParticipants=participants;lastResult=null;startRound(r,r.round,participants);},onError:error=>{competitive.notice(error.message);}});
  listen(r,'leave',player=>{
   if(r.playing&&matchParticipants&&!matchParticipants.some(p=>p.connectionId===player?.id))return;
@@ -152,24 +167,25 @@ function bind(r){
 
 }
 
-async function online(){
+async function online(entry=onlineMenu){
  if(busy)return;
+ onlineMenu=entry;
  if(!window.YouGame?.multiplayer?.joinLobby){status('ONLINE UNAVAILABLE',6);return;}
  platformLobby=false;competitive.hide();
  busy=true;onlineEntry.hidden=true;touch.clear();
  if(platformLobby)window.focus();
  status(queueKind===2?'CREATING FRIEND LOBBY':queueKind===3?'JOINING FRIEND ROOM':queueKind===1?'SEARCHING RANKED':'SEARCHING CASUAL',1);const token=++generation;
  try{
-  const options={players:queueKind>=2?4:2,minPlayers:2,maxLocalPlayers:queueKind>=2?4:1,compatibility:BUILD+':slots-v1',mode:COMPETITIVE_MODE,queue:queueKind===1?'ranked':queueKind>=2?'friends':'casual',onStatus:s=>{
+  const options={players:queueKind>=2?4:2,minPlayers:2,maxLocalPlayers:queueKind>=2?4:1,compatibility:BUILD+(queueKind===1?':slots-v1':':native-menu-v1'),mode:COMPETITIVE_MODE,queue:queueKind===1?'ranked':queueKind>=2?'friends':'casual',onStatus:s=>{
    if(token!==generation){s.room?.leave();return;}
    if(s.room)bind(s.room);
   }};
   const r=await YouGame.multiplayer.joinLobby(options);
   if(token!==generation){r.leave();return;}bind(r);
- }catch(e){if(token===generation){console.warn(e);cleanup(e.message==='Cancelled'?'CANCELLED':'COULD NOT CONNECT',6);}}
+ }catch(e){if(token===generation){console.warn(e);cleanup(e.message==='Cancelled'?'':'COULD NOT CONNECT',e.message==='Cancelled'?0:6);}}
 }
 window.addEventListener('pagehide',disconnect);
 const params=engineParams();
 try{if(window.YouGame){await YouGame.ready();if(YouGame.multiplayer.invite){queueKind=3;params.set('SSB64_START_SCENE','16');params.set('SSB64_YOUGAME_INVITE','1');}}}catch(e){console.warn(e);}
 menu=createEngine(params);
-if(window.YouGame?.multiplayer?.invite){queueKind=3;online();window.focus();}
+if(window.YouGame?.multiplayer?.invite){queueKind=3;online('native');window.focus();}
