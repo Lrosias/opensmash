@@ -1,0 +1,14 @@
+{
+  "release": "/Volumes/OpenSmashBuilds/publisher/build/melee-friends-departure-20260911",
+  "releaseTreeSha256": "e6199c393318ef01ae2682b6b48cce7b823c1b62d59bdb9299317e46c0b264a9",
+  "candidate": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-session-20260911-card-r1/candidate",
+  "enginePackage": "/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-qa-20260911-card-r1/stage/engine",
+  "sourceCommit": "f9a79a77d832a98e664936a724f2d8585dbd1fec",
+  "wasmSha256": "9e48682ea0370512b14b43be4b174369fa5b9c741a911301cd355f5c8854ee86",
+  "jsSha256": "ad299abdc13ac7f59db3ec706d4c047c1523830bf192cb0af80254bf56f95b7c",
+  "enginePackagePins": {
+    "melee.js": "ad299abdc13ac7f59db3ec706d4c047c1523830bf192cb0af80254bf56f95b7c",
+    "melee.wasm.gz": "59c436584f72a439c1e59e4de2abe4b8076b3431a177c7569912150da32e31b3",
+    "wasm.json": "43d5286263b8f6b44c98a1f771c5eb613e4ac041a6b182e755fe3ee98082e830"
+  }
+}
