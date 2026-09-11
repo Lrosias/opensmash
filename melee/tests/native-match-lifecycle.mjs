@@ -16,23 +16,11 @@ try {
   });
   assert.equal(cancellation.iframes,0);assert.match(cancellation.message,/closed/);
   await page.unroute('**/match.html');
-  await page.route('**/match.html',r=>r.fulfill({contentType:'text/html',body:`<!doctype html><script>window.addEventListener('message',e=>{if(e.data.kind==='melee-native-port'){const p=e.ports[0];p.onmessage=({data})=>{if(data.method==='boot')p.postMessage({id:data.id,value:{frame:1,checksum:'test'}});};}});</script>`}));
-  const stalled=await page.evaluate(async()=>{
-    const {createNativeMatch}=await import('./native-match.mjs');const {MeleeMatchAdapter}=await import('./competitive-adapter.mjs');
-    const abort=new AbortController(),engine=await createNativeMatch({},()=>{},abort.signal);
-    const pending=engine.step([]).catch(()=>{});
-    const adapter=new MeleeMatchAdapter({room:{players:[{id:'a'},{id:'b'}],round:1,rollbackAsync(){}},build:'test'});
-    adapter.engine=engine;adapter.bootAbort=abort;adapter.sync={stop:()=>pending};
-    const start=performance.now();await adapter.stop();
-    return {ms:performance.now()-start,iframes:document.querySelectorAll('.native-match').length};
-  });
-  assert.ok(stalled.ms<1000);assert.equal(stalled.iframes,0);
-  await page.unroute('**/match.html');
   await page.route('**/engine/melee.js',r=>r.fulfill({contentType:'text/javascript',body:'window.createMelee=options=>{options.instantiateWasm({},()=>{});return new Promise(()=>{});};'}));
   await page.route('**/engine/wasm.json',r=>r.fulfill({status:503,body:'Unavailable'}));
   const failure=await page.evaluate(async()=>{
     const {createNativeMatch}=await import('./native-match.mjs');const start=performance.now();
-    try{await createNativeMatch({stage:31,selections:[{fighter:2,color:0},{fighter:20,color:0}]});return {resolved:true};}
+    try{await createNativeMatch({nativeSession:true,slots:[0,1]});return {resolved:true};}
     catch(error){return {message:error.message,ms:performance.now()-start,iframes:document.querySelectorAll('.native-match').length};}
   });
   assert.match(failure.message,/manifest.*unavailable|metadata|manifest|engine.*unavailable/i);

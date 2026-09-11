@@ -31,22 +31,27 @@ are recorded in [PORT-COMPARISON.md](PORT-COMPARISON.md).
 
 ## Play
 
-The **Online** entry now includes fighter setup, ranked set preparation and
-counterpicks, casual stage rotation and rank/result presentation. Its explicitly
-labelled flow previews work while live Melee queues wait for the native match
-adapter and uGames update. See [COMPETITIVE.md](COMPETITIVE.md) for rules, verification
-and the integration contract.
+The page boots straight into Melee. A native mode menu, drawn with the game's
+own SIS text renderer over the versus character select, offers **LOCAL VERSUS**
+and **ONLINE** (**FRIENDS**, **CASUAL**, **RANKED**); the stick or D-pad moves,
+A selects, B goes back, and B on an empty roster returns to the menu. Online
+games boot a second engine in an iframe on Melee's own character select, stage
+select and results, through `MeleeNativeRoomSession`; the platform's lobby owns
+membership and invitations. The native screen shows the platform's status line
+(searching, waiting, failed) with BACK and TRY AGAIN. There is no browser title
+screen, no HTML mode picker and no HTML lobby or set screens any more; Escape or
+the touch "Hold to leave" leaves an online session.
 
-The title screen uses generated artwork matching the listing thumbnail: Onett,
-Kirby, the purple Ice Climber and the yellow/blue OpenSmash Melee title. Live HTML
-buttons and loading progress sit over `src/opening-v3.jpg`; the generation prompt
-and original PNG are in `media/opening-v3-prompt.md` and `media/opening-v3.png`.
+`melee/engine/Menu.cpp` runs the menu on the CPU thread from the
+`HSD_PadRenewMasterStatus` hook (lite.py) and calls the recompiled SIS text
+functions through the module dispatcher; while it is open the game sees neutral
+pads. `?log` on the page routes the game's own OSReport lines to the console.
 
 Use current desktop Chrome: the engine needs WebAssembly promise integration,
 shared memory and WebGL 2. `yougame.json` enables the supported embedded isolation
-policy. Unsupported browsers show a capability message. Click Play to start audio
-and enter the roster. Use Report to capture measurements, or Controls to remap
-keys and assign controllers. Local versus supports four SDK seats.
+policy. Unsupported browsers show a capability message. Sound starts on the first
+click or key press. The platform's Controls panel remaps keys and assigns
+controllers. Local versus supports four SDK seats.
 
 The default keyboard follows [Slippi Dolphin's built-in bindings](https://github.com/project-slippi/Ishiiruka/blob/slippi/Source/Core/Core/HW/GCPadEmu.cpp#L142).
 
@@ -72,39 +77,8 @@ ordinary gamepad’s 127-unit range. Raw GameCube adapter input bypasses this pa
 Previously saved YouGame
 control overrides take precedence; reset those in Controls to use these defaults.
 Additional players use controllers; their default keyboard bindings are empty.
-Physical controllers have not been validated; test controllers exercise the
-standard Gamepad API.
-
-## Phones
-
-`src/touch.mjs` draws the OpenSmash64 touch scheme with Melee's buttons on any
-device with a coarse pointer (`?touch=1` forces it on a desktop for layout work):
-a control stick on the left, the C-stick and A / B / Jump (X) / Grab (Z) /
-Shield (R) on the right, Taunt (D-pad up) above the stick, Start and a
-"Reset match" button (hold L+R+A and press Start, so pause first) in the top
-right. The overlay reads into port 1 beside the SDK seat in `readSeat`
-(`withTouch` in `app.mjs`): buttons merge, a deflected touch stick replaces that
-stick, and the triggers follow Shield (there is no L: light shield and L-cancel
-use R on the overlay). An upright phone turns `#play-surface`
-(the canvas, the online match iframe and the overlay) 90°, as the 64 edition
-does; the online screens cover the overlay while they are open, and in a session
-the reset gives way to a hold-to-leave. The last input picks the scheme: a
-pressed Bluetooth pad or a page-owned GameCube adapter hides the overlay and
-gives the picture the whole screen; a touch on the picture brings it back.
-
-The engine itself still needs WebAssembly promise integration, so phones run
-Melee only where their browser has it (Chrome 137+ on Android). Safari on iOS
-26.2 has no JSPI and shows the capability message at Play.
-
-Tests: `node --test melee/tests/touch-controls.test.mjs` (pointer handlers in a
-vm), `melee/tests/touch-browser.mjs` (layout, sticks, buttons and controller
-hand-off at six phone viewports without the engine) and
-`melee/tests/touch-native-browser.mjs` (a served build with the real engine;
-touch events must reach `_melee_input` on port 1). The browser tests take
-`PLAYWRIGHT_PATH` and `PLAYWRIGHT_CHROMIUM` like `keyboard-browser.mjs`.
-`melee/tools/package-touch-update.mjs <released-package> <out>` overlays this
-checkout's `melee/src` and `controllers/` on a released package without
-rebuilding the engine, for wrapper-only releases.
+Physical controllers and mobile have not been validated; test controllers
+exercise the standard Gamepad API.
 
 ## Build and upload
 
@@ -126,6 +100,9 @@ streaming upload helper accepts the full build with an MCP upload token; its old
 raw-ZIP API has a smaller limit. A browser upload also works.
 
 Run `python3 melee/tools/serve.py --port 8075` for local play. Test utilities:
+`tests/native-menu-browser.mjs` drives the native mode menu on the real engine
+and screenshots it; `tests/native-room-app-browser.mjs` drives the online flow
+through the menu callback with fixture transport and engines.
 `node melee/tests/keyboard.mjs` validates the rectangle input math;
 `tests/media.mjs` exercises keyboard and standard controller input in an isolated,
 headed Chromium session and captures metrics/media; `tests/embed.mjs` tests the

@@ -14,11 +14,9 @@ test('normal-menu session preserves sparse ports and preloads no forced choices'
     assert.throws(()=>nativeLaunch({nativeSession:true,slots}),/controller ports/);
 });
 
-test('legacy match still validates choices and preloads its exact assets',()=>{
-  assert.throws(()=>nativeLaunch({slots:[0,1]}),/match configuration/);
-  const result=nativeLaunch({stage:31,selections:[{fighter:2,color:0},{fighter:0,color:0}],slots:[1,3]});
-  assert.equal(result.session,false);assert.equal(result.mask,10);
-  assert.deepEqual(result.groups,['menu','match','stage:31','fighter:2','fighter:0']);
+test('only native sessions can boot; frozen picks are not a launch any more',()=>{
+  assert.throws(()=>nativeLaunch({slots:[0,1]}),/native Melee sessions/);
+  assert.throws(()=>nativeLaunch({stage:31,selections:[{fighter:2,color:0},{fighter:0,color:0}],slots:[1,3]}),/native Melee sessions/);
 });
 
 test('native lifecycle is exposed without treating stale legacy stock fields as a result',async()=>{
