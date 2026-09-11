@@ -22,10 +22,10 @@ test('global ports preserve holes and local controller indices; native bootstrap
  const params=nativeSessionParams({participants:members,seed:9,profile});assert.equal(params.get('SSB64_BOOT_SLOTS'),'hoho');assert.equal(params.get('SSB64_BOOT_BATTLE'),'-1,-1,6,0,-1,-1');assert.equal(params.get('SSB64_YOUGAME_SESSION'),'1');
  assert.throws(()=>nativeRoster([...members,{...members[1],id:'bad'}]));assert.throws(()=>nativePads(members,{a:[[1,200,0]]}));
 });
-test('all engines prepare before host auto-begin; fixed delay and scoped traffic retain global ports',async()=>{
+test('all engines prepare before host auto-begin; automatic buffering and scoped traffic retain global ports',async()=>{
  const p=pair();try{assert.equal(p.rooms[0].begins,0);await flush();p.sessions.forEach(s=>s.pulse());await flush();
   assert.equal(p.rooms[0].begins,1);assert.ok(p.sessions.every(s=>s.running));
-  for(const room of p.rooms){const sync=room.syncs[0];assert.equal(sync.options.delay,2);assert.equal(sync.options.hz,60);assert.deepEqual(sync.options.input(),room.me==='a'?[[0x1000,1,2]]:[[0x8000,3,4]]);sync.options.step(0,{a:[[0x1000,0,0]],b:[[0x8000,0,0]]});assert.deepEqual(p.engines[p.rooms.indexOf(room)].steps[0],[[0x1000,0,0],null,[0x8000,0,0],null]);sync.receive('b',{_ls:1,nativeScope:'stale'});assert.equal(sync.received.length,0);}
+  for(const room of p.rooms){const sync=room.syncs[0];assert.equal(sync.options.delay,'auto');assert.equal(sync.options.hz,60);assert.deepEqual(sync.options.input(),room.me==='a'?[[0x1000,1,2]]:[[0x8000,3,4]]);sync.options.step(0,{a:[[0x1000,0,0]],b:[[0x8000,0,0]]});assert.deepEqual(p.engines[p.rooms.indexOf(room)].steps[0],[[0x1000,0,0],null,[0x8000,0,0],null]);sync.receive('b',{_ls:1,nativeScope:'stale'});assert.equal(sync.received.length,0);}
   assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });
