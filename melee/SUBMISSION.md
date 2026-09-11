@@ -1,8 +1,10 @@
 # OpenSmash Melee submission
 
-## Native mode menu v1.17 — September 11, 2026
+## Native mode menu v1.18 — September 11, 2026
 
-**v1.17 is live** at https://yougame.co/g/opensmash-melee, upload `UPLOAD_ID`,
+**v1.18 is live** at https://yougame.co/g/opensmash-melee, upload `4977401a68744c72a77af8f74314750e`
+(v1.17, upload `0508fff3df5643349b4ebed3082491cf`, shipped an older `melee.js` with the new
+wasm and failed at boot; prod pointed back at v1.16 for about 20 minutes),
 on the v1.16 assets with a rebuilt engine
 `30c94b6e53084930a2be0e8587b6a69534470502f0387b68b41adfcb600dcfcc`.
 
@@ -24,7 +26,7 @@ on the v1.16 assets with a rebuilt engine
   the real engine (screenshots of both lists, LOCAL VERSUS and the return);
   `tests/native-room-app-browser.mjs` drove casual, friends, invite, cancel and
   ranked through the menu callback with fixture transport and engines.
-- Package: `/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-20260911-r2/melee`
+- Package: `/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-20260911-r3/melee`
   (`-release.json` records the base package, commit, engine and changed files).
 
 ## Just-in-time loading v1.16 — September 11, 2026
