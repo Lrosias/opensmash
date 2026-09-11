@@ -49,7 +49,9 @@ def main():
     old=next(a for a in link if a.endswith('yougame.c.o'));link[link.index(old)]=str(out/'yougame.c.o')
     if edition=='remix':
         frozen=MAIN/'build/remix/conker-fix'
-        prior=subprocess.check_output(['git','show','HEAD:remix/main.c'],cwd=ROOT)
+        # The authored HEAD now includes session changes; compare the frozen
+        # released stub to its pre-session source, not the new candidate HEAD.
+        prior=subprocess.check_output(['git','show','063f569:remix/main.c'],cwd=ROOT)
         if prior!=(frozen/'stubs/remix_marth.c').read_bytes():raise SystemExit('Remix authored baseline differs from released source')
         shutil.copytree(frozen/'stubs',out/'source/stubs',dirs_exist_ok=args.resume);shutil.copy2(ROOT/'remix/main.c',out/'source/stubs/remix_marth.c')
         compile=json.loads((frozen/'build-commands.json').read_text())[0][:]
@@ -57,7 +59,7 @@ def main():
         if '-MF' in compile:compile[compile.index('-MF')+1]=str(out/'remix_marth.c.o.d')
         run('compile-remix-menu',compile)
         old=next(a for a in link if a.endswith('remix_marth.c.o'));link[link.index(old)]=str(out/'remix_marth.c.o')
-    link.append('-Wl,--wrap=osGetTime,--wrap=osGetCount')
+    link.append('-Wl,--wrap=osGetTime,--wrap=osGetCount,--wrap=scVSBattleStartScene')
     link[link.index('-o')+1]=str(out/'candidate/BattleShip.js');run('candidate-link',link)
     assert all(sha(Path(p))==h for p,h in inputs.items()),'Historical inputs changed during build'
     assert all(sha(Path(p))==h for p,h in source_inputs.items()),'Authored source changed during build'

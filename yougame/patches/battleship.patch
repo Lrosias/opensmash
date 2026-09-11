@@ -18,7 +18,7 @@ index aa14103..7ac3450 100644
 +        # larger scenes and measure the high-water mark in browser tests.
 +        -sINITIAL_MEMORY=192MB
 +        # SESSION mode uses a frame-derived clock; existing modes forward it.
-+        -Wl,--wrap=osGetTime,--wrap=osGetCount
++        -Wl,--wrap=osGetTime,--wrap=osGetCount,--wrap=scVSBattleStartScene
          -sSTACK_SIZE=8388608
          -sFORCE_FILESYSTEM=1
          -sEXPORTED_RUNTIME_METHODS=FS,callMain

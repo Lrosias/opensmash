@@ -44,6 +44,52 @@ int port_yougame_enabled(void) {
     if (enabled < 0) enabled = getenv("SSB64_YOUGAME") != NULL;
     return enabled;
 }
+/* A receipt follows the complete VS scene, including sudden death. The native
+ * result initializers only fill scalar/array data, so Remix can reuse them
+ * without entering the original twelve-character result renderer. */
+typedef struct {
+    unsigned int battle_id;
+    int kind, winner, present, humans, teams, no_contest, places[4];
+} YouGameNativeReceipt;
+static YouGameNativeReceipt session_receipt;
+extern void __real_scVSBattleStartScene(void);
+extern void mnVSResultsInitVars(void);
+extern void mnVSResultsSetIsPresent(void);
+extern void mnVSResultsInitRankings(void);
+extern s32 mnVSResultsGetPlace(s32 player);
+static void port_yougame_capture_native_result(void) {
+    SCBattleState *bs = &gSCManagerTransferBattleState;
+    const char *roles = getenv("SSB64_BOOT_SLOTS");
+    int assigned = 0, winners = 0, count = 0, i;
+    if (!session_battle) return;
+    mnVSResultsInitVars();
+    mnVSResultsSetIsPresent();
+    mnVSResultsInitRankings();
+    session_receipt = (YouGameNativeReceipt){0};
+    session_receipt.battle_id = session_battle;
+    session_receipt.kind = 2; /* unscored unless one representable winner */
+    session_receipt.winner = -1;
+    session_receipt.teams = !!bs->is_team_battle;
+    session_receipt.no_contest = !!gSCManagerSceneData.is_reset;
+    for (i = 0; roles && i < 4 && roles[i]; i++) if (roles[i] == 'h') assigned |= 1 << i;
+    for (i = 0; i < 4; i++) {
+        session_receipt.places[i] = -1;
+        if (bs->players[i].pkind == nFTPlayerKindNot) continue;
+        count++;
+        session_receipt.present |= 1 << i;
+        if (bs->players[i].pkind == nFTPlayerKindMan) session_receipt.humans |= 1 << i;
+        session_receipt.places[i] = mnVSResultsGetPlace(i);
+        if (session_receipt.places[i] == 0) { winners++; session_receipt.winner = i; }
+    }
+    if (!session_receipt.teams && !session_receipt.no_contest && count >= 2 && winners == 1 &&
+        session_receipt.present == assigned && session_receipt.humans == assigned) session_receipt.kind = 1;
+    else session_receipt.winner = -1;
+}
+void __wrap_scVSBattleStartScene(void) {
+    if (port_yougame_session_enabled()) session_receipt = (YouGameNativeReceipt){0};
+    __real_scVSBattleStartScene();
+    if (port_yougame_session_enabled()) port_yougame_capture_native_result();
+}
 int port_yougame_before_tick(void) {
     static int seeded = 0, menu_initialized = 0;
     if (!menu_initialized) {
@@ -90,7 +136,7 @@ void port_yougame_after_tick(void) {
             if (best < 0 || stocks[i] > stocks[best] || (stocks[i] == stocks[best] && percent[i] < percent[best])) {best = i; tied = 0;}
             else if (stocks[i] == stocks[best] && percent[i] == percent[best]) tied = 1;
         }
-        if (battle_ticks > 0 && best >= 0 && (alive <= 1 || battle_ticks >= 8*60*60)) result = tied ? 4 : best;
+        if (!port_yougame_session_enabled() && battle_ticks > 0 && best >= 0 && (alive <= 1 || battle_ticks >= 8*60*60)) result = tied ? 4 : best;
     }
     if (port_yougame_session_enabled()) {
         int seat_mask = 0;
@@ -106,8 +152,22 @@ void port_yougame_after_tick(void) {
             hash = (hash ^ (unsigned int)sMNPlayersVSSlots[i].costume) * 16777619u;
         }
         if (port_remix_session_hash) hash = (hash ^ port_remix_session_hash()) * 16777619u;
+        if (session_receipt.kind) {
+            hash = (hash ^ session_receipt.battle_id) * 16777619u;
+            hash = (hash ^ session_receipt.kind) * 16777619u;
+            hash = (hash ^ (unsigned int)session_receipt.winner) * 16777619u;
+            hash = (hash ^ session_receipt.present) * 16777619u;
+            hash = (hash ^ session_receipt.humans) * 16777619u;
+            hash = (hash ^ session_receipt.teams) * 16777619u;
+            hash = (hash ^ session_receipt.no_contest) * 16777619u;
+            for (i = 0; i < 4; i++) hash = (hash ^ (unsigned int)session_receipt.places[i]) * 16777619u;
+        }
         EM_ASM({Module.yougameSession=({scene:$0,frame:$1,battleId:$2,battleTicks:$3,hash:$4>>>0,mask:$5,stage:$6,seatMask:$7});},
                scene,session_ticks,session_battle,battle_ticks,hash,mask,gSCManagerSceneData.gkind,seat_mask);
+        EM_ASM({Module.yougameSession.receipt=($0?{battleId:$1,kind:$0===1?'winner':'unscored',winnerSlot:$0===1?$2:null,
+            participantsMask:$3,humanMask:$4,teamBattle:!!$5,noContest:!!$6,places:[$7,$8,$9,$10]}:null);},
+            session_receipt.kind,session_receipt.battle_id,session_receipt.winner,session_receipt.present,session_receipt.humans,
+            session_receipt.teams,session_receipt.no_contest,session_receipt.places[0],session_receipt.places[1],session_receipt.places[2],session_receipt.places[3]);
     }
     EM_ASM({ if (Module.onYouGameState) Module.onYouGameState($0 >>> 0,$1,$2,$3,$4,$5,$6,$7); },
            hash, result, stocks[0], stocks[1], battle_ticks, stocks[2], stocks[3], mask);
