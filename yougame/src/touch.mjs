@@ -1,18 +1,48 @@
 import {TouchState} from './touch-state.mjs';
 import {TouchStick} from './touch-stick.mjs';
-export function createTouch({wakeAudio,leave}){
+export function createTouch({wakeAudio,leave,controller=()=>false}){
  const state=new TouchState(),root=document.getElementById('touch-controls');
  const gesture=new TouchStick();
  const stick=document.getElementById('touch-stick'),thumb=document.getElementById('stick-thumb');
  const stickZone=document.getElementById('touch-stick-zone');
  const coarse=matchMedia('(any-pointer: coarse)');
  const forced=new URLSearchParams(location.search).get('touch')==='1';
- let stickPointer=null,quitPointer=null,context='',holdTimer=null,rotated=false,gameplay=false,layoutFrame=null,layoutKey='',contactGeometry='';
+ let stickPointer=null,quitPointer=null,context='',holdTimer=null,rotated=false,gameplay=false,layoutFrame=null,layoutKey='',contactGeometry='',pad=false,polled=-1e9;
  const quit=document.getElementById('touch-leave');
  const reset=document.getElementById('touch-reset');
  const buttons=[...root.querySelectorAll('[data-mask]')],pressed=new Map();
  const controlGroups=[...new Set(buttons.map(b=>b.parentElement).filter(Boolean))];
  const active=()=>forced||coarse.matches;
+ // The last input decides the scheme on a phone. Real input from a controller
+ // (a pressed button or a moved stick on a Bluetooth pad, or a GameCube adapter the
+ // page owns) hides the overlay and lets the picture fill the surface; a touch on
+ // the picture brings the overlay back, and so does the pad going away. Only the
+ // online leave hold stays visible either way, since a pad has no equivalent.
+ // `?touch=1` on a desktop always shows the overlay for layout work.
+ function pads(){
+  // [any pad connected, any pad giving input right now]
+  if(controller())return [true,true];
+  let list;try{list=navigator.getGamepads?.()||[];}catch{return [false,false];}
+  let connected=false;
+  for(const p of list){
+   if(!p?.connected)continue;connected=true;
+   if(p.buttons?.some(b=>b?.pressed)||p.axes?.some(a=>Math.abs(a)>.5))return [true,true];
+  }
+  return [connected,false];
+ }
+ function setPad(next){
+  if(next===pad)return;pad=next;clear();
+  document.body.classList.toggle('pad',pad);
+ }
+ // Events and context changes sync at once; the per-tick read() polls at most every
+ // 50 ms (input.mjs already reads the same list each tick).
+ function syncPad(force=false){
+  const now=Date.now();if(!force&&now-polled<50)return;polled=now;
+  if(!coarse.matches){setPad(false);return;}
+  const [connected,input]=pads();
+  setPad(pad?connected:input);
+ }
+ function touched(){if(pad&&!controller())setPad(false);}
  function releaseCapture(target,id){try{target.releasePointerCapture(id);}catch{}}
  function clear(){
   const captures=[...pressed];
@@ -45,7 +75,7 @@ export function createTouch({wakeAudio,leave}){
  // Orientation events can precede resize; measure again on the next frame and
  // on viewport resize so the transform and input axes use the same geometry.
  function scheduleLayout(){
-  clear();
+  clear();syncPad(true);
   if(layoutFrame!==null)return;
   layoutFrame=window.requestAnimationFrame(()=>{layoutFrame=null;layout();});
  }
@@ -62,6 +92,7 @@ export function createTouch({wakeAudio,leave}){
   if(contactGeometry&&contactGeometry!==geometry())clear();
  }
  coarse.addEventListener('change',scheduleLayout);
+ for(const event of ['gamepadconnected','gamepaddisconnected'])window.addEventListener(event,()=>syncPad(true));
  window.addEventListener('blur',clear);window.addEventListener('pagehide',clear);
  window.addEventListener('resize',scheduleLayout);
  window.addEventListener('orientationchange',scheduleLayout);
@@ -130,14 +161,20 @@ export function createTouch({wakeAudio,leave}){
  for(const event of ['pointerup','pointercancel','lostpointercapture'])quit.addEventListener(event,e=>{
   if(e.pointerId!==quitPointer)return;quitPointer=null;releaseCapture(quit,e.pointerId);clearTimeout(holdTimer);quit.classList.remove('holding');
  });
- layout();
+ layout();syncPad(true);
  return {
-  read:()=>{if(!active())return [0,0,0];if(stickPointer!==null||quitPointer!==null||pressed.size)syncContacts();return state.read();},clear,active,
+  read:()=>{syncPad();if(!active()||pad)return [0,0,0];if(stickPointer!==null||quitPointer!==null||pressed.size)syncContacts();return state.read();},clear,active,
+  /** True while a controller replaces the overlay on a touch device. */
+  get pad(){return pad;},
+  /** Re-check the controller now (the adapter claims and releases without a gamepad event). */
+  sync(){syncPad(true);},
+  /** The player touched the picture: touch is the last input, so the overlay returns. */
+  touched,
   context(online,scene){
    gameplay=online||[22,52,53,54].includes(scene);
    // VS, 1P and bonus battles use the native reset chord. Training has its own menu.
    const canReset=!online&&[22,52,53].includes(scene);
-   const key=`${online}:${gameplay}:${canReset}`;if(key===context)return;context=key;clear();
+   const key=`${online}:${gameplay}:${canReset}`;if(key===context)return;context=key;clear();syncPad(true);
    root.classList.toggle('gameplay',gameplay);
    document.getElementById('touch-a-label').textContent=gameplay?'Attack':'Select';
    document.getElementById('touch-b-label').textContent=gameplay?'Special':'Back';

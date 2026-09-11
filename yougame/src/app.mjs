@@ -20,7 +20,8 @@ let lobby=null,matchParticipants=null,lastResult=null;
 let fighter=0, stage=6, queueKind=0, busy=false, room=null, session=null, set=null, menu=null, battle=null, presentation=null, generation=0, platformLobby=false,resultsPresentation=false;
 let menuState={phase:0,text:'',revision:0};
 const engines=new Map(),listeners=[],rotationSeeds=new WeakMap(),settledRounds=new WeakMap();
-const touch=createTouch({wakeAudio:()=>{engineAudioContext((battle||menu)?.contentWindow)?.resume().catch(()=>{});},leave:()=>cleanup('YOU LEFT THE MATCH',6)});
+const touch=createTouch({wakeAudio:()=>{engineAudioContext((battle||menu)?.contentWindow)?.resume().catch(()=>{});},leave:()=>cleanup('YOU LEFT THE MATCH',6),controller:()=>!!adapter?.owned});
+adapter.subscribe(()=>touch.sync());
 const competitive=createCompetitiveUI({readController:()=>readAdapterMenu(adapter),onBack:()=>cleanup(),onPick:choice=>{try{set?.choose(choice);}catch(e){set?.fail(e.message);}},onSelection:(id,choice)=>lobby?.pick(id,choice),onReady:id=>lobby?.toggleReady(id),onStart:()=>lobby?.start(),onReturnLobby:event=>{clearPresentation();if(event.ranked||!room){cleanup();if(event.ranked)online();return;}lastResult=null;set?.destroy();set=null;showMenu();lobby?.resume();}});
 function status(text,phase=menuState.phase){
  menuState={phase,text,revision:menuState.revision+1};
@@ -76,7 +77,7 @@ window.openSmashAttachEngine=win=>{
  if(!frame)throw new Error('Unexpected game frame');
  const {input,duel,result,bootToken}=engines.get(frame);let pads=[[0,0,0],[0,0,0]],nativeState=null;input.attach(win);
  const resumeAudio=()=>engineAudioContext(win)?.resume().catch(()=>{});
- win.addEventListener('pointerdown',resumeAudio,true);win.addEventListener('keydown',resumeAudio,true);
+ win.addEventListener('pointerdown',e=>{resumeAudio();if(e.pointerType!=='mouse')touch.touched();},true);win.addEventListener('keydown',resumeAudio,true);
  // Own controller mapping in menus too; SDL must not also interpret the same keys.
  win.addEventListener('keydown',e=>{if(e.code==='Escape'&&duel)setTimeout(()=>cleanup('YOU LEFT THE MATCH',6),0);},true);
  for(const kind of ['keydown','keyup'])win.addEventListener(kind,e=>{e.preventDefault();e.stopImmediatePropagation();},true);

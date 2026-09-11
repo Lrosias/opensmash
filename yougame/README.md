@@ -108,6 +108,11 @@ the previous landscape surface when rotating back to portrait.
   input instead of curving upward across the center; each new touch starts fresh.
 - Desktop uses the keyboard layout above and standard gamepad controls. `?touch=1` enables the
   controller on desktop for layout testing.
+- On a phone the last input picks the scheme. A button press or stick move on a connected
+  controller (or an owned GameCube adapter) hides the stick and buttons and lets the picture
+  fill the rotated surface; touching the picture brings them back, and so does the pad going
+  away. Only **Hold to leave** remains during online matches. `?touch=1` keeps the overlay
+  regardless.
 
 The local-only `tests/mobile-harness.html?touch=1` fixture runs a real CPU battle with
 the same touch/input modules. Serve `yougame/` on a separate localhost port to use it.

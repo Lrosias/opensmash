@@ -30,6 +30,9 @@ body.touch{--stick-gutter:clamp(110px,calc(16 * var(--play-vw)),168px);--stick-i
 #touch-leave.holding{background:linear-gradient(90deg,#a52222 50%,#242424 50%);background-size:200% 100%;animation:leave-hold 1.2s linear forwards}
 @keyframes leave-hold{from{background-position:100% 0}to{background-position:0 0}}
 .touch.compact .touch-actions{bottom:8px}.touch.compact #touch-stick{bottom:20px}
+/* A connected controller replaces the overlay; only the online leave hold remains. */
+.touch.pad #game{left:var(--safe-left);right:var(--safe-right)}
+.touch.pad #touch-controls>:not(.touch-top),.touch.pad .touch-top button:not(#touch-leave){display:none}
 
 #play-surface{position:relative}
 body{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px)}
