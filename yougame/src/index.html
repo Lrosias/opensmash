@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OpenSmash64 · YouGame</title><link rel="stylesheet" href="./style.css">
+<script src="https://yougame.co/sdk.js"></script></head><body>
+<div id="play-surface">
+<main id="game" aria-label="OpenSmash64"></main>
+<section id="touch-controls" aria-label="Touch controller">
+  <div class="touch-top">
+    <button id="touch-start" data-mask="4096" type="button">Start</button><button id="touch-leave" type="button" hidden>Hold to leave</button>
+  </div>
+  <div id="touch-stick-zone" role="group" aria-label="Movement stick">
+  <div id="touch-stick" aria-hidden="true"><span class="stick-arrows" aria-hidden="true">＋</span><span id="stick-thumb"></span></div>
+  </div>
+  <div class="touch-actions">
+    <button class="touch-button jump" data-mask="8" type="button" aria-label="Jump"><b>Jump</b></button>
+    <button class="touch-button special" data-mask="16384" type="button" aria-label="B Special or back"><b>B</b><span id="touch-b-label">Back</span></button>
+    <button class="touch-button attack" data-mask="32768" type="button" aria-label="A Attack or select"><b>A</b><span id="touch-a-label">Select</span></button>
+    <button class="touch-button shield" data-mask="8192" type="button" aria-label="Shield"><b>Shield</b></button>
+    <button class="touch-button grab" data-mask="16" type="button" aria-label="Grab"><b>Grab</b></button>
+  </div>
+</section>
+</div>
+<p id="status" role="status" class="sr-only">Loading OpenSmash64</p>
+<script type="module" src="./app.mjs"></script></body></html>

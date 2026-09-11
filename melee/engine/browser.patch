@@ -1,0 +1,951 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1036,3 +1036,7 @@
+     add_test(NAME moderngekko.dolphin_shader
+              COMMAND moderngekko_dolphin_shader_test)
+ endif()
++
++if(EMSCRIPTEN AND OPENSMASH_WEB_FRONTEND)
++  add_subdirectory("${OPENSMASH_WEB_FRONTEND}" opensmash-web)
++endif()
+--- a/src/runtime/dolphin_runtime.cpp
++++ b/src/runtime/dolphin_runtime.cpp
+@@ -622,7 +622,11 @@
+   }
+   Config::SetBase(Config::MAIN_FULLSCREEN, impl->config.fullscreen);
+ 
+-  if (impl->config.headless)
++  if (impl->config.headless
++#ifdef __EMSCRIPTEN__
++      || true
++#endif
++  )
+     impl->platform = Platform::CreateHeadlessPlatform();
+ #ifdef _WIN32
+   else
+@@ -712,11 +716,19 @@
+     recomp_source = StaticRecompModuleSource::Attached(
+         reinterpret_cast<const StaticRecompModuleDesc *>(
+             impl->config.module.descriptor));
+-  recomp_source.host_call = &ModManager::HostCall;
+-  recomp_source.host_call_contains = &ModManager::HostCallContains;
+-  recomp_source.host_call_range_contains =
+-      &ModManager::HostCallRangeContains;
+-  recomp_source.host_call_user = impl->mods.get();
++#ifdef __EMSCRIPTEN__
++  // This runtime loads its mods above, before creating the CPU core. An empty
++  // manager cannot intercept any guest address; leave callbacks null so every
++  // recompiled block need not call through empty hook and patch maps.
++  if (!impl->mods->Empty())
++#endif
++  {
++    recomp_source.host_call = &ModManager::HostCall;
++    recomp_source.host_call_contains = &ModManager::HostCallContains;
++    recomp_source.host_call_range_contains =
++        &ModManager::HostCallRangeContains;
++    recomp_source.host_call_user = impl->mods.get();
++  }
+   jit.SetStaticRecompModuleSource(std::move(recomp_source));
+ 
+   s_runtime_active = true;
+--- a/vendor/dolphin/Externals/SFML/SFML/include/SFML/Config.hpp
++++ b/vendor/dolphin/Externals/SFML/SFML/include/SFML/Config.hpp
+@@ -76,7 +76,7 @@
+ // Android
+ #define SFML_SYSTEM_ANDROID
+ 
+-#elif defined(__linux__)
++#elif defined(__linux__) || defined(__EMSCRIPTEN__)
+ 
+ // Linux
+ #define SFML_SYSTEM_LINUX
+--- a/vendor/dolphin/Externals/libusb/CMakeLists.txt
++++ b/vendor/dolphin/Externals/libusb/CMakeLists.txt
+@@ -22,7 +22,9 @@
+ )
+ endif()
+ 
+-if(WIN32 OR CYGWIN)
++if(EMSCRIPTEN)
++  target_sources(usb PRIVATE libusb/libusb/os/null_usb.c)
++elseif(WIN32 OR CYGWIN)
+   target_sources(usb PRIVATE
+     libusb/libusb/os/threads_windows.c
+     libusb/libusb/os/windows_common.c
+--- a/vendor/dolphin/Externals/zlib-ng/zlib-ng/cmake/detect-arch.cmake
++++ b/vendor/dolphin/Externals/zlib-ng/zlib-ng/cmake/detect-arch.cmake
+@@ -1,3 +1,8 @@
++if(EMSCRIPTEN)
++  set(ARCH "wasm32")
++  set(BASEARCH "generic")
++  return()
++endif()
+ # detect-arch.cmake -- Detect compiler architecture and set ARCH and BASEARCH
+ # Copyright (C) 2019 Hans Kristian Rosbach
+ # Licensed under the Zlib license, see LICENSE.md for details
+--- a/vendor/dolphin/GXRuntime/src/core/cpu_interpreter_float.c
++++ b/vendor/dolphin/GXRuntime/src/core/cpu_interpreter_float.c
+@@ -1,5 +1,12 @@
+ #include "cpu_interpreter_private.h"
+ #include <string.h>
++
++#if defined(__EMSCRIPTEN__) && MELEE_EXACT_FMA
++#include "MeleeExactFma.h"
++#define runtime_fma melee_exact_fma
++#else
++#define runtime_fma fma
++#endif
+ 
+ f64 ppc_approx_rsqrt(f64 value) {
+     u64 bits = f64_bits(value);
+@@ -289,15 +296,15 @@
+     f64 result;
+ 
+     if (!single) {
+-        result = fma(a, c, addend);
++        result = runtime_fma(a, c, addend);
+     } else {
+         f64 rounded_c = force_25_bit(c);
+-        result = fma(a, rounded_c, addend);
++        result = runtime_fma(a, rounded_c, addend);
+         u64 bits = f64_bits(result);
+         if ((bits & 0x000000001FFFFFFFull) == 0x0000000010000000ull) {
+             f64 a_prime = addend - result;
+             f64 b_prime = result + a_prime;
+-            f64 error = fma(a, rounded_c, a_prime) + (addend - b_prime);
++            f64 error = runtime_fma(a, rounded_c, a_prime) + (addend - b_prime);
+             if (error != 0.0) {
+                 if ((error > 0.0) == (result > 0.0)) bits++;
+                 else bits--;
+@@ -479,11 +486,11 @@
+     FPRes result = {0.0, 0};
+ 
+     if (!single) {
+-        result.value = fma(a, c, sub ? -b : b);
++        result.value = runtime_fma(a, c, sub ? -b : b);
+     } else {
+         f64 c_round = force_25bit_c(c);
+         f64 b_sign = sub ? -b : b;
+-        result.value = fma(a, c_round, b_sign);
++        result.value = runtime_fma(a, c_round, b_sign);
+ 
+         u64 result_bits = f64_bits(result.value);
+         const u64 D_MASK = 0x000000001FFFFFFFull;
+@@ -491,7 +498,7 @@
+         if ((result_bits & D_MASK) == EVEN_TIE) {
+             f64 a_prime = b_sign - result.value;
+             f64 b_prime = result.value + a_prime;
+-            f64 delta_a = fma(a, c_round, a_prime);
++            f64 delta_a = runtime_fma(a, c_round, a_prime);
+             f64 delta_b = b_sign - b_prime;
+             f64 error = delta_a + delta_b;
+             if (error != 0.0) {
+--- a/vendor/dolphin/Source/Core/AudioCommon/AudioCommon.cpp
++++ b/vendor/dolphin/Source/Core/AudioCommon/AudioCommon.cpp
+@@ -2,6 +2,9 @@
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+ #include "AudioCommon/AudioCommon.h"
++#ifdef __EMSCRIPTEN__
++#include "WebSound.h"
++#endif
+ 
+ #include <fmt/chrono.h>
+ #include <fmt/format.h>
+@@ -30,6 +33,9 @@
+ 
+ static std::unique_ptr<SoundStream> CreateSoundStreamForBackend(std::string_view backend)
+ {
++#ifdef __EMSCRIPTEN__
++  if (backend == "WebAudio") return std::make_unique<WebSound>();
++#endif
+   if (backend == BACKEND_CUBEB && CubebStream::IsValid())
+     return std::make_unique<CubebStream>();
+   else if (backend == BACKEND_OPENAL && OpenALStream::IsValid())
+@@ -123,6 +129,9 @@
+   std::vector<std::string> backends;
+ 
+   backends.emplace_back(BACKEND_NULLSOUND);
++#ifdef __EMSCRIPTEN__
++  backends.emplace_back("WebAudio");
++#endif
+   if (CubebStream::IsValid())
+     backends.emplace_back(BACKEND_CUBEB);
+   if (AlsaSound::IsValid())
+--- a/vendor/dolphin/Source/Core/AudioCommon/Mixer.cpp
++++ b/vendor/dolphin/Source/Core/AudioCommon/Mixer.cpp
+@@ -2,6 +2,9 @@
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+ #include "AudioCommon/Mixer.h"
++#ifdef __EMSCRIPTEN__
++#include "MeleeRollback.h"
++#endif
+ 
+ #include <algorithm>
+ #include <cmath>
+@@ -215,6 +218,10 @@
+ 
+ void Mixer::PushSamples(const s16* samples, std::size_t num_samples)
+ {
++#ifdef __EMSCRIPTEN__
++  // Re-execute emulated DSP state, but do not play the same interval twice.
++  if (melee_rb_replaying.load()) return;
++#endif
+   if (IsOutputSampleRateValid())
+   {
+     // Big-endian RL-orderered stereo samples.
+@@ -238,6 +245,9 @@
+ 
+ void Mixer::PushStreamingSamples(const s16* samples, std::size_t num_samples)
+ {
++#ifdef __EMSCRIPTEN__
++  if (melee_rb_replaying.load()) return;
++#endif
+   if (IsOutputSampleRateValid())
+   {
+     // Big-endian RL-orderered stereo samples.
+--- a/vendor/dolphin/Source/Core/Common/CMakeLists.txt
++++ b/vendor/dolphin/Source/Core/Common/CMakeLists.txt
+@@ -255,7 +255,7 @@
+ else()
+   target_sources(common PRIVATE
+     Logging/ConsoleListenerNix.cpp
+-    MemArenaUnix.cpp
++    $<$<NOT:$<BOOL:${EMSCRIPTEN}>>:MemArenaUnix.cpp>
+   )
+ endif()
+ 
+--- a/vendor/dolphin/Source/Core/Common/FileUtil.cpp
++++ b/vendor/dolphin/Source/Core/Common/FileUtil.cpp
+@@ -760,6 +760,9 @@
+ 
+ static std::string CreateSysDirectoryPath()
+ {
++#ifdef __EMSCRIPTEN__
++  return "/dolphin-sys/";
++#endif
+ #if defined(_WIN32) || defined(LINUX_LOCAL_DEV)
+ #define SYSDATA_DIR "Sys"
+ #elif defined __APPLE__
+--- a/vendor/dolphin/Source/Core/Common/GL/GLContext.cpp
++++ b/vendor/dolphin/Source/Core/Common/GL/GLContext.cpp
+@@ -4,6 +4,9 @@
+ #include <memory>
+ 
+ #include "Common/GL/GLContext.h"
++#ifdef __EMSCRIPTEN__
++#include "GLContextWeb.h"
++#endif
+ 
+ #if defined(__APPLE__)
+ #include "Common/GL/GLInterface/AGL.h"
+@@ -79,6 +82,9 @@
+                                              bool prefer_gles)
+ {
+   std::unique_ptr<GLContext> context;
++#ifdef __EMSCRIPTEN__
++  context = std::make_unique<GLContextWeb>();
++#endif
+ #if defined(__APPLE__)
+   if (wsi.type == WindowSystemType::MacOS || wsi.type == WindowSystemType::Headless)
+     context = std::make_unique<GLContextAGL>();
+--- a/vendor/dolphin/Source/Core/Common/MemArena.h
++++ b/vendor/dolphin/Source/Core/Common/MemArena.h
+@@ -149,6 +149,8 @@
+   vm_address_t m_region_address = 0;
+   vm_size_t m_region_size = 0;
+ #else
++  u8* m_web_memory = nullptr;
++  size_t m_web_size = 0;
+   int m_shm_fd = 0;
+   void* m_reserved_region = nullptr;
+   std::size_t m_reserved_region_size = 0;
+--- a/vendor/dolphin/Source/Core/Common/MemoryUtil.cpp
++++ b/vendor/dolphin/Source/Core/Common/MemoryUtil.cpp
+@@ -252,7 +252,9 @@
+ 
+ size_t MemPhysical()
+ {
+-#ifdef _WIN32
++#ifdef __EMSCRIPTEN__
++  return size_t{2147483648ULL};
++#elif defined(_WIN32)
+   MEMORYSTATUSEX memInfo;
+   memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+   GlobalMemoryStatusEx(&memInfo);
+--- a/vendor/dolphin/Source/Core/Common/Thread.cpp
++++ b/vendor/dolphin/Source/Core/Common/Thread.cpp
+@@ -1,3 +1,6 @@
++#ifdef __EMSCRIPTEN__
++#include <emscripten/threading.h>
++#endif
+ // Copyright 2008 Dolphin Emulator Project
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+@@ -176,7 +179,9 @@
+ 
+ void SetCurrentThreadName(const char* name)
+ {
+-#ifdef __APPLE__
++#ifdef __EMSCRIPTEN__
++  emscripten_set_thread_name(pthread_self(), name);
++#elif defined(__APPLE__)
+   pthread_setname_np(name);
+ #elif defined __FreeBSD__ || defined __OpenBSD__
+   pthread_set_name_np(pthread_self(), name);
+--- a/vendor/dolphin/Source/Core/Common/Timer.cpp
++++ b/vendor/dolphin/Source/Core/Common/Timer.cpp
+@@ -220,7 +220,7 @@
+   // Note that Linux's CLOCK_MONOTONIC "does not count time that the system is suspended".
+   // This is in contrast to the behavior on macOS and FreeBSD.
+   static constexpr auto clock_id =
+-#if defined(__linux__)
++#if defined(__linux__) || defined(__EMSCRIPTEN__)
+       CLOCK_MONOTONIC;
+ #elif defined(__APPLE__)
+       CLOCK_UPTIME_RAW;
+--- a/vendor/dolphin/Source/Core/Core/Core.cpp
++++ b/vendor/dolphin/Source/Core/Core/Core.cpp
+@@ -2,6 +2,9 @@
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+ #include "Core/Core.h"
++#ifdef __EMSCRIPTEN__
++#include "MeleeRollback.h"
++#endif
+ 
+ #include <algorithm>
+ #include <atomic>
+@@ -857,6 +860,9 @@
+   // settings that depend on it, such as GPU determinism mode. should have
+   // override options for testing,
+   bool new_want_determinism = system.GetMovie().IsMovieActive() || NetPlay::IsNetPlayRunning();
++#ifdef __EMSCRIPTEN__
++  new_want_determinism = new_want_determinism || melee_rb_mode.load();
++#endif
+   if (new_want_determinism != s_wants_determinism || initial)
+   {
+     NOTICE_LOG_FMT(COMMON, "Want determinism <- {}", new_want_determinism ? "true" : "false");
+--- a/vendor/dolphin/Source/Core/Core/HW/DVD/AMMediaboard.cpp
++++ b/vendor/dolphin/Source/Core/Core/HW/DVD/AMMediaboard.cpp
+@@ -34,7 +34,7 @@
+ #include "VideoCommon/OnScreenDisplay.h"
+ 
+ #if defined(__linux__) or defined(__APPLE__) or defined(__FreeBSD__) or defined(__NetBSD__) or     \
+-    defined(__HAIKU__)
++    defined(__HAIKU__) or defined(__EMSCRIPTEN__)
+ 
+ #include <unistd.h>
+ 
+--- a/vendor/dolphin/Source/Core/Core/HW/DVD/AMMediaboardSocket.cpp
++++ b/vendor/dolphin/Source/Core/Core/HW/DVD/AMMediaboardSocket.cpp
+@@ -34,7 +34,7 @@
+ #include "VideoCommon/OnScreenDisplay.h"
+ 
+ #if defined(__linux__) or defined(__APPLE__) or defined(__FreeBSD__) or defined(__NetBSD__) or     \
+-    defined(__HAIKU__)
++    defined(__HAIKU__) or defined(__EMSCRIPTEN__)
+ 
+ #include <unistd.h>
+ 
+--- a/vendor/dolphin/Source/Core/Core/HW/EXI/EXI_DeviceEthernet.h
++++ b/vendor/dolphin/Source/Core/Core/HW/EXI/EXI_DeviceEthernet.h
+@@ -412,7 +412,7 @@
+     bool m_bba_link_up = false;
+     bool m_bba_failure_notified = false;
+ #if defined(WIN32) || defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) ||          \
+-    defined(__OpenBSD__) || defined(__NetBSD__) || defined(__HAIKU__)
++    defined(__OpenBSD__) || defined(__NetBSD__) || defined(__HAIKU__) || defined(__EMSCRIPTEN__)
+     sf::UdpSocket m_sf_socket;
+     sf::IpAddress m_sf_recipient_ip = sf::IpAddress::Any;
+     char m_in_frame[9004]{};
+@@ -456,7 +456,7 @@
+     std::map<u32, Common::MACAddress> m_arp_table;
+     sf::TcpListener m_upnp_httpd;
+ #if defined(WIN32) || defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) ||          \
+-    defined(__OpenBSD__) || defined(__NetBSD__) || defined(__HAIKU__)
++    defined(__OpenBSD__) || defined(__NetBSD__) || defined(__HAIKU__) || defined(__EMSCRIPTEN__)
+     NetworkRef m_network_ref;
+     std::thread m_read_thread;
+     Common::Flag m_read_enabled;
+--- a/vendor/dolphin/Source/Core/Core/HW/EXI/EXI_DeviceIPL.cpp
++++ b/vendor/dolphin/Source/Core/Core/HW/EXI/EXI_DeviceIPL.cpp
+@@ -22,6 +22,9 @@
+ #include "Core/Config/SessionSettings.h"
+ #include "Core/Config/ConfigManager.h"
+ #include "Core/Core.h"
++#ifdef __EMSCRIPTEN__
++#include "MeleeRollback.h"
++#endif
+ #include "Core/CoreTiming.h"
+ #include "Core/HW/Sram.h"
+ #include "Core/HW/SystemTimers.h"
+@@ -402,6 +405,11 @@
+ {
+   u64 ltime = 0;
+ 
++#ifdef __EMSCRIPTEN__
++  if (melee_rb_mode.load())
++    return Config::Get(Config::MAIN_CUSTOM_RTC_VALUE) +
++           system.GetCoreTiming().GetTicks() / system.GetSystemTimers().GetTicksPerSecond() - epoch;
++#endif
+   auto& movie = system.GetMovie();
+   if (movie.IsMovieActive())
+   {
+--- a/vendor/dolphin/Source/Core/Core/HW/VideoInterface.cpp
++++ b/vendor/dolphin/Source/Core/Core/HW/VideoInterface.cpp
+@@ -14,6 +14,9 @@
+ #include "Common/CommonTypes.h"
+ #include "Common/Config/Config.h"
+ #include "Common/FixedFrameTiming.h"
++#ifdef __EMSCRIPTEN__
++#include "MeleeRollback.h"
++#endif
+ #include "Common/Logging/Log.h"
+ 
+ #include "VideoCommon/OnScreenDisplay.h"
+@@ -707,6 +710,9 @@
+   m_system.GetPerfMetrics().CountVBlank();
+   m_system.GetVideoEvents().vi_end_field_event.Trigger();
+   Core::OnFrameEnd(m_system);
++#ifdef __EMSCRIPTEN__
++  if (melee_rb_mode.load(std::memory_order_relaxed)) melee_rb_field();
++#endif
+ }
+ 
+ // Purpose: Send VI interrupt when triggered
+--- a/vendor/dolphin/Source/Core/Core/IOS/Network/Socket.h
++++ b/vendor/dolphin/Source/Core/Core/IOS/Network/Socket.h
+@@ -15,7 +15,7 @@
+ #define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
+ 
+ #elif defined(__linux__) or defined(__APPLE__) or defined(__FreeBSD__) or defined(__NetBSD__) or   \
+-    defined(__OpenBSD__) or defined(__HAIKU__)
++    defined(__OpenBSD__) or defined(__HAIKU__) or defined(__EMSCRIPTEN__)
+ #include <arpa/inet.h>
+ #include <netdb.h>
+ #include <sys/ioctl.h>
+--- a/vendor/dolphin/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompCore_Run.cpp
++++ b/vendor/dolphin/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompCore_Run.cpp
+@@ -17,6 +17,9 @@
+ #include "Core/Core.h"
+ #include "Core/HW/SI/SI.h"
+ 
++#ifdef __EMSCRIPTEN__
++#include "MeleeRollback.h"
++#endif
+ #include <cstdio>
+ #include <cstdlib>
+ #include <memory>
+@@ -149,6 +152,7 @@
+ void StaticRecompCore::Run()
+ {
+   auto& core_timing = m_system.GetCoreTiming();
++  auto& system_timers = m_system.GetSystemTimers();
+   auto& power_pc = m_system.GetPowerPC();
+   auto& ppc = power_pc.GetPPCState();
+   auto& interpreter = m_system.GetInterpreter();
+@@ -222,9 +226,19 @@
+     return;
+   }
+ 
++#ifdef __EMSCRIPTEN__
++  // Return at an existing CoreTiming slice boundary so V8 can enter the
++  // optimized version on later calls. A permanently active Wasm invocation
++  // cannot switch from its baseline code through on-stack replacement.
++  const auto run_slice = [&]() __attribute__((noinline)) {
++#else
+   while (*state_ptr == CPU::State::Running)
+   {
++#endif
+     core_timing.Advance();
++#ifdef __EMSCRIPTEN__
++    if (melee_rb_mode.load(std::memory_order_relaxed)) melee_rb_after_timing();
++#endif
+     const std::string current_game_id = SConfig::GetInstance().GetGameID();
+     m_module_active = m_module && (current_game_id.empty() || current_game_id == m_module->game_id);
+ 
+@@ -303,7 +317,7 @@
+           // Use the same clock as SyncIn. Raw instruction charges do not include
+           // the CPU overclock factor and can make the guest clock run backward
+           // when the next burst resets it to the hardware timebase.
+-          m_guest.timebase = m_system.GetSystemTimers().GetFakeTimeBase();
++          m_guest.timebase = system_timers.GetFakeTimeBase();
+ 
+           // US v1.02 SelectThread waits at 0x8034B164 while RunQueueBits is zero.
+           // A newly runnable thread must execute now. Skip only while the queue
+@@ -312,8 +326,18 @@
+           const bool can_skip_idle =
+               m_guest.pc == m_idle_pc && m_idle_pc != 0 &&
+               (m_idle_pc != 0x8034B164u ||
+-               ((m_guest.msr & 0x8000u) != 0 && m_system.GetMemory().Read_U32(0x804D73D8u) == 0));
+-          if (can_skip_idle)
++               ((m_guest.msr & 0x8000u) != 0 && memory.Read_U32(0x804D73D8u) == 0));
++          // The verified Melee frame loop has finished its disc/card callbacks
++          // and is polling the raw pad queue. Wake at the next hardware event
++          // instead of spending host CPU on repeated empty-queue polls.
++          // Check the rare wait address before consulting game configuration.
++          // Every normal dispatch can bypass the remaining, unchanged guards.
++          const bool can_skip_pad_wait = m_guest.pc == 0x801A4DACu &&
++              m_strict_native && initial_game_id == "GALE01" &&
++              SConfig::GetInstance().GetRevision() == 2 &&
++              m_guest.lr == 0x801A4DACu && (m_guest.msr & 0x8000u) != 0 &&
++              ppc.Exceptions == 0 && memory.Read_U8(0x804C1F7Bu) == 0;
++          if (can_skip_idle || can_skip_pad_wait)
+           {
+             m_system.GetCoreTiming().Idle();
+           }
+@@ -399,7 +423,13 @@
+         }
+       }
+     } while (ppc.downcount > 0 && *state_ptr == CPU::State::Running);
++#ifdef __EMSCRIPTEN__
++  };
++  while (*state_ptr == CPU::State::Running)
++    run_slice();
++#else
+   }
++#endif
+ }
+ 
+ void StaticRecompCore::SingleStep()
+--- a/vendor/dolphin/Source/Core/Core/State.cpp
++++ b/vendor/dolphin/Source/Core/Core/State.cpp
+@@ -217,6 +217,18 @@
+   return 0;
+ }
+ 
++std::size_t CaptureRollback(Core::System& system, Common::UniqueBuffer<u8>& buffer)
++{
++  if (!Core::IsCPUThread() || system.IsDualCoreMode()) return 0;
++  return SaveToBuffer(system, buffer);
++}
++
++bool RestoreRollback(Core::System& system, std::span<u8> buffer)
++{
++  if (!Core::IsCPUThread() || system.IsDualCoreMode() || buffer.empty()) return false;
++  return LoadFromBuffer(system, buffer);
++}
++
+ static void CompressAndDumpState(Core::System& system, const CompressAndDumpStateArgs& save_args)
+ {
+   const auto& buffer = save_args.buffer;
+--- a/vendor/dolphin/Source/Core/Core/State.h
++++ b/vendor/dolphin/Source/Core/Core/State.h
+@@ -7,6 +7,8 @@
+ 
+ #include <cstddef>
+ #include <functional>
++#include <span>
++#include "Common/Buffer.h"
+ #include <string>
+ #include <type_traits>
+ 
+@@ -79,6 +81,11 @@
+   // and WriteHeadersToFile()
+ };
+ 
++// Internal rollback API: call only at the browser CPU timing boundary in
++// single-core video mode. Uses canonical emulation state, never host Wasm memory.
++std::size_t CaptureRollback(Core::System& system, Common::UniqueBuffer<u8>& buffer);
++bool RestoreRollback(Core::System& system, std::span<u8> buffer);
++
+ void Init(Core::System& system);
+ void Shutdown();
+ 
+--- a/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLConfig.cpp
++++ b/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLConfig.cpp
+@@ -688,6 +688,9 @@
+   // Background compiling is supported only when shared contexts aren't broken.
+   g_backend_info.bSupportsBackgroundCompiling =
+       !DriverDetails::HasBug(DriverDetails::BUG_SHARED_CONTEXT_SHADER_COMPILATION);
++#ifdef __EMSCRIPTEN__
++  g_backend_info.bSupportsBackgroundCompiling = false;
++#endif
+ 
+   // Program binaries are supported on GL4.1+, ARB_get_program_binary, or ES3.
+   if (supports_glsl_cache)
+@@ -720,6 +723,9 @@
+   g_Config.VerifyValidity();
+   UpdateActiveConfig();
+ 
++#ifndef __EMSCRIPTEN__
++  // Browser startup should enter the roster without a driver-information
++  // overlay. Keep the diagnostic log below and all initialization failures.
+   OSD::AddMessage(fmt::format("Video Info: {}, {}, {}", g_ogl_config.gl_vendor,
+                               g_ogl_config.gl_renderer, g_ogl_config.gl_version),
+                   5000);
+@@ -731,6 +737,8 @@
+                     60000);
+     OSD::AddMessage("This device's performance may be poor.", 60000);
+   }
++
++#endif
+ 
+   INFO_LOG_FMT(VIDEO, "Video Info: {}, {}, {}", g_ogl_config.gl_vendor, g_ogl_config.gl_renderer,
+                g_ogl_config.gl_version);
+--- a/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLGfx.cpp
++++ b/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLGfx.cpp
+@@ -387,7 +387,8 @@
+   if (zEnable)
+   {
+     glDepthMask(zEnable ? GL_TRUE : GL_FALSE);
+-    glClearDepthf(float(z & 0xFFFFFF) / 16777216.0f);
++    const float depth = float(z & 0xFFFFFF) / 16777216.0f;
++    glClearDepthf(g_backend_info.bSupportsReversedDepthRange ? depth : 1.0f - depth);
+     clear_mask |= GL_DEPTH_BUFFER_BIT;
+   }
+ 
+@@ -532,11 +533,14 @@
+   const GLenum glCmpFuncs[8] = {GL_NEVER,   GL_LESS,     GL_EQUAL,  GL_LEQUAL,
+                                 GL_GREATER, GL_NOTEQUAL, GL_GEQUAL, GL_ALWAYS};
+ 
++  const GLenum invertedCmpFuncs[8] = {GL_NEVER, GL_GREATER, GL_EQUAL, GL_GEQUAL,
++                                      GL_LESS, GL_NOTEQUAL, GL_LEQUAL, GL_ALWAYS};
+   if (state.test_enable)
+   {
+     glEnable(GL_DEPTH_TEST);
+     glDepthMask(state.update_enable ? GL_TRUE : GL_FALSE);
+-    glDepthFunc(glCmpFuncs[u32(state.func.Value())]);
++    glDepthFunc((g_backend_info.bSupportsReversedDepthRange ? glCmpFuncs : invertedCmpFuncs)
++                    [u32(state.func.Value())]);
+   }
+   else
+   {
+--- a/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLMain.cpp
++++ b/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLMain.cpp
+@@ -121,7 +121,12 @@
+   g_backend_info.bSupports3DVision = false;
+   g_backend_info.bSupportsPostProcessing = true;
+   g_backend_info.bSupportsSSAA = true;
++#ifdef __EMSCRIPTEN__
++  // WebGL rejects depthRange(near, far) when near exceeds far.
++  g_backend_info.bSupportsReversedDepthRange = false;
++#else
+   g_backend_info.bSupportsReversedDepthRange = true;
++#endif
+   g_backend_info.bSupportsLogicOp = true;
+   g_backend_info.bSupportsMultithreading = false;
+   g_backend_info.bSupportsCopyToVram = true;
+--- a/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLStreamBuffer.cpp
++++ b/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLStreamBuffer.cpp
+@@ -346,6 +346,11 @@
+ // Chooses the best streaming method based on the supported extensions and known issues
+ std::unique_ptr<StreamBuffer> StreamBuffer::Create(u32 type, u32 size)
+ {
++#ifdef __EMSCRIPTEN__
++  // WebGL cannot stream through mapped buffers. Orphan each upload to avoid
++  // stalling on the previous draw that still reads offset zero.
++  return std::make_unique<BufferData>(type, size);
++#endif
+   // without basevertex support, only streaming methods whith uploads everything to zero works fine:
+   if (!g_ogl_config.bSupportsGLBaseVertex)
+   {
+--- a/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLTexture.cpp
++++ b/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLTexture.cpp
+@@ -12,6 +12,9 @@
+ #include "VideoBackends/OGL/OGLGfx.h"
+ 
+ #include "VideoCommon/VideoConfig.h"
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++#endif
+ 
+ namespace OGL
+ {
+@@ -113,11 +116,15 @@
+ 
+ bool UsePersistentStagingBuffers()
+ {
++#ifdef __EMSCRIPTEN__
++  return false;
++#else
+   // We require ARB_buffer_storage to create the persistent mapped buffer,
+   // ARB_shader_image_load_store for glMemoryBarrier, and ARB_sync to ensure
+   // the GPU has finished the copy before reading the buffer from the CPU.
+   return g_ogl_config.bSupportsGLBufferStorage && g_ogl_config.bSupportsImageLoadStore &&
+          g_ogl_config.bSupportsGLSync;
++#endif
+ }
+ }  // Anonymous namespace
+ 
+@@ -418,12 +425,14 @@
+ {
+   if (m_fence != nullptr)
+     glDeleteSync(m_fence);
++#ifndef __EMSCRIPTEN__
+   if (m_map_pointer)
+   {
+     glBindBuffer(GL_PIXEL_PACK_BUFFER, m_buffer_name);
+     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+   }
++#endif
+   if (m_buffer_name != 0)
+     glDeleteBuffers(1, &m_buffer_name);
+ }
+@@ -574,7 +583,11 @@
+     // Unmap the buffer before writing when not using persistent mappings.
+     if (m_map_pointer)
+     {
++#ifdef __EMSCRIPTEN__
++      glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, m_buffer_size, m_map_pointer);
++#else
+       glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
++#endif
+       m_map_pointer = nullptr;
+     }
+   }
+@@ -630,6 +643,25 @@
+   if (m_map_pointer)
+     return true;
+ 
++#ifdef __EMSCRIPTEN__
++  // WebGL2 has no mapped buffers. Keep CPU staging storage and use the actual
++  // readback API instead of asking the GLES emulation layer for MAP_READ.
++  m_web_buffer.resize(m_buffer_size);
++  if (m_type != StagingTextureType::Upload)
++  {
++    glBindBuffer(m_target, m_buffer_name);
++    EM_ASM({
++      // A non-shared destination works across WebGL implementations even when
++      // the engine's Wasm memory is shared with pthreads.
++      const bytes = new Uint8Array($2);
++      GLctx.getBufferSubData($0, 0, bytes);
++      HEAPU8.set(bytes, $1);
++    }, m_target, m_web_buffer.data(), m_buffer_size);
++    glBindBuffer(m_target, 0);
++  }
++  m_map_pointer = m_web_buffer.data();
++  return true;
++#else
+   // Slow path, map the texture, unmap it later.
+   GLenum flags;
+   if (m_type == StagingTextureType::Readback)
+@@ -642,6 +674,7 @@
+   m_map_pointer = static_cast<char*>(glMapBufferRange(m_target, 0, m_buffer_size, flags));
+   glBindBuffer(m_target, 0);
+   return m_map_pointer != nullptr;
++#endif
+ }
+ 
+ void OGLStagingTexture::Unmap()
+@@ -651,7 +684,12 @@
+     return;
+ 
+   glBindBuffer(m_target, m_buffer_name);
++#ifdef __EMSCRIPTEN__
++  if (m_type != StagingTextureType::Readback)
++    glBufferSubData(m_target, 0, m_buffer_size, m_map_pointer);
++#else
+   glUnmapBuffer(m_target);
++#endif
+   glBindBuffer(m_target, 0);
+   m_map_pointer = nullptr;
+ }
+--- a/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLTexture.h
++++ b/vendor/dolphin/Source/Core/VideoBackends/OGL/OGLTexture.h
+@@ -96,6 +96,9 @@
+   GLuint m_buffer_name;
+   size_t m_buffer_size;
+   GLsync m_fence = nullptr;
++#ifdef __EMSCRIPTEN__
++  std::vector<char> m_web_buffer;
++#endif
+ };
+ 
+ class OGLFramebuffer final : public AbstractFramebuffer
+--- a/vendor/dolphin/Source/Core/VideoBackends/OGL/ProgramShaderCache.cpp
++++ b/vendor/dolphin/Source/Core/VideoBackends/OGL/ProgramShaderCache.cpp
+@@ -36,6 +36,15 @@
+ #include "VideoCommon/VertexShaderManager.h"
+ #include "VideoCommon/VideoBackendBase.h"
+ #include "VideoCommon/VideoConfig.h"
++
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++extern "C" void melee_shader_timing(double milliseconds);
++struct WebShaderTimer {
++  double start = emscripten_get_now();
++  ~WebShaderTimer() { melee_shader_timing(emscripten_get_now() - start); }
++};
++#endif
+ 
+ namespace OGL
+ {
+@@ -328,6 +337,9 @@
+ 
+ GLuint ProgramShaderCache::CompileSingleShader(GLenum type, std::string_view code)
+ {
++#ifdef __EMSCRIPTEN__
++  WebShaderTimer timer;
++#endif
+   const GLuint result = glCreateShader(type);
+ 
+   constexpr GLsizei num_strings = 2;
+@@ -412,6 +424,9 @@
+ bool ProgramShaderCache::CheckProgramLinkResult(GLuint id, std::string_view vcode,
+                                                 std::string_view pcode, std::string_view gcode)
+ {
++#ifdef __EMSCRIPTEN__
++  WebShaderTimer timer;
++#endif
+   GLint linkStatus;
+   glGetProgramiv(id, GL_LINK_STATUS, &linkStatus);
+   GLsizei length = 0;
+--- a/vendor/dolphin/Source/Core/VideoCommon/AsyncShaderCompiler.cpp
++++ b/vendor/dolphin/Source/Core/VideoCommon/AsyncShaderCompiler.cpp
+@@ -126,6 +126,12 @@
+ 
+ bool AsyncShaderCompiler::StartWorkerThreads(u32 num_worker_threads)
+ {
++#ifdef __EMSCRIPTEN__
++  // WebGL cannot share shader objects across contexts. This also covers custom
++  // resource/mod compilers which request workers independently of VideoConfig.
++  // QueueWorkItem already supports compilation on the owning graphics thread.
++  num_worker_threads = 0;
++#endif
+   if (num_worker_threads == 0)
+     return true;
+ 
+--- a/vendor/dolphin/Source/Core/VideoCommon/DriverDetails.cpp
++++ b/vendor/dolphin/Source/Core/VideoCommon/DriverDetails.cpp
+@@ -41,6 +41,8 @@
+ constexpr u32 m_os = OS_ALL | OS_OPENBSD;
+ #elif __NetBSD__
+ constexpr u32 m_os = OS_ALL | OS_NETBSD;
++#elif __EMSCRIPTEN__
++constexpr u32 m_os = OS_ALL;
+ #elif __HAIKU__
+ constexpr u32 m_os = OS_ALL | OS_HAIKU;
+ #endif
+--- a/vendor/dolphin/Source/Core/VideoCommon/Fifo.cpp
++++ b/vendor/dolphin/Source/Core/VideoCommon/Fifo.cpp
+@@ -286,7 +286,13 @@
+ void FifoManager::RunGpuLoop()
+ {
+   m_gpu_mainloop.Run(
+-      [this] {
++      [this]()
++#ifdef __EMSCRIPTEN__
++          // Keep the recurring payload out of the lifetime-long worker loop.
++          // Later calls can enter V8's optimized Wasm code after tier-up.
++          __attribute__((noinline))
++#endif
++      {
+         // Run events from the CPU thread.
+         AsyncRequests::GetInstance()->PullEvents();
+ 
+--- a/vendor/dolphin/Source/Core/VideoCommon/FramebufferManager.cpp
++++ b/vendor/dolphin/Source/Core/VideoCommon/FramebufferManager.cpp
+@@ -2,6 +2,9 @@
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+ #include "VideoCommon/FramebufferManager.h"
++#ifdef __EMSCRIPTEN__
++extern "C" float melee_efb_scale();
++#endif
+ 
+ #include <fmt/format.h>
+ #include <memory>
+@@ -185,19 +188,19 @@
+   return result;
+ }
+ 
+-unsigned int FramebufferManager::GetEFBScale() const
++float FramebufferManager::GetEFBScale() const
+ {
+   return m_efb_scale;
+ }
+ 
+ int FramebufferManager::EFBToScaledX(int x) const
+ {
+-  return x * static_cast<int>(m_efb_scale);
++  return static_cast<int>(x * m_efb_scale);
+ }
+ 
+ int FramebufferManager::EFBToScaledY(int y) const
+ {
+-  return y * static_cast<int>(m_efb_scale);
++  return static_cast<int>(y * m_efb_scale);
+ }
+ 
+ float FramebufferManager::EFBToScaledXf(float x) const
+@@ -221,8 +224,11 @@
+   if (max_size < EFB_WIDTH * m_efb_scale)
+     m_efb_scale = max_size / EFB_WIDTH;
+ 
+-  u32 new_efb_width = std::max(EFB_WIDTH * static_cast<int>(m_efb_scale), 1u);
+-  u32 new_efb_height = std::max(EFB_HEIGHT * static_cast<int>(m_efb_scale), 1u);
++#ifdef __EMSCRIPTEN__
++  m_efb_scale = melee_efb_scale();
++#endif
++  u32 new_efb_width = std::max(static_cast<u32>(EFB_WIDTH * m_efb_scale), 1u);
++  u32 new_efb_height = std::max(static_cast<u32>(EFB_HEIGHT * m_efb_scale), 1u);
+ 
+   return std::make_tuple(new_efb_width, new_efb_height);
+ }
+--- a/vendor/dolphin/Source/Core/VideoCommon/FramebufferManager.h
++++ b/vendor/dolphin/Source/Core/VideoCommon/FramebufferManager.h
+@@ -74,7 +74,7 @@
+   // Use this to convert a whole native EFB rect to backbuffer coordinates
+   MathUtil::Rectangle<int> ConvertEFBRectangle(const MathUtil::Rectangle<int>& rc) const;
+ 
+-  unsigned int GetEFBScale() const;
++  float GetEFBScale() const;
+ 
+   // Use this to upscale native EFB coordinates to IDEAL internal resolution
+   int EFBToScaledX(int x) const;
+--- a/vendor/dolphin/Source/Core/VideoCommon/ShaderCache.cpp
++++ b/vendor/dolphin/Source/Core/VideoCommon/ShaderCache.cpp
+@@ -71,6 +71,12 @@
+ 
+   // Compile all known UIDs.
+   CompileMissingPipelines();
++#ifdef __EMSCRIPTEN__
++  // All browser shader work executes on this context. Drain stage and pipeline
++  // completions before the first game frame, including dependent requeues.
++  while (m_async_shader_compiler->HasCompletedWork())
++    m_async_shader_compiler->RetrieveWorkItems();
++#endif
+   if (g_ActiveConfig.bWaitForShadersBeforeStarting)
+     WaitForAsyncCompiler();
+ 
+@@ -897,6 +903,12 @@
+     WARN_LOG_FMT(VIDEO, "Writing pipeline UID to cache failed, closing file.");
+     m_gx_pipeline_uid_cache_file.Close();
+   }
++#ifdef __EMSCRIPTEN__
++  // Flush to the in-memory Wasm filesystem so the browser can persist complete
++  // records while a session is active. This performs no network or disk I/O.
++  else
++    m_gx_pipeline_uid_cache_file.Flush();
++#endif
+ }
+ 
+ void ShaderCache::QueueVertexShaderCompile(const VertexShaderUid& uid, u32 priority)
+--- a/vendor/dolphin/Source/Core/VideoCommon/VideoConfig.cpp
++++ b/vendor/dolphin/Source/Core/VideoCommon/VideoConfig.cpp
+@@ -264,6 +264,10 @@
+ 
+ u32 VideoConfig::GetShaderCompilerThreads() const
+ {
++#ifdef __EMSCRIPTEN__
++  // WebGL contexts cannot share shader objects across pthreads.
++  return 0;
++#endif
+   if (!g_backend_info.bSupportsBackgroundCompiling)
+     return 0;
+ 
+@@ -275,6 +279,10 @@
+ 
+ u32 VideoConfig::GetShaderPrecompilerThreads() const
+ {
++#ifdef __EMSCRIPTEN__
++  // WebGL contexts cannot share shader objects across pthreads.
++  return 0;
++#endif
+   // When using background compilation, always keep the same thread count.
+   if (!bWaitForShadersBeforeStarting)
+     return GetShaderCompilerThreads();

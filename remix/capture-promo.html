@@ -1,0 +1,33 @@
+<!doctype html><meta charset="utf-8"><title>Remix gameplay capture</title>
+<style>html,body{margin:0;background:#101827}iframe{border:0;width:960px;height:720px}canvas{position:fixed;left:0;top:0;width:1280px;height:720px;pointer-events:none}</style>
+<iframe id="game"></iframe><canvas id="output" width="1280" height="720"></canvas>
+<script>
+const q=new URLSearchParams(location.search),names=(q.get('names')||'Marth|Roy').split('|'),stage=q.get('stage')||'Final Destination';
+let driver,frame=0,recording=false,ready=false;window.captureError=null;
+window.openSmashAttachEngine=win=>{const original=win.HTMLCanvasElement.prototype.getContext;win.HTMLCanvasElement.prototype.getContext=function(type,options){return original.call(this,type,/webgl/.test(type)?{...options,preserveDrawingBuffer:true}:options);};return ({menuState:()=>({phase:0}),menuAction(){},ready(e){driver=e;ready=true},beforeTick:()=>true,afterTick(){},error(e){window.captureError=String(e)},readPorts(ptr,H){for(let i=0;i<4;i++){const b=(ptr>>2)+i*4;H[b]=i<2?2:1;H[b+1]=H[b+2]=H[b+3]=0;if(i<2&&recording){const p=probe(),dx=p[(1-i)*16+3]-p[i*16+3],y=p[i*16+4];H[b+2]=Math.abs(dx)>220?(dx>0?42:-42):0;H[b+1]=(frame+i*9)%31<3?32768:0;if((frame+i*47)%170<3||y<0)H[b+1]|=8;}}}});};
+const params=new URLSearchParams({SSB64_REMIX_MAIN:'1',SSB64_YOUGAME:'1',SSB64_YOUGAME_ROLLBACK:'1',SSB64_BOOT_HUMANS:'2',SSB64_BOOT_SLOTS:'hhoo',SSB64_VS_INTRO:'0',SSB64_STOCKS:'9',SSB64_YOUGAME_AUDIO:'SDL',SSB64_BOOT_BATTLE:q.get('battle')||'58,74,16,0'});
+game.src='../yougame/dist/engine/index.html?'+params;
+function probe(){const w=game.contentWindow,p=w.Module._port_marth_probe()>>2;return Array.from(w.HEAP32.slice(p,p+32));}
+const ctx=output.getContext('2d');
+function draw(){
+ ctx.fillStyle='#0b1022';ctx.fillRect(0,0,1280,720);ctx.drawImage(game.contentDocument.querySelector('canvas'),0,0,960,720);
+ const g=ctx.createLinearGradient(960,0,1280,720);g.addColorStop(0,'#172c53');g.addColorStop(1,'#281735');ctx.fillStyle=g;ctx.fillRect(960,0,320,720);
+ ctx.fillStyle='#71d9ff';ctx.fillRect(986,44,45,5);ctx.fillStyle='#fff';ctx.font='bold 30px Arial';ctx.fillText('OpenSmash64',986,98);ctx.font='bold 57px Arial';ctx.fillStyle='#ffc65c';ctx.fillText('REMIX',984,157);
+ ctx.font='bold 26px Arial';ctx.fillStyle='#fff';names.forEach((n,i)=>{let words=n.split(' & ');words.forEach((s,j)=>ctx.fillText(s,986,285+i*130+j*30));});
+ ctx.fillStyle='#8199bd';ctx.font='18px Arial';ctx.fillText('VS',986,358);ctx.fillStyle='#ced9ee';ctx.font='bold 19px Arial';ctx.fillText(stage,986,538);
+ ctx.fillStyle='#8ea8c6';ctx.font='16px Arial';ctx.fillText('CAPTURED GAMEPLAY',986,652);ctx.fillText('Experimental character port',986,680);
+}
+window.captureReady=()=>ready;
+window.capture=async()=>{
+ for(let i=0;i<550;i++)driver.step();
+ const a=game.contentWindow.Module.SDL2;let destination;
+ if(a?.audio?.scriptProcessorNode){await a.audioContext.resume();destination=a.audioContext.createMediaStreamDestination();a.audio.scriptProcessorNode.connect(destination);}
+ const stream=output.captureStream(30);if(destination)destination.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+ const chunks=[],rec=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp9,opus',videoBitsPerSecond:6000000});
+ rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+ const done=new Promise(resolve=>rec.onstop=async()=>{const bytes=new Uint8Array(await new Blob(chunks).arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));resolve({video:btoa(binary),probe:probe(),audio:stream.getAudioTracks().length});});
+ recording=true;draw();rec.start();let last=performance.now(),pending=0;
+ function tick(now){pending+=Math.min(50,now-last);last=now;while(pending>=1000/60){driver.step();frame++;pending-=1000/60;}draw();if(frame<720)requestAnimationFrame(tick);else{recording=false;rec.stop();}}
+ requestAnimationFrame(tick);return done;
+};
+</script>

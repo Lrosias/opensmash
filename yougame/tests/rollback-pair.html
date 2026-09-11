@@ -1,0 +1,47 @@
+<!doctype html><meta charset="utf-8"><title>OpenSmash two-client rollback test</title>
+<style>body{background:#151821;color:white;font:15px monospace}iframe{width:480px;height:360px;border:0}button{padding:16px}pre{white-space:pre-wrap}</style>
+<button id="run" disabled>Test two native clients with delayed inputs</button><pre id="report">Loading two engines…</pre><div id="game"></div>
+<script type="module">
+import {makeSync,loops} from './.sdk-sync.mjs';
+import {RollbackDuelSession} from '../src/rollback-session.mjs';
+import {prepareRollbackEngine} from '../src/rollback-engine.mjs';
+const ko=new URLSearchParams(location.search).has('ko'),limit=ko?1500:240;
+const clients=[],errors=[],queue=[],sessions=[],history=[new Map(),new Map()],results=[[],[]];let now=0,ready=0;
+const say=s=>{report.textContent+='\n'+s;};
+window.openSmashAttachEngine=win=>{
+ const c=clients.find(c=>c.frame.contentWindow===win);
+ return {menuState:()=>({phase:0}),menuAction(){},beforeTick:()=>true,afterTick(...s){c.state=s;},
+ async ready(raw){try{if(typeof raw.comparePage!=='function')throw new Error('Wasm checkpoint helper did not load');c.engine=await prepareRollbackEngine(raw,{getState:()=>c.state,setPads:p=>{c.pads=p;}});if(++ready===2){run.disabled=false;report.textContent='Both native battles ready';}}catch(e){errors.push(e.message);say('FAIL: '+e.stack);}},
+ error(e){errors.push(e);say('ENGINE ERROR: '+e);},readPorts(ptr,H){for(let i=0;i<4;i++){const b=(ptr>>2)+i*4,p=c.pads[i];H[b]=p?2:1;H[b+1]=p?.[0]||0;H[b+2]=p?.[1]||0;H[b+3]=p?.[2]||0;}}};
+};
+for(let i=0;i<2;i++){const frame=document.createElement('iframe');clients.push({frame,pads:[[0,0,0],[0,0,0]]});frame.src='../dist/engine/index.html?SSB64_YOUGAME_MUTE=1&SSB64_YOUGAME=1&SSB64_YOUGAME_ROLLBACK=1&SSB64_YOUGAME_SEED=1234&SSB64_BOOT_BATTLE=0,8,6,0&SSB64_BOOT_HUMANS=2&SSB64_BOOT_SLOTS=hhoo&SSB64_STOCKS=3&SSB64_VS_INTRO=0';game.append(frame);}
+run.onclick=async()=>{
+ run.disabled=true;report.textContent='Running native rollback scenario…';
+ try{
+ const events=[new Map(),new Map()];
+ const rooms=[0,1].map(i=>({me:'p'+i,players:[{id:'p0'},{id:'p1'}],playing:true,
+  on(e,h){if(!events[i].has(e))events[i].set(e,new Set());events[i].get(e).add(h);},off(e,h){events[i].get(e)?.delete(h);},
+  rollback(o){return makeSync(this,o,true);},send(data){if(data._ls&&data.f%7===0)return;queue.push({at:now+(data._ls?3+data.f%3:0),to:1-i,from:'p'+i,data:structuredClone(data)});},
+  finish(r){results[i].push(r);return Promise.resolve(r);}}));
+ const deliver=()=>{for(let i=0;i<queue.length;){const e=queue[i];if(e.at>now){i++;continue;}queue.splice(i,1);if(e.data._ls)rooms[e.to]._sync?.receive(e.from,e.data);else for(const fn of events[e.to].get('message')||[])fn(e);}};
+ for(let i=0;i<2;i++){
+  const engine=clients[i].engine,save=engine.save.bind(engine);
+  engine.save=f=>{const s=save(f);history[i].set(f,structuredClone(s));return s;};
+  const s=new RollbackDuelSession({room:rooms[i],round:1,fighter:i?8:0,seed:1234,build:'same',
+   readInput:()=>ko?[0,i?80:0,0]:[now%13<5?32768:now%17<4?16384:0,(now%70<35?1:-1)*(i?-50:50),now%41<3?50:0],
+   launch:(_,s)=>s.attach(engine),status(){},stop:e=>{errors.push(e);say('SESSION ERROR: '+e);}});
+  clearInterval(s.timer);sessions.push(s);
+ }
+ for(let n=0;n<3;n++){deliver();for(const s of sessions){s.lastHello=0;s.pulse();}}
+ const start=performance.now();
+ for(now=1;now<=limit;now++){for(const tick of loops)tick();deliver();if(errors.length)throw new Error(errors.join('; '));if(results.every(r=>r.length))break;if(now%10===0){report.textContent='Native ticks '+now+'/'+limit+'; rollbacks '+sessions.map(s=>s.sync.rollbacks);await new Promise(r=>setTimeout(r,0));}}
+ const confirmed=Math.min(...sessions.map(s=>s.frame))-13;
+ if(confirmed<100)throw new Error('Simulation did not advance');
+ if(JSON.stringify(history[0].get(confirmed))!==JSON.stringify(history[1].get(confirmed)))throw new Error('Confirmed native states differ at '+confirmed+': '+JSON.stringify(history.map(h=>h.get(confirmed))));
+ if(!sessions.every(s=>s.sync.rollbacks>0&&!s.sync.desynced))throw new Error('Rollback was not exercised successfully');
+ if(ko&&(results[0].length!==1||results[1].length!==1||JSON.stringify(results[0])!==JSON.stringify(results[1])||results[0][0].winner!=='p0'))throw new Error('Native KO settlement failed: '+JSON.stringify(results));
+ say('Results: '+JSON.stringify(results));
+ say('PASS: both native states agree at confirmed frame '+confirmed+'; rollbacks '+sessions.map(s=>s.sync.rollbacks)+'; elapsed '+((performance.now()-start)/1000).toFixed(1)+'s');
+ }catch(e){say('FAIL: '+e.stack);}finally{sessions.forEach(s=>s.destroy());}
+};
+</script>

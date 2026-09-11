@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {gameCubeInput,keyboardOptions} from '../src/keyboard.mjs';
+const state=(extra={})=>({source:'keyboard',move:{x:0,y:0},aim:{x:0,y:0},...extra});
+const units=s=>gameCubeInput(s).slice(1,5).map(x=>Math.round(x*127)||0);
+assert.deepEqual(units(state({move:{x:1,y:-1},aim:{x:-1,y:1}})),[80,80,-80,-80]);
+assert.deepEqual(units(state({move:{x:1,y:-1},aim:{x:-1,y:1},stickmod:true})),[40,40,-80,-80]);
+assert.deepEqual(units(state({move:{x:1,y:-1},aim:{x:-1,y:1},cmod:true})),[80,80,-40,-40]);
+assert.deepEqual(units(state()),[0,0,0,0]);
+for(const [id,bit] of Object.entries({a:1,b:2,x:4,y:8,r1:16,start:32,dup:64,ddown:128,dleft:256,dright:512,l1:1024,l2:1024,r2:2048}))
+  assert.equal(gameCubeInput(state({[id]:true}))[0],bit,id);
+assert.equal(gameCubeInput(state({start:true,startalt:true}))[0],0);
+assert.deepEqual(gameCubeInput(state({l1:true,r2:true})).slice(5),[1,1]);
+const pad=state({source:'gamepad',move:{x:.24,y:-.5},aim:{x:-.4,y:.7},start:true});
+assert.deepEqual(gameCubeInput(pad),[32,.24,.5,-.4,-.7,0,0]);
+assert.deepEqual(units({...pad,move:{x:1,y:0},aim:{x:0,y:-1},stickmod:true,cmod:true}),[40,0,0,40]);
+assert.equal(gameCubeInput({...pad,startalt:true,dup:true})[0],64);
+for(const mapping of keyboardOptions.keys.slice(1))assert.ok(Object.values(mapping).every(keys=>keys.length===0));
+const expected={up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',a:'KeyX',b:'KeyZ',x:'KeyC',y:'KeyS',r1:'KeyD',l1:'KeyQ',r2:'KeyW',start:'Enter',aimUp:'KeyI',aimDown:'KeyK',aimLeft:'KeyJ',aimRight:'KeyL',stickmod:'ShiftLeft',cmod:'ControlLeft',dup:'KeyT',ddown:'KeyG',dleft:'KeyF',dright:'KeyH',startalt:'AltLeft'};
+for(const [id,code] of Object.entries(expected))assert.deepEqual(keyboardOptions.keys[0][id],[code],id);
+console.log('Slippi defaults, both sticks, modifiers, buttons, triggers, D-pad and gamepad isolation passed.');

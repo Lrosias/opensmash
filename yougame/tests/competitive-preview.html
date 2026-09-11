@@ -1,0 +1,6 @@
+<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Competitive UI test fixture</title><link rel="stylesheet" href="/style.css"><div id="play-surface"></div><script type="module">
+import {createCompetitiveUI} from '/competitive-ui.mjs';
+const view={phase:'counterpick',round:1,game:2,ranked:true,wins:[1,0],fighters:[58,74],picks:[null,null],seat:0,turn:0,stage:6,history:[{game:1,winner:0,stage:6}]};
+const ui=createCompetitiveUI({onQueue(){},onBack(){},onPick(fighter){view.fighters[0]=fighter;view.picks[0]=fighter;view.turn=1;ui.show(view,[{name:'Juniper'},{name:'Orion'}]);}});
+ui.show(view,[{name:'Juniper'},{name:'Orion'}]);
+</script></html>

@@ -1,0 +1,28 @@
+diff --git a/port/web_input.cpp b/port/web_input.cpp
+--- a/port/web_input.cpp
++++ b/port/web_input.cpp
+@@ -147,3 +147,10 @@
+ 	if (port < 0 || port >= PORT_INPUT_PORTS) return 0;
+ 	return sConnected[port];
+ }
++
++int port_input_platform_owned(void)
++{
++	/* The shell's resolved pads are authoritative, including disconnected
++	 * rows. Native builds without a platform source keep normal SDL remap. */
++	return sEngaged;
++}
+diff --git a/port/web_input.h b/port/web_input.h
+--- a/port/web_input.h
++++ b/port/web_input.h
+@@ -37,6 +37,10 @@
+ /* 1 if port N (0..3) should report a plugged-in controller to the game. */
+ int port_input_port_connected(int port);
+ 
++/* Last sampled platform batch owns routing, including empty/stale ports.
++ * Prevent later SDL resampling from overwriting browser-resolved axes. */
++int port_input_platform_owned(void);
++
+ #ifdef __cplusplus
+ }
+ #endif

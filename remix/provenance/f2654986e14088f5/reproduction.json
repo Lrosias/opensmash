@@ -1,0 +1,13 @@
+{
+  "base_commits": {
+    "BattleShip": "3ba1814ec34c376b1d1904b4dda2ef503ee90701",
+    "decomp": "eddd0c9ba8ce0b9e80a225929ce466adc2e999fe",
+    "libultraship": "c220d93816d39b6ca64576152bd0a81d3d10aa00"
+  },
+  "recipe_differences": [
+    "decomp/src/ft/ftcommon/ftcommonjumpaerial.c",
+    "decomp/src/ft/ftparam.c"
+  ],
+  "reproduced_worktree": "/tmp/opensmash-remix-repro-f2654986e14088f5",
+  "checked_files": 59
+}

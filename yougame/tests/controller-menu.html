@@ -1,0 +1,8 @@
+<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../src/style.css"><div id="play-surface"></div>
+<script type="module">
+import {createCompetitiveUI} from '../src/competitive-ui.mjs';
+import {readAdapterMenu} from '../../controllers/controller-menu.mjs';
+window.sample={owned:true,stale:false,suspended:false,ports:[{port:0,connected:true,axes:[128,128,128,128],buttons:0,origin:[128,128,128,128,0,0]}]};
+window.queues=[];window.backCount=0;
+const adapter={snapshot:()=>sample};const ui=createCompetitiveUI({readController:()=>readAdapterMenu(adapter),onQueue:(q,f)=>queues.push({q,f}),onBack:()=>{backCount++;ui.hide();},onPick(){}});ui.setup();
+</script>

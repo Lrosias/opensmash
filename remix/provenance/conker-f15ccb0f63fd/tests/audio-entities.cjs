@@ -1,0 +1,10 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE),fs=require('node:fs/promises'),assert=require('node:assert/strict');
+(async()=>{const b=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--enable-unsafe-swiftshader','--mute-audio']});try{const report=[];for(const id of [56]){
+const p=await b.newPage(),errors=[];p.on('pageerror',e=>errors.push(String(e)));await p.goto(`http://127.0.0.1:4207/remix-check.html?battle=${id},74,16,0&SSB64_REMIX_TEST=1`);await p.waitForFunction(()=>window.driver,{},{timeout:60000});await p.frames().find(f=>f.url().includes('/engine/')).locator('canvas').click();
+const r=await p.evaluate(async id=>{const {NativeCheckpoints}=await import('/checkpoints.mjs'),m=game.contentWindow.Module;const tick=(n,a=[0,0,0],other=[0,0,0])=>{pads=[a,other];for(let i=0;i<n;i++)driver.step()};for(let n=0;(window.state?.[4]||0)<30&&n<900;n++)tick(1);if(!m._port_remix_test_place(1800))throw Error('place');tick(2);tick(80,[16384,0,0]);tick(2);
+const observe=()=>{const w=game.contentWindow,e=m._port_remix_entity_probe()>>2,s=m._port_remix_sound_probe()>>2;return {state:[...state],fighters:probe(),entities:Array.from(w.HEAP32.slice(e,e+322)),sound:Array.from(w.HEAP32.slice(s,s+3))}};
+const start=observe(),store=new NativeCheckpoints(driver,{window:240}),snap=store.save(0,state),expected=[];const input=n=>n===40?[8,0,0]:n===65?[16384,0,70]:n===115?[16384,0,0]:[0,0,0];
+for(let n=0;n<180;n++){tick(1,input(n));expected.push(observe());}state=store.load(snap);for(let n=0;n<180;n++){tick(1,input(n));if(JSON.stringify(observe())!==JSON.stringify(expected[n]))throw Error(`fighter ${id} rollback differs at frame ${n}`);}
+return {id,frames:180,startSound:start.sound,lastSound:expected.at(-1).sound,maxEntities:Math.max(...expected.map(x=>x.entities[0]+x.entities[1])),rollback:true};},id);console.log(r);assert.deepEqual(errors,[]);assert.equal(r.lastSound[1],1545);report.push(r);console.log(r);await p.close();}
+assert(report[0].maxEntities>0);await fs.writeFile('build/remix/conker-fix/entities-rollback.json',JSON.stringify(report,null,2));
+}finally{await b.close()}})();

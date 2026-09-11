@@ -1,0 +1,97 @@
+diff --git a/src/sys/controller.c b/src/sys/controller.c
+index a2e0a88..a0ae163 100644
+--- a/src/sys/controller.c
++++ b/src/sys/controller.c
+@@ -2,6 +2,7 @@
+ 
+ #ifdef PORT
+ extern void port_log(const char *fmt, ...);
++extern int port_input_platform_owned(void);
+ #endif
+ #ifdef __EMSCRIPTEN__
+ #include <emscripten.h>
+@@ -184,6 +185,20 @@ static void syControllerApplyPadScript(void)
+ }
+ #endif
+ 
++#ifdef PORT
++// Errored ports must release cached controls as well as zero the pad.
++// Keep repeat settings, error/status and physical port identity intact.
++static void syControllerClearDisconnectedInput(s32 i)
++{
++    sSYControllerDescs[i].unk00 = sSYControllerDescs[i].unk02 = sSYControllerDescs[i].unk04 = 0;
++    sSYControllerDescs[i].unk06 = sSYControllerDescs[i].unk08 = sSYControllerDescs[i].unk0A = 0;
++    sSYControllerDescs[i].unk0C = 0;
++    sSYControllerDescs[i].unk0E = sSYControllerDescs[i].unk0F = 0;
++    sSYControllerDescs[i].unk18 = sSYControllerDescs[i].unk10;
++    gSYControllerDevices[i] = (SYController){0};
++}
++#endif
++
+ // 0x80003DD4
+ void syControllerReadDeviceData(void)
+ {
+@@ -194,8 +209,8 @@ void syControllerReadDeviceData(void)
+     osContGetReadData(sSYControllerData);
+ #ifdef PORT
+     syControllerApplyPadScript();
+-    /* Browser port map (port/web_input.cpp): keyboard/gamepad/nothing per
+-     * port, decided by the shell. No-op on native and when not engaged. */
++    /* Platform input map: browser devices or an owned native raw adapter.
++     * Unowned native slots retain the existing SDL/keyboard samples. */
+     {
+         extern void port_input_apply_pads(void *pads);
+         port_input_apply_pads(sSYControllerData);
+@@ -243,6 +258,12 @@ void syControllerReadDeviceData(void)
+             sSYControllerDescs[i].unk0C |= sSYControllerDescs[i].unk0A;
+             sSYControllerDescs[i].unk08 |= sSYControllerDescs[i].unk06;
+         }
++#ifdef PORT
++        else
++        {
++            syControllerClearDisconnectedInput(i);
++        }
++#endif
+     }
+     sSYControllerIsUpdateData = TRUE;
+ }
+@@ -271,6 +292,12 @@ void syControllerUpdateGlobalData(void)
+             // Must come BEFORE c_stick_smash so the synthetic ±80 values that
+             // c_stick_smash writes into stick_range are not subsequently
+             // re-rescaled by our deadzone/range formula.
++#ifdef PORT
++            // This enhancement samples the SDL stick again. Platform routing
++            // already supplied the axes; preserve the saved setting for
++            // the later return to regular controls without resampling SDL here.
++            if (!port_input_platform_owned())
++#endif
+             port_enhancement_analog_remap(i,
+                 &gSYControllerDevices[i].stick_range.x,
+                 &gSYControllerDevices[i].stick_range.y);
+@@ -320,9 +347,26 @@ void syControllerUpdateGlobalData(void)
+ 
+             sSYControllerDescs[i].unk04 = sSYControllerDescs[i].unk08 = sSYControllerDescs[i].unk0C = 0;
+         }
++#ifdef PORT
++        else
++        {
++            syControllerClearDisconnectedInput(i);
++        }
++#endif
+     }
+     syControllerUpdateDeviceIndexes();
+ 
++#ifdef PORT
++    // An empty/stale four-port adapter is valid. There is no first controller
++    // in this case: deviceStatuses[0] is -1, not an array index.
++    if (gSYControllerConnectedNum == 0)
++    {
++        *sys = (SYController){0};
++        sSYControllerIsUpdateData = FALSE;
++        return;
++    }
++#endif
++
+     players = &gSYControllerDevices[gSYControllerDeviceStatuses[0]];
+ 
+     sys->button_tap = players->button_tap;

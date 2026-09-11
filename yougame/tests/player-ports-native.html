@@ -1,0 +1,10 @@
+<!doctype html><meta charset="utf-8"><title>Native player slots</title><pre id="report">Loading</pre><script type="module">
+// Serve a copy at the build root; each staged distribution keeps test files out.
+const edition=new URLSearchParams(location.search).get('edition')||'remix';
+const slots=(new URLSearchParams(location.search).get('slots')||'0,1,2,3').split(',').map(Number);
+let driver,state,pads=Array.from({length:4},()=>[0,0,0]);window.test={};
+window.openSmashAttachEngine=()=>({menuState:()=>({phase:0}),menuAction(a,v){window.test.menuAction=[a,v];},ready(raw){driver=raw;window.test.ready=true;},beforeTick:()=>true,afterTick(...s){state=s;},error(e){window.test.error=String(e);},readPorts(ptr,H){for(let i=0;i<4;i++){const b=(ptr>>2)+i*4,p=pads[i];H[b]=p?2:1;H[b+1]=p?.[0]||0;H[b+2]=p?.[1]||0;H[b+3]=p?.[2]||0;}}});
+const f=document.createElement('iframe');f.width=640;f.height=480;f.src=`./lobby-${edition}/engine/index.html?${edition==='remix'?'SSB64_REMIX_MAIN=1&':''}SSB64_YOUGAME_MUTE=1&SSB64_YOUGAME=1&SSB64_YOUGAME_ROLLBACK=1&SSB64_YOUGAME_SEED=121&SSB64_BOOT_BATTLE=0,1,6,0,2,3&SSB64_BOOT_HUMANS=${slots.length}&SSB64_BOOT_SLOTS=${[0,1,2,3].map(i=>slots.includes(i)?'h':'o').join('')}&SSB64_STOCKS=1&SSB64_VS_INTRO=0`;document.body.append(f);
+window.test.run=async()=>{for(let i=0;i<900&&!(state?.[4]>5);i++){driver.step();if(i%20===0)await new Promise(r=>setTimeout(r,0));}window.test.initial=[...state];if(state[7]!==slots.reduce((mask,i)=>mask|(1<<i),0))throw Error('Wrong active controller ports');
+ const results=[];for(const seat of slots.slice(0,-1)){pads=Array.from({length:4},(_,i)=>[0,i===seat?85:0,0]);for(let i=0;i<2200;i++){driver.step();if(i%50===0)await new Promise(r=>setTimeout(r,0));if(state[[2,3,5,6][seat]]<=0)break;}results.push([...state]);if(seat!==slots.at(-2)&&state[1]!==-1)throw Error('Match finished before remaining humans were eliminated');}window.test.results=results;if(state[1]!==slots.at(-1))throw Error('Wrong winning port: '+JSON.stringify(state));window.test.passed=true;report.textContent=JSON.stringify(window.test,null,2);return {initial:window.test.initial,results};};
+</script>

@@ -1,0 +1,14 @@
+{
+  "melee4mac": {
+    "commit": "a276aeb70f9879204d891d967f1c9442523568e1",
+    "url": "https://github.com/t3dotgg/melee4mac.git"
+  },
+  "ModernGekko": {
+    "commit": "5417826c31187d4dadf8588c7aa25bf107782936",
+    "url": "https://github.com/ExpansionPak/ModernGekko.git"
+  },
+  "RecompCore": {
+    "commit": "55c7b023fa0f4eba1cf3fdbbb25b1c5ec468d5ac",
+    "url": "https://github.com/ExpansionPak/RecompCore.git"
+  }
+}

@@ -1,0 +1,2 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE);
+(async()=>{const b=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--enable-unsafe-swiftshader']});try{const p=await b.newPage({viewport:{width:960,height:720}});await p.goto('http://127.0.0.1:4199/title-check.html');await p.waitForFunction(()=>window.driver,{},{timeout:60000});await p.evaluate(()=>{for(let i=0;i<240;i++)driver.step()});await p.screenshot({path:'build/remix/main/checks/title-no-names.png'});}finally{await b.close()}})();

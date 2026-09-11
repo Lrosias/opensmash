@@ -1,0 +1,17 @@
+{
+  "uploadId": "f9030ddb66294964b696f67a4fb3d9e4",
+  "title": "OpenSmash64",
+  "thumbnail": "gallery/opensmash64-thumbnail.png",
+  "description": "An experimental Smash 64 browser port with 34 fighters and eight selected stages. Includes the main Remix roster plus Dark Samus, Lucas, Roy and Dr. Luigi. Choose a fighter and stage with the native controller menu. Online uses 3 stocks, 8 minutes, no items, and P1's stage choice.\n\nOriginal fighters retain native moves. Imported fighters have ROM models, movement, animations and normal attacks; custom specials and character mechanics are still being ported. Imported fighters currently use default costumes. This build is not yet suitable for serious ranked competition.\n\nKeyboard: arrows or WASD move, M selects/attacks, O goes back/special, P jumps, Q shields, Enter is Start. Gamepads and landscape touch controls are supported.",
+  "genres": [
+    "Fighting",
+    "Platformer"
+  ],
+  "controls": "Touch",
+  "play_mode": "both",
+  "mobile": true,
+  "mature": false,
+  "score_kind": "none",
+  "paywalls": [],
+  "notes": "Local OpenSmash64 candidate. See remix/MAIN.md for stage sources, source extraction, validation, and known port limitations. Earlier uploaded media and approval results describe an older build and must be refreshed before publishing this version."
+}
