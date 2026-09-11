@@ -107,3 +107,47 @@ export class RollbackDuelSession {
   }
   destroy(){if(this.closed)return;this.closed=true;clearInterval(this.timer);this.room.off('message',this.message);this.sync.stop();this.restoreSend?.();this.engine?.destroy?.();}
 }
+
+// A connection sends all its local participants together. Only the server's
+// frozen participant roster can map those samples to native controller ports.
+export class RollbackPartySession {
+ constructor({room,round,participants,game=1,expectedFighters,stage,seed,build,readPorts,readInput,launch,status,stop,onGameResult,profile=ACTIVE_PROFILE}){
+  Object.assign(this,{room,round,participants,game,expectedFighters,stage,seed,build,readPorts,readInput,launch,status,stop,onGameResult,profile});
+  this.connections=[...new Set(participants.map(p=>p.connectionId))];this.local=participants.filter(p=>p.connectionId===room.me);this.frame=0;this.peers=new Map();this.startedAt=Date.now();this.terminal=null;
+  if(!this.local.length||participants.length<2||participants.length>4||participants.some((p,i)=>!validFighter(expectedFighters[i],profile)))throw Error('Invalid player ports');
+  this.signature=JSON.stringify({build,round,game,seed,stage,ports:participants.map((p,i)=>[p.id,p.connectionId,p.slot,p.localIndex,expectedFighters[i]])});
+  this.sync=room.rollback({hz:60,delay:2,maxRollback:MAX_ROLLBACK,checksumEvery:30,stallTimeout:10000,
+   input:()=>this.guard(()=>{const ports=this.local.length===1&&this.local[0].localIndex===0&&this.readInput?[this.readInput()]:this.readPorts();return this.local.map(p=>{const pad=ports[p.localIndex]||neutral();if(!validPad(pad))throw Error('Invalid local controller');return pad;});},this.local.map(()=>neutral())),
+   step:(frame,inputs)=>this.guard(()=>this.step(frame,inputs)),save:()=>this.guard(()=>this.save(),{failed:true}),load:state=>this.guard(()=>this.load(state))});
+  const send=room.send,receive=this.sync.receive?.bind(this.sync);
+  this.scopedSend=(data,...args)=>send.call(room,data?._ls===1?{...data,os:[profile.protocol,round,game]}:data,...args);room.send=this.scopedSend;
+  this.restoreSend=()=>{if(room.send===this.scopedSend)room.send=send;};
+  if(receive)this.sync.receive=(from,data)=>{if(!this.closed&&data?.os?.[0]===profile.protocol&&data.os[1]===round&&data.os[2]===game)return receive(from,data);};
+  for(const event of ['desync','timeout'])this.sync.on(event,()=>this.fail('The game could not stay synchronized.'));
+  this.message=({from,data:d})=>{if(this.closed||from===room.me||!this.connections.includes(from)||d?.p!==profile.protocol||d.round!==round||d.game!==game)return;
+   if(d.type==='abort')return this.fail('Another device could not continue the game.');
+   if(d.type!=='ports-ready')return;
+   if(d.signature!==this.signature)return this.fail('Players prepared different fighters or controller ports.');
+   this.peers.set(from,d.ready===true);this.startIfReady();};
+  room.on('message',this.message);this.timer=setInterval(()=>this.pulse(),500);
+  this.launch(expectedFighters,this);this.pulse();
+ }
+ guard(fn,fallback){if(this.closed)return fallback;try{return fn();}catch(error){this.fail(error.message);return fallback;}}
+ pulse(){if(this.closed)return;if(!this.started&&Date.now()-this.startedAt>90000)return this.fail('The game could not finish loading.');this.room.send({p:this.profile.protocol,round:this.round,game:this.game,type:'ports-ready',signature:this.signature,ready:!!this.engine});}
+ attach(engine){if(this.closed)return engine.destroy?.();this.engine=engine;this.pulse();this.startIfReady();}
+ startIfReady(){if(!this.started&&!this.closed&&this.engine&&this.connections.filter(id=>id!==this.room.me).every(id=>this.peers.get(id))){this.started=true;this.sync.start();}}
+ save(){return {frame:this.frame,terminal:this.terminal?structuredClone(this.terminal):null,engine:this.engine.save(this.frame)};}
+ load(state){if(!Number.isInteger(state?.frame))throw Error('Invalid checkpoint');this.engine.load(state.engine);this.frame=state.frame;this.terminal=state.terminal?structuredClone(state.terminal):null;}
+ step(frame,inputs){
+  if(frame!==this.frame)throw Error('Simulation frame is out of order');
+  const pads=Array.from({length:4},()=>neutral());
+  for(const connection of this.connections){const owned=this.participants.filter(p=>p.connectionId===connection);const samples=inputs[connection]??owned.map(()=>neutral());if(!Array.isArray(samples)||samples.length!==owned.length||samples.some(p=>!validPad(p)))throw Error('Invalid controller port bundle');owned.forEach((p,i)=>pads[p.slot]=samples[i]);}
+  if(!this.terminal){const [hash,result,s0,s1,ticks,s2,s3,mask]=this.engine.step(pads);if(mask===undefined)throw Error('The game engine does not support online player slots.');
+   this.status(`Game ${this.game} · ${Math.max(0,480-Math.floor(ticks/60))}s remaining`);
+   if(result>=0){const winner=result===4?this.participants.length:this.participants.findIndex(p=>p.slot===result);if(winner<0)throw Error('The engine returned an unoccupied winning slot');this.terminal={frame,result:winner,stocks:this.participants.map(p=>[s0,s1,s2,s3][p.slot]),hash};}}
+  this.frame=frame+1;
+  if(this.terminal&&frame-this.terminal.frame>MAX_ROLLBACK+2&&!this.reported){this.reported=true;const t=this.terminal;queueMicrotask(()=>{if(!this.closed){this.sync.stop();this.onGameResult({result:t.result,hash:t.hash>>>0,stocks:t.stocks.map(n=>Math.max(0,n))});}});}
+ }
+ fail(message){if(this.closed)return;try{this.room.send({p:this.profile.protocol,round:this.round,game:this.game,type:'abort'});}catch{}this.destroy();Promise.resolve(this.room.finish({void:true})).catch(()=>{}).finally(()=>this.stop(message));}
+ destroy(){if(this.closed)return;this.closed=true;clearInterval(this.timer);this.room.off('message',this.message);this.sync.stop();this.restoreSend?.();this.engine?.destroy?.();}
+}

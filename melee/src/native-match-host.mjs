@@ -7,7 +7,7 @@ let module,engine,loader,audio,port,booted=false,shaderCache,engineSha256,failed
 const status=value=>port.postMessage({status:value});
 async function boot(launch) {
   if(booted)throw Error('A Melee match can only boot once.');booted=true;
-  if(!launch||!STAGES.some(s=>s.id===launch.stage)||launch.selections?.length!==2||!launch.selections.every(validSelection))throw Error('Invalid Melee match configuration.');
+  if(!launch||!STAGES.some(s=>s.id===launch.stage)||!Array.isArray(launch.selections)||launch.selections.length<2||launch.selections.length>4||!launch.selections.every(validSelection))throw Error('Invalid Melee match configuration.');
   if(!crossOriginIsolated||!WebAssembly.Suspending||!WebAssembly.promising)throw Error('Online Melee requires Chrome with shared memory and WebAssembly promise integration.');
   const canvas=document.getElementById('canvas'),display=canvas.getContext('bitmaprenderer');
   const memory=new WebAssembly.Memory({initial:4096,maximum:32768,shared:true});
@@ -27,8 +27,12 @@ async function boot(launch) {
   loader=await createAssetLoader(module,memory,p=>status({event:'download',name:p.name,loaded:p.completed,total:p.total,error:p.error}));
   loader.background=false;
   await Promise.race([failed,Promise.all(['menu','match','stage:'+launch.stage,...launch.selections.map(s=>'fighter:'+s.fighter)].map(key=>loader.group(key,0)))]);
-  const [a,b]=launch.selections;
-  if(!module._melee_match_configure(launch.seed,launch.stage,a.fighter,a.color,b.fighter,b.color))throw Error('The Melee engine rejected the match rules.');
+  const slots=launch.slots??launch.selections.map((_,i)=>i);
+  if(slots.length!==launch.selections.length||new Set(slots).size!==slots.length||slots.some(s=>!Number.isInteger(s)||s<0||s>3))throw Error('Invalid Melee controller ports.');
+  const choices=Array.from({length:4},()=>({fighter:0,color:0}));
+  slots.forEach((slot,i)=>{choices[slot]=launch.selections[i];});
+  const mask=slots.reduce((m,slot)=>m|(1<<slot),0);
+  if(typeof module._melee_match_configure_slots!=='function'||!module._melee_match_configure_slots(launch.seed,launch.stage,mask,...choices.flatMap(p=>[p.fighter,p.color])))throw Error('The Melee engine rejected the player slots.');
   audio=new AudioContext({sampleRate:48000,latencyHint:'interactive'});
   await audio.audioWorklet.addModule('./audio-worklet.js');
   new AudioWorkletNode(audio,'melee-audio',{outputChannelCount:[2],processorOptions:{memory,pointer:module._melee_audio_ring()}}).connect(audio.destination);

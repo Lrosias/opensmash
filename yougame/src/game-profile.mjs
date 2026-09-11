@@ -11,7 +11,10 @@ export function engineParams({battle,seed,profile=ACTIVE_PROFILE}={}){
  const params=new URLSearchParams();
  if(profile.remix)params.set('SSB64_REMIX_MAIN','1');
  if(!battle){params.set('SSB64_START_SCENE','7');return params;}
- params.set('SSB64_BOOT_BATTLE',`${battle.fighters[0]},${battle.fighters[1]},${battle.stage},0`);
- for(const [k,v]of Object.entries({SSB64_STOCKS:profile.stocks,SSB64_YOUGAME:1,SSB64_YOUGAME_ROLLBACK:1,SSB64_YOUGAME_SEED:seed,SSB64_BOOT_HUMANS:2,SSB64_BOOT_SLOTS:'hhoo',SSB64_VS_INTRO:0}))params.set(k,String(v));
+ const slots=battle.participants||battle.fighters.map((_,slot)=>({slot}));
+ const fighters=Array(4).fill(0),roles=Array(4).fill('o');
+ slots.forEach((p,i)=>{fighters[p.slot]=battle.fighters[i];roles[p.slot]='h';});
+ params.set('SSB64_BOOT_BATTLE',`${fighters[0]},${fighters[1]},${battle.stage},0,${fighters[2]},${fighters[3]}`);
+ for(const [k,v]of Object.entries({SSB64_STOCKS:profile.stocks,SSB64_YOUGAME:1,SSB64_YOUGAME_ROLLBACK:1,SSB64_YOUGAME_SEED:seed,SSB64_BOOT_HUMANS:slots.length,SSB64_BOOT_SLOTS:roles.join(''),SSB64_VS_INTRO:0}))params.set(k,String(v));
  return params;
 }

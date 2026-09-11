@@ -57,3 +57,8 @@ body{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-ri
 .touch #competitive.native-result .competitive-card{display:flex;align-items:center;gap:12px;width:auto;max-width:none;padding:6px 12px}
 .touch #competitive.native-result h1{font-size:18px;margin:0}.touch #competitive.native-result .result-score{font-size:22px;margin:0}
 .touch #competitive.native-result .competitive-kicker,.touch #competitive.native-result .competitive-subtitle,.touch #competitive.native-result .rules-note,.touch #competitive.native-result .rank-line{display:none}
+/* Game-owned lobby and result actions remain usable over native presentation. */
+#competitive button.primary:hover,#competitive button[aria-pressed=true]:hover{background:#d7f4a4;color:#14200c}
+#competitive .competitive-card>.primary{margin:0 8px 8px 0}
+#competitive.native-result .competitive-card{pointer-events:auto}
+.touch #competitive.native-result .competitive-card{flex-wrap:wrap}

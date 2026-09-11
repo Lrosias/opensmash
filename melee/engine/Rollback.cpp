@@ -43,7 +43,7 @@ std::atomic<int> request{0}, command{0}, argument{0}, replay{0};
 std::atomic<bool> waiting{false};
 bool field_pending = false, entered = false, managed_history = false;
 std::atomic<bool> match_configured{false}, match_entered{false};
-std::array<int, 6> match_config{};
+std::array<int, 13> match_config{};
 bool match_menu_started = false;
 int menu_field = 0;
 
@@ -65,7 +65,7 @@ void advance_match_boot() {
   melee_input(1,buttons1,f < 56 ? x : 0,f < 56 ? y : 0,0,0,0,0);
 }
 
-struct MatchStatus { int active, outcome, stocks0, stocks1, percent0, percent1, seconds, game_frame, fighter0, fighter1, stage; };
+struct MatchStatus { int active, outcome, stocks0, stocks1, percent0, percent1, seconds, game_frame, fighter0, fighter1, stage, stocks2, stocks3, percent2, percent3, fighter2, fighter3, mask; };
 MatchStatus match_status() {
   if (!match_entered.load()) return {};
   auto& mem = Core::System::GetInstance().GetMemory();
@@ -77,7 +77,10 @@ MatchStatus match_status() {
     mem.Read_U16(player + 0x60), mem.Read_U16(player + stride + 0x60),
     static_cast<int>(mem.Read_U32(controller + 0x28)), game_frame,
     static_cast<int>(mem.Read_U32(player + 4)), static_cast<int>(mem.Read_U32(player + stride + 4)),
-    mem.Read_U16(controller + 0x24c8 + 0xe)};
+    mem.Read_U16(controller + 0x24c8 + 0xe),
+    static_cast<s8>(mem.Read_U8(player + stride * 2 + 0x8e)), static_cast<s8>(mem.Read_U8(player + stride * 3 + 0x8e)),
+    mem.Read_U16(player + stride * 2 + 0x60), mem.Read_U16(player + stride * 3 + 0x60),
+    static_cast<int>(mem.Read_U32(player + stride * 2 + 4)), static_cast<int>(mem.Read_U32(player + stride * 3 + 4)), match_config[12]};
 }
 int frame = 0, next_handle = 0, step_sequence = 0;
 double step_start = 0;
@@ -92,10 +95,17 @@ u32 ram_hash() {
 void reply(int seq, int status, int handle, size_t bytes, double ms, bool hash = true) {
   const u32 digest = hash ? ram_hash() : 0;
   const auto match = match_status();
-  EM_ASM({ postMessage({cmd:9,handler:'onMeleeRollback',args:[$0,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15]}); },
-         seq, status, frame, handle, digest, bytes, ms, match.active, match.outcome,
-         match.stocks0, match.stocks1, match.percent0, match.percent1, match.seconds, match.game_frame,
-         (match.fighter0 & 255) | ((match.fighter1 & 255) << 8) | (match.stage << 16));
+  // EM_ASM supports at most 16 scalar arguments. Copy the status from this
+  // stack frame before posting so all four ports keep the same callback ABI.
+  static_assert(sizeof(MatchStatus) == 18 * sizeof(int));
+  EM_ASM({
+    var i = $7 >>> 2;
+    var args = new Array($0,$1,$2,$3,$4,$5,$6);
+    for (var f = 0; f < 8; f++) args.push(HEAP32[i + f]);
+    args.push((HEAP32[i + 8] & 255) | ((HEAP32[i + 9] & 255) << 8) | (HEAP32[i + 10] << 16));
+    for (var f = 11; f < 18; f++) args.push(HEAP32[i + f]);
+    postMessage({cmd:9,handler:'onMeleeRollback',args:args});
+  }, seq, status, frame, handle, digest, bytes, ms, &match);
 }
 int capture() {
   if (managed_history && history.size() >= HISTORY) return 0;
@@ -145,20 +155,27 @@ bool restore(int handle) {
 }
 }
 
-// Called before main. Configuration is immutable for this engine instance.
-extern "C" EMSCRIPTEN_KEEPALIVE int melee_match_configure(unsigned seed, int stage, int f0, int c0, int f1, int c1) {
-  if (match_configured.load() || entered || f0 < 0 || f0 > 25 || f1 < 0 || f1 > 25 ||
-      c0 < 0 || c0 > 3 || c1 < 0 || c1 > 3 ||
+// Called before main. Each occupied participant keeps its actual controller port.
+extern "C" EMSCRIPTEN_KEEPALIVE int melee_match_configure_slots(unsigned seed, int stage, int mask,
+    int f0, int c0, int f1, int c1, int f2, int c2, int f3, int c3) {
+  if (match_configured.load() || entered || mask < 1 || mask > 15 || __builtin_popcount(static_cast<unsigned>(mask)) < 2 ||
       (stage != 2 && stage != 3 && stage != 8 && stage != 28 && stage != 31 && stage != 32)) return 0;
-  match_config = {static_cast<int>(seed), stage, f0, c0, f1, c1};
+  const int fighters[] = {f0,f1,f2,f3}, colors[] = {c0,c1,c2,c3};
+  for (int i=0;i<4;i++) if ((mask & (1<<i)) &&
+      (fighters[i]<0 || fighters[i]>25 || colors[i]<0 || colors[i]>3)) return 0;
+  match_config = {static_cast<int>(seed), stage, f0, c0, f1, c1, 1, 0, f2, c2, f3, c3, mask};
   melee_rb_mode = true;
   match_configured.store(true, std::memory_order_release);
   return 1;
 }
+// Preserve the existing two-player ABI for diagnostics and previously authored adapters.
+extern "C" EMSCRIPTEN_KEEPALIVE int melee_match_configure(unsigned seed, int stage, int f0, int c0, int f1, int c1) {
+  return melee_match_configure_slots(seed,stage,3,f0,c0,f1,c1,0,0,0,0);
+}
 extern "C" int melee_match_option(int option) {
   if (!match_configured.load(std::memory_order_acquire)) return -1;
   if (option == 7) return match_menu_started ? 1 : 0;
-  return option >= 0 && option < 6 ? match_config[option] : 1;
+  return option >= 0 && option < 13 ? match_config[option] : -1;
 }
 extern "C" void melee_match_menu() { if (match_configured.load()) { match_menu_started = true; menu_field = 0; } }
 extern "C" void melee_match_enter() { match_entered = true; EM_ASM({console.log("Melee competitive match configured");}); }

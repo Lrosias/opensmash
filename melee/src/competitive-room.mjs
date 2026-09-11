@@ -6,13 +6,16 @@ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 export class MeleeCompetitiveRoom {
   constructor({room,build,selection,adapter,bag=null,onChange=()=>{},onError=()=>{},onResult=()=>{}}){
     this.room=room;this.build=build;this.adapter=adapter;this.onChange=onChange;this.onError=onError;this.onResult=onResult;
-    this.players=room.players.map(p=>p.id);this.seat=this.players.indexOf(room.me);this.round=room.round;
+    this.players=room.activeConnections?.length?room.activeConnections.slice():room.players.map(p=>p.id);this.seat=this.players.indexOf(room.me);this.round=room.round;
     if(this.players.length!==2||new Set(this.players).size!==2||this.seat<0||!validSelection(selection)||!build||!adapter?.prepare||!adapter?.play||!adapter?.stop)
       throw Error('Competitive play requires two players and a confirmed-result engine adapter');
+    const participants=room.matchParticipants?.length?room.matchParticipants:room.activeParticipants;
+    this.slots=this.players.map((id,index)=>participants?.find(p=>p.connectionId===id)?.slot??index);
+    if(new Set(this.slots).size!==2||this.slots.some(slot=>!Number.isInteger(slot)||slot<0||slot>3))throw Error('Invalid competitive controller ports');
     this.host=this.players[0];this.local={build,rules:MELEE_RULES.id,selection,bag};this.queued=[];this.requests=0;this.seen=[0,0];this.reports=[null,null];
     this.message=e=>{try{this.receive(e);}catch(e){this.fail(e);}};
     this.leave=player=>this.opponentLeft(player);
-    this.close=()=>this.fail(Error('The connection closed. Return to the online menu.'));
+    this.close=()=>{if(!this.settled)this.fail(Error('The connection closed. Return to the online menu.'));};
     this.result=result=>{if(!this.settled&&result?.round===this.round){this.settled=true;this.stop();this.onResult(result);}};
     room.on('message',this.message);room.on('leave',this.leave);room.on('close',this.close);room.on('result',this.result);
     this.timer=setInterval(()=>{if(!this.model)this.hello();},1000);
@@ -80,19 +83,28 @@ export class MeleeCompetitiveRoom {
   }
   changed(){
     if(this.closed)return;
-    const s=this.model.snapshot;this.onChange(s,this.model);
+    const s=this.model.snapshot;
+    // Persist each agreed game independently; the final set alone affects rating.
+    this.gameReports??=new Map();
+    for(const result of s.history)if(!this.gameReports.has(result.game)){
+      const pending=typeof this.room.reportGame==='function'?this.room.reportGame({id:`game-${result.game}`, ...(result.winner===null?{draw:true}:{winner:this.players[result.winner]})}):Promise.resolve();
+      this.gameReports.set(result.game,pending);pending.catch(e=>this.fail(e));
+    }
+    this.onChange(s,this.model);
     if(s.phase==='ready'&&this.preparing!==s.game){
-      this.preparing=s.game;const launch=this.model.launch;
+      this.preparing=s.game;const launch={...this.model.launch,slots:this.slots};
       Promise.resolve().then(()=>this.adapter.prepare(launch)).then(()=>{
         if(!this.closed&&this.model.state.game===launch.game&&this.model.state.phase==='ready')this.action({type:'ready'});
       }).catch(e=>this.fail(e));
     }
     if(s.phase==='playing'&&this.playing!==s.game){
-      this.playing=s.game;const launch=this.model.launch;
+      this.playing=s.game;const launch={...this.model.launch,slots:this.slots};
       Promise.resolve().then(()=>this.adapter.play(launch)).then(result=>{
         if(this.closed)return;
         if(result?.confirmed!==true)throw Error('Engine returned a speculative result');
-        const report={game:launch.game,winner:result.winner,frame:result.frame,checksum:result.checksum};
+        const winner=result.winner===null?null:this.slots.indexOf(result.winner);
+        if(winner===-1)throw Error('The engine reported an unoccupied winning port');
+        const report={game:launch.game,winner,frame:result.frame,checksum:result.checksum};
         if(this.seat===0)this.report(0,report);
         else {this.reports[1]=report;this.send('report',report);}
       }).catch(e=>this.fail(e));
@@ -101,7 +113,7 @@ export class MeleeCompetitiveRoom {
       this.finishing=true;
       const winner=s.scores[0]===s.scores[1]?null:this.players[s.scores[0]>s.scores[1]?0:1];
       const result={...(winner===null?{draw:true}:{winner}),scores:Object.fromEntries(this.players.map((id,i)=>[id,s.scores[i]]))};
-      Promise.resolve().then(()=>this.room.finish(result)).then(this.result).catch(e=>this.fail(e));
+      Promise.all([...this.gameReports.values()]).then(()=>this.room.finish(result)).then(this.result).catch(e=>this.fail(e));
     }
   }
   opponentLeft(player){

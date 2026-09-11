@@ -12,7 +12,7 @@ function setup({lag=4,loseEvery=0,attach=true}={}){
  const sdk=readFileSync(sdkPath,'utf8'),loops=[],network=[],sessions=[],reports=[[],[]],errors=[];
  let now=0;
  const source=sdk.slice(sdk.indexOf('  function canon('),sdk.indexOf('  // A hidden tab'))+
-  sdk.slice(sdk.indexOf('  function makeSync('),sdk.indexOf('  /* ---------- host-authoritative kit:'));
+  sdk.slice(sdk.indexOf('  function matchConnectionIds(')>=0?sdk.indexOf('  function matchConnectionIds('):sdk.indexOf('  function makeSync('),sdk.indexOf('  /* ---------- host-authoritative kit:'));
  assert.ok(source.includes('function makeSync'));
  const makeSync=vm.runInNewContext(source+'; makeSync',{window:{console},console,Date,performance,
   fixedStep(o){let active=false;const tick=()=>{if(active)o.update();};loops.push(tick);return {start(){active=true;},stop(){active=false;}};}});

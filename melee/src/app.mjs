@@ -24,7 +24,7 @@ state.competitive=new MeleeCompetitiveUI({root:$('competitive'),sdk:window.YouGa
 fetch('./engine/wasm.json').then(r=>{if(!r.ok)throw Error('The Melee build could not load.');return r.json();}).then(manifest=>{
   if(!/^[a-f0-9]{64}$/.test(manifest.sha256))throw Error('Invalid Melee build identity.');
   state.competitive.setAdapter(room=>{setupInput();return new MeleeMatchAdapter({room,build:manifest.sha256,createEngine:createNativeMatch,
-    input:()=>readSeat(0),onStatus:status=>{
+    input:(_frame,localIndex=0)=>readSeat(localIndex),onStatus:status=>{
       if(status.event==='audio')matchSound.hidden=status.running;
       if(status.event==='download'&&status.name)$('metrics').textContent=`${status.name} · ${Math.round(status.loaded/(status.total||1)*100)}%`;
       else if(status.event==='stall')$('metrics').textContent='Waiting for the connection…';

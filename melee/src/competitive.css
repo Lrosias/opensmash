@@ -7,3 +7,6 @@
 
 /* Scroll inside the reserved viewport so lower rows cannot pass under host tools. */
 .competitive{overflow:hidden}.comp-shell{height:100%;overflow:auto;scroll-padding-block:16px;padding:4px}
+
+.comp-lobby-players{grid-template-columns:repeat(4,minmax(0,1fr))}.comp-lobby-players .comp-player{min-width:0;flex-direction:column;align-items:stretch;gap:10px}.comp-lobby-players .comp-player button{width:100%;min-width:0;white-space:normal}.comp-lobby-players .comp-player h2{margin:0}
+@media(max-width:900px){.comp-lobby-players{grid-template-columns:repeat(2,minmax(0,1fr))}}

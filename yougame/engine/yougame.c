@@ -42,28 +42,31 @@ int port_yougame_before_tick(void) {
 void port_yougame_after_tick(void) {
     SCBattleState *bs = gSCManagerBattleState;
     unsigned int hash;
-    int result = -1, stocks[2] = {3,3}, percent[2] = {0,0}, i;
+    int result = -1, stocks[4] = {0,0,0,0}, percent[4] = {0,0,0,0}, i, mask = 0;
     if (!port_yougame_enabled()) {
         EM_ASM({Module.nativeScene=$0;}, gSCManagerSceneData.scene_curr);
         return;
     }
     hash = ((unsigned int)syUtilsRandSeed() * 16777619u) ^ gSCManagerSceneData.scene_curr;
     if (gSCManagerSceneData.scene_curr == nSCKindVSBattle && bs != NULL) {
+        int alive = 0, best = -1, tied = 0;
         hash ^= syNetSyncHashBattleFighters();
         if (bs->game_status == nSCBattleGameStatusGo) battle_ticks++;
-        for (i = 0; i < 2; i++) {
+        for (i = 0; i < 4; i++) {
+            if (bs->players[i].pkind != nFTPlayerKindMan) continue;
+            mask |= 1 << i;
             stocks[i] = bs->players[i].stock_count + 1;
             if (bs->players[i].fighter_gobj) percent[i] = ftGetStruct(bs->players[i].fighter_gobj)->percent_damage;
             hash = (hash ^ (unsigned int)stocks[i]) * 16777619u;
+            if (stocks[i] > 0) alive++;
+            if (best < 0 || stocks[i] > stocks[best] || (stocks[i] == stocks[best] && percent[i] < percent[best])) {best = i; tied = 0;}
+            else if (stocks[i] == stocks[best] && percent[i] == percent[best]) tied = 1;
         }
-        if (battle_ticks > 0 && (stocks[0] <= 0 || stocks[1] <= 0 || battle_ticks >= 8*60*60)) {
-            if (stocks[0] != stocks[1]) result = stocks[0] > stocks[1] ? 0 : 1;
-            else if (percent[0] != percent[1]) result = percent[0] < percent[1] ? 0 : 1;
-            else result = 2;
-        }
+        if (battle_ticks > 0 && best >= 0 && (alive <= 1 || battle_ticks >= 8*60*60)) result = tied ? 4 : best;
     }
-    EM_ASM({ if (Module.onYouGameState) Module.onYouGameState($0 >>> 0,$1,$2,$3,$4); },
-           hash, result, stocks[0], stocks[1], battle_ticks);
+    EM_ASM({ if (Module.onYouGameState) Module.onYouGameState($0 >>> 0,$1,$2,$3,$4,$5,$6,$7); },
+           hash, result, stocks[0], stocks[1], battle_ticks, stocks[2], stocks[3], mask);
+
 }
 #endif
 
@@ -194,7 +197,7 @@ void port_yougame_online_run(void) {
         if(!online_phase) {
             port_yougame_queue_kind=online_cursor;
             func_800269C0_275C0(nSYAudioFGMMenuSelect);
-            online_scene(nSCKindPlayersVS);
+            online_event(6, port_yougame_queue_kind);
         } else if(online_cursor==1) online_event(2,0);
         else if(online_phase==4) online_event(3,0);
         else if(online_phase==6) online_event(4,0);

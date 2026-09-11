@@ -52,20 +52,21 @@ test('locked fighters, mirror colors and platform rank data have explicit bounda
 });
 
 const flush=async()=>{for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));};
-function pair({differentResult=false,ranked=true,deferFinish=false}={}){
-  const rooms=[],sessions=[],errors=[],finishes=[[],[]],pending=[[],[]],stopped=[0,0],wire=[],results=[[],[]],settlements=[[],[]];
+function pair({differentResult=false,ranked=true,deferFinish=false,slots=null}={}){
+  const rooms=[],sessions=[],errors=[],finishes=[[],[]],pending=[[],[]],stopped=[0,0],wire=[],results=[[],[]],settlements=[[],[]],games=[[],[]];
   for(let i=0;i<2;i++){
     const handlers=new Map();
-    rooms.push({me:['a','b'][i],players:[{id:'a',name:'Alice'},{id:'b',name:'Bob'}],round:1,seed:77,ranked,playing:true,queue:ranked?'ranked':'casual',
+    rooms.push({me:['a','b'][i],matchParticipants:slots?slots.map((slot,index)=>({id:['a','b'][index],connectionId:['a','b'][index],slot,localIndex:0})):undefined,players:[{id:'a',name:'Alice'},{id:'b',name:'Bob'}],round:1,seed:77,ranked,playing:true,queue:ranked?'ranked':'casual',
       on:(e,f)=>{if(!handlers.has(e))handlers.set(e,new Set());handlers.get(e).add(f);},off:(e,f)=>handlers.get(e)?.delete(f),
       emit:(e,data)=>{for(const f of handlers.get(e)??[])f(data);},
       send:data=>{wire.push({from:i,data:structuredClone(data)});queueMicrotask(()=>rooms[1-i].emit('message',{from:['a','b'][i],data:structuredClone(data)}));},
+      reportGame:async data=>{games[i].push(structuredClone(data));return data;},
       finish:async data=>{finishes[i].push(data);return deferFinish?new Promise(resolve=>settlements[i].push(resolve)):{round:1,...data,won:data.winner===rooms[i].me};}});
   }
   for(let i=0;i<2;i++)sessions.push(new MeleeCompetitiveRoom({room:rooms[i],build:'same-build',selection:{fighter:i?20:2,color:0},
     adapter:{prepare:async()=>{},play:async config=>new Promise(resolve=>pending[i].push(winner=>resolve({confirmed:true,winner,frame:300,checksum:differentResult?`peer-${i}`:`game-${config.game}`}))),stop:()=>stopped[i]++},
     onError:e=>errors.push(e.message),onResult:r=>results[i].push(r)}));
-  return {rooms,sessions,errors,finishes,pending,stopped,wire,results,settlements,stop:()=>sessions.forEach(s=>s.stop())};
+  return {rooms,sessions,errors,finishes,pending,stopped,wire,results,settlements,games,stop:()=>sessions.forEach(s=>s.stop())};
 }
 async function stageToPlay(p){
   await flush();
@@ -129,10 +130,10 @@ test('transport failure remains neutral instead of claiming a forfeit',async()=>
     assert.deepEqual(p.finishes,[[{void:true}],[{void:true}]]);
   }finally{p.stop();}
 });
-test('interrupted platform outcomes show Continue guidance without a fabricated score',()=>{
+test('interrupted platform outcomes show game-owned return guidance without a fabricated score',()=>{
   for(const result of [{won:true},{won:false},{void:true},{draw:true}]){
     const html=MeleeCompetitiveUI.prototype.setScreen.call({roundResult:result,model:{state:{phase:'playing'}}});
-    assert.match(html,/ONLINE \/ RESULT/);assert.match(html,/Continue button/);
+    assert.match(html,/ONLINE \/ RESULT/);assert.match(html,/return-lobby/);
     assert.doesNotMatch(html,/in progress|Set score|Game score|0 – 0/);
     assert.match(html,result.void?/Set void/:result.draw?/Set drawn/:result.won?/Set won/:/Set lost/);
   }
@@ -146,12 +147,12 @@ test('UI accepts SDK results after its round advances and ignores callbacks from
     room,root:{hidden:true},build:'test-build',selection:{fighter:2,color:0},renders:0,
     adapterFactory:()=>({prepare:async()=>{},play:async()=>{},stop(){}}),render(){this.renders++;}});
   try{
-    ui.beginRound();const first=ui.session;
+    ui.beginRound([{id:'a',connectionId:'a',slot:0,selection:{fighter:2,color:0}},{id:'b',connectionId:'b',slot:1,selection:{fighter:20,color:0}}]);const first=ui.session;
     // Match deployed SDK ordering: round increments before result callbacks fire.
     room.round=2;const result={round:1,won:true};first.onResult(result);
     assert.equal(ui.roundResult,result);assert.equal(ui.root.hidden,false);assert.equal(ui.screen,'set');
     ui.notice='Previous engine failed';
-    ui.beginRound();assert.equal(ui.session.round,2);assert.equal(ui.roundResult,null);assert.equal(ui.notice,'');
+    ui.beginRound([{id:'a',connectionId:'a',slot:0,selection:{fighter:2,color:0}},{id:'b',connectionId:'b',slot:1,selection:{fighter:20,color:0}}]);assert.equal(ui.session.round,2);assert.equal(ui.roundResult,null);assert.equal(ui.notice,'');
     const renders=ui.renders;
     first.onResult(result);first.onChange({phase:'playing'},{stale:true});first.onError(Error('Late finish failure'));
     assert.equal(ui.renders,renders);assert.equal(ui.roundResult,null);assert.equal(ui.model,null);assert.equal(ui.screen,'set');
@@ -160,4 +161,28 @@ test('UI accepts SDK results after its round advances and ignores callbacks from
     second.onChange({phase:'playing'},{stale:true});second.onError(Error('Left room'));second.onResult({round:2,won:true});
     assert.equal(ui.renders,renders);
   }finally{ui.session?.stop();}
+});
+
+test('a 2–1 ranked set records three games and exactly one final result per connection',async()=>{
+ const p=pair();try{
+  await stageToPlay(p);p.pending.forEach(q=>q.shift()(0));await flush();
+  p.sessions.forEach(s=>s.action({type:'continue'}));await flush();
+  p.sessions[0].action({type:'stage',stage:31});await flush();p.sessions[1].action({type:'stage',stage:3});await flush();
+  p.sessions[0].action(pick(9));await flush();p.sessions[1].action(pick(19));await flush();
+  p.pending.forEach(q=>q.shift()(1));await flush();
+  p.sessions.forEach(s=>s.action({type:'continue'}));await flush();
+  const a=p.sessions[0].model;p.sessions[a.actor].action({type:'stage',stage:a.legalStages()[0].id});await flush();
+  const b=p.sessions[0].model;p.sessions[b.actor].action({type:'stage',stage:b.legalStages()[0].id});await flush();
+  p.sessions[1].action(pick(20));await flush();p.sessions[0].action(pick(2));await flush();
+  p.pending.forEach(q=>q.shift()(0));await flush();
+  assert.deepEqual(p.errors,[]);assert.deepEqual(p.games[0],[{id:'game-1',winner:'a'},{id:'game-2',winner:'b'},{id:'game-3',winner:'a'}]);assert.deepEqual(p.games[0],p.games[1]);
+  assert.deepEqual(p.finishes,[[{winner:'a',scores:{a:2,b:1}}],[{winner:'a',scores:{a:2,b:1}}]]);
+  p.rooms.forEach(r=>r.emit('close'));await flush();assert.deepEqual(p.errors,[]);assert.equal(p.results[0].length,1);
+ }finally{p.stop();}
+});
+test('competitive games translate a sparse physical winning port back to the correct participant',async()=>{
+ const p=pair({ranked:false,slots:[3,1]});try{
+  await stageToPlay(p);p.pending.forEach(q=>q.shift()(1));await flush();
+  assert.deepEqual(p.errors,[]);assert.deepEqual(p.games[0],[{id:'game-1',winner:'b'}]);assert.deepEqual(p.finishes[0],[{winner:'b',scores:{a:0,b:1}}]);
+ }finally{p.stop();}
 });

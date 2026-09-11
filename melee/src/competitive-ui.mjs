@@ -1,5 +1,7 @@
 import {CompetitiveSet,FIGHTERS,STAGES,MELEE_RULES,COMPETITIVE_PROTOCOL,rankPresentation} from './competitive-rules.mjs';
 import {MeleeCompetitiveRoom} from './competitive-room.mjs';
+import {MeleePartyMatch} from './party-match.mjs';
+import {GameLobby} from '../../controllers/online-lobby.mjs';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fighter=id=>FIGHTERS.find(f=>f.id===id)?.name??'Choosing…';
 const button=(label,action,value='',extra='')=>`<button data-action="${action}" data-value="${value}" data-key="${action}-${value}" ${extra}>${label}</button>`;
@@ -10,18 +12,18 @@ function stageArt(stage){
 
 export class MeleeCompetitiveUI {
   constructor({root,sdk,readMenu,onLocal=()=>{}}){
-    this.root=root;this.sdk=sdk;this.readMenu=readMenu;this.onLocal=onLocal;this.selection={fighter:2,color:0};this.screen='setup';this.preview=false;this.names=['You','Practice opponent'];
+    this.root=root;this.sdk=sdk;this.readMenu=readMenu;this.onLocal=onLocal;this.selection={fighter:2,color:0};this.screen='queues';this.preview=false;this.names=['You','Practice opponent'];
     root.addEventListener('click',event=>{const b=event.target.closest('[data-action]');if(b&&!b.disabled)this.handle(b.dataset.action,b.dataset.value).catch(e=>{this.notice=e.message;this.render();});});
     root.addEventListener('keydown',event=>{
       const direction={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
       if(direction){event.preventDefault();this.moveFocus(...direction);}
       if(event.key==='Escape'){event.preventDefault();this.handle('back','');}
     });
-    this.readyHandler=()=>this.beginRound();
-    if(sdk?.ready)Promise.resolve(sdk.ready()).then(()=>{if(sdk.multiplayer?.invite){this.invited=true;this.show();}}).catch(()=>{});
+
+    if(sdk?.ready)Promise.resolve(sdk.ready()).then(()=>{if(sdk.multiplayer?.invite){this.invited=true;this.show();if(this.adapterFactory)this.connect('friends');}}).catch(()=>{});
   }
   // Production wiring is explicit: an awaited SDK alone cannot initialize Melee.
-  setAdapter(factory,build){if(typeof factory!=='function'||typeof build!=='string'||!build)throw Error('Supply a match adapter and exact build identity');this.adapterFactory=factory;this.build=build;this.render();}
+  setAdapter(factory,build){if(typeof factory!=='function'||typeof build!=='string'||!build)throw Error('Supply a match adapter and exact build identity');this.adapterFactory=factory;this.build=build;this.render();if(this.invited&&!this.room)this.connect('friends');}
   show(){this.root.hidden=false;this.render();this.root.querySelector('h1')?.focus();}
   hide(){this.root.hidden=true;this.onLocal();}
   moveFocus(dx,dy){
@@ -60,8 +62,10 @@ export class MeleeCompetitiveUI {
     let body;
     if(this.screen==='setup')body=this.setup();
     else if(this.screen==='queues')body=this.queues();
+    else if(this.screen==='lobby')body=this.lobbyScreen();
+    else if(this.screen==='party')body=this.partyScreen();
     else body=this.setScreen();
-    this.root.innerHTML=`<div class="comp-shell"><nav class="comp-nav"><div class="comp-brand">OPENSMASH <span>MELEE</span></div>${button(this.session?'Leave set':'Local play','back')}</nav>
+    this.root.innerHTML=`<div class="comp-shell"><nav class="comp-nav"><div class="comp-brand">OPENSMASH <span>MELEE</span></div>${button(this.room?'Leave lobby':'Local play','back')}</nav>
       ${this.preview?'<div class="comp-preview">FLOW PREVIEW <span>You control both sides. No online match or rating changes.</span></div>':''}
       ${this.notice?`<p class="comp-notice" role="status">${esc(this.notice)}</p>`:''}${body}
       <footer class="comp-footer"><span>4 stocks · 8 minutes · No items</span><span>NTSC 1.02 · Unfrozen Stadium</span></footer></div>`;
@@ -74,7 +78,7 @@ export class MeleeCompetitiveUI {
     <div class="comp-columns"><main>${this.roster(this.selection.fighter)}</main><aside class="comp-panel"><p class="comp-eyebrow">YOUR PICK</p><h2>${esc(fighter(this.selection.fighter))}</h2><p>Costume</p><div class="comp-colors">${[0,1,2,3].map(i=>button(String(i+1),'color',i,`aria-label="Costume ${i+1}" aria-pressed="${i===this.selection.color}"`)).join('')}</div>
     <p class="comp-muted">Zelda and Sheik select your starting form. Matching costumes are separated automatically.</p>${button('Lock fighter →','lock','','class="comp-primary"')}<p class="comp-muted">You can change characters between games. In Ranked, the previous winner chooses first.</p></aside></div><div class="comp-mobile-pick"><span>${esc(fighter(this.selection.fighter))}</span>${button('Continue with '+esc(fighter(this.selection.fighter)),'lock','','class="comp-primary"')}</div>`;}
   rankCard(){const rank=rankPresentation(this.platformResult);return `<aside class="comp-panel comp-rank"><p class="comp-eyebrow">YOUR RANK</p><h2>${esc(rank?.label??'Make your mark.')}</h2><p>${esc(rank?.detail??'Complete 5 rated sets to earn your first rank. Your existing rank is available on the uGames ladder.')}</p><p class="comp-muted">Bronze → Silver → Gold → Platinum → Diamond → Challenger</p><p class="comp-muted">Ranked sets affect your rating once. Casual and Friends never show a competitive rating.</p></aside>`;}
-  queues(){const unavailable=!this.adapterFactory;return `<div class="comp-heading"><p class="comp-eyebrow">ONLINE / FIND A MATCH</p><h1 tabindex="-1">Your next set starts here.</h1><p>Playing ${esc(fighter(this.selection.fighter))} · Costume ${this.selection.color+1} ${button('Change fighter','change')}</p></div>
+  queues(){const unavailable=!this.adapterFactory;return `<div class="comp-heading"><p class="comp-eyebrow">ONLINE / FIND A MATCH</p><h1 tabindex="-1">Your next set starts here.</h1><p>Join a lobby, then choose your fighters together.</p></div>
     <div class="comp-columns"><main><div class="comp-modes">${[
       ['casual','Casual','Find your rhythm.','Random competitive stages. Keep playing, or change your fighter.'],
       ['ranked','Ranked','Play the set.','Best of three. Stage strikes, counterpicks, and a rating that follows your results.'],
@@ -87,7 +91,7 @@ export class MeleeCompetitiveUI {
     if(this.roundResult&&(this.roundResult.void||this.model?.state.phase!=='complete')){
       const result=this.roundResult,title=result.void?'Set void.':result.draw?'Set drawn.':result.won?'Set won.':'Set lost.';
       const explanation=result.void?'This set did not produce a rated result.':'The set ended before all games were completed. uGames confirmed the outcome.';
-      return `<div class="comp-heading"><p class="comp-eyebrow">ONLINE / RESULT</p><h1 tabindex="-1">${title}</h1><p>${explanation}</p><p>Use uGames’ Continue button when you’re ready for another match.</p></div>${rankPresentation(result)?this.rankCard():''}`;
+      return `<div class="comp-heading"><p class="comp-eyebrow">ONLINE / RESULT</p><h1 tabindex="-1">${title}</h1><p>${explanation}</p><p>Return to character selection, or find another match.</p>${button(this.room?.queue==='ranked'?'Back to Online':'Return to lobby','return-lobby','','class="comp-primary"')}</div>${rankPresentation(result)?this.rankCard():''}`;
     }
     if(this.screen==='error')return '<div class="comp-heading"><h1 tabindex="-1">Set interrupted.</h1><p>Return to the online menu when you’re ready. uGames determines any rating outcome.</p></div>';
     if(!this.model)return '<div class="comp-heading"><h1 tabindex="-1">Preparing your set…</h1><p>Waiting for both players’ locked selections.</p></div>';
@@ -111,10 +115,10 @@ export class MeleeCompetitiveUI {
     }else if(s.phase==='game-result'||s.phase==='complete'){
       const last=s.history.at(-1);title=last.winner===null?'A tied game.':s.phase==='complete'&&s.mode==='ranked'?`${this.names[s.scores[0]>s.scores[1]?0:1]} wins the set.`:`${this.names[last.winner]} takes game ${s.game}.`;
       description=s.phase==='game-result'?(last.winner===null?'Replay the same stage and fighters.':'Next: winner bans, loser chooses a stage, then winner chooses their character first.'):
-        this.preview?'Preview complete. No result was submitted and no rating changed.':'Use uGames’ Continue button when you’re ready for another match.';
+        this.preview?'Preview complete. No result was submitted and no rating changed.':'Return to character selection, or find another match.';
       content=`<div class="comp-panel"><h2>${s.mode==='ranked'?'Set score':'Game score'} · ${s.scores.join(' – ')}</h2><ol class="comp-history">${s.history.map(g=>`<li>Game ${g.game}<span>${esc(STAGES.find(t=>t.id===g.stage).name)}</span><strong>${g.winner===null?'Draw':esc(this.names[g.winner])}</strong></li>`).join('')}</ol>
       ${s.phase==='game-result'?button(last.winner===null?'Replay game':'Continue to counterpick','continue','','class="comp-primary" '+(!this.preview&&s.continued[this.session?.seat]?'disabled':'')):
-        this.preview?`<div class="comp-action-row">${button('Play again','again','','class="comp-primary"')}${button('Change fighter','change')}</div>`:''}</div>
+        this.preview?`<div class="comp-action-row">${button('Play again','again','','class="comp-primary"')}${button('Change fighter','change')}</div>`:`<div class="comp-action-row">${button(this.room?.queue==='ranked'?'Back to Online':'Return to lobby','return-lobby','','class="comp-primary"')}</div>`}</div>
       ${s.phase==='complete'&&s.mode==='ranked'?this.rankCard():''}`;
     }
     return `<div class="comp-heading"><p class="comp-eyebrow">${esc(s.mode.toUpperCase())} / ${s.mode==='ranked'?'BEST OF THREE':'FRIENDLIES'} / GAME ${s.game}</p><h1 tabindex="-1">${esc(title)}</h1><p role="status">${esc(description)}</p></div>${this.playerCards(s)}${content}`;
@@ -127,8 +131,19 @@ export class MeleeCompetitiveUI {
     this.notice='';
     if(action==='back'){
       this.attempt=(this.attempt??0)+1;
-      if(this.session){this.session.stop();this.session=null;this.room?.off('ready',this.readyHandler);this.room?.leave();this.room=null;}
-      this.preview=false;this.screen='setup';this.hide();return;
+      this.leaveLobby();
+      this.preview=false;this.screen='queues';this.hide();return;
+    }
+    if(action==='local-player'){this.selectedParticipant=value;this.render();return;}
+    if(action==='lobby-fighter'||action==='lobby-color'){
+      const own=this.lobby?.view().participants.find(p=>p.id===this.selectedParticipant&&p.local);
+      if(own){const selection={...(own.selection??this.selection)};selection[action==='lobby-fighter'?'fighter':'color']=Number(value);this.lobby.pick(own.id,selection);}return;
+    }
+    if(action==='lobby-ready'){this.lobby?.toggleReady(value);return;}
+    if(action==='lobby-start'){await this.lobby?.start();return;}
+    if(action==='return-lobby'){
+      if(this.room&&this.room.queue!=='ranked'&&this.room.connected!==false){this.session?.stop();this.session=null;this.model=null;this.platformResult=null;this.screen='lobby';this.lobby?.resume();}
+      else {this.leaveLobby();this.screen='queues';}this.render();return;
     }
     if(action==='fighter')this.selection.fighter=Number(value);
     if(action==='color')this.selection.color=Number(value);
@@ -151,20 +166,62 @@ export class MeleeCompetitiveUI {
     this.render();
   }
   perform(action){if(this.preview)this.model.apply(this.model.actor,action);else this.session?.action(action);}
+  leaveLobby(){
+    this.session?.stop();this.session=null;this.lobby?.destroy();this.lobby=null;
+    if(this.room&&this.roomClose)this.room.off('close',this.roomClose);
+    this.room?.leave();this.room=null;this.model=null;this.connecting=false;
+    this.sdk.multiplayer?.leave?.();
+  }
+  lobbyScreen(){
+    const view=this.lobby?.view();if(!view)return '<p role="status">Joining the lobby…</p>';
+    const local=view.participants.filter(p=>p.local);
+    if(!local.some(p=>p.id===this.selectedParticipant))this.selectedParticipant=local[0]?.id;
+    const selected=local.find(p=>p.id===this.selectedParticipant),choice=selected?.selection??this.selection;
+    const seats=Array.from({length:view.capacity},(_,slot)=>{
+      const p=view.participants.find(p=>p.slot===slot);
+      return `<article class="comp-player"><p class="comp-eyebrow">PLAYER ${slot+1}</p><h2>${p?esc(p.name):'Open slot'}</h2><p>${p?esc(p.selection?fighter(p.selection.fighter):'Choosing a fighter'):'Waiting for someone to join'}</p>${p?.local?button('Select for this player','local-player',p.id,`aria-pressed="${p.id===this.selectedParticipant}"`):''}${p?`<p>${p.ready?'Ready':'Not ready'}</p>`:''}</article>`;
+    }).join('');
+    return `<div class="comp-heading"><p class="comp-eyebrow">ONLINE / ${this.room.queue==='private'?'FRIENDS':'MATCH'} LOBBY</p><h1 tabindex="-1">Choose your fighters.</h1><p>${view.playing?'A game is in progress. New players join the next game.':'Invite friends and manage local players from the YouGame lobby menu.'}</p></div><div class="comp-players comp-lobby-players">${seats}</div>${selected&&(!view.playing||view.waitingNext)?`<h2>${esc(selected.name)} · Controller ${selected.localIndex+1}</h2>${this.roster(choice.fighter,'lobby-fighter')}<div class="comp-colors">${[0,1,2,3].map(c=>button('Costume '+(c+1),'lobby-color',c,`aria-pressed="${choice.color===c}"`)).join('')}</div>${button(selected.ready?'Not ready':'Ready','lobby-ready',selected.id,`class="comp-primary" ${!selected.selection?'disabled':''}`)}`:''}<div class="comp-action-row">${view.host?button('Start game','lobby-start','','class="comp-primary" '+(!view.canStart?'disabled':'')):'<p>The host starts when everyone is ready.</p>'}</div>`;
+  }
+  partyScreen(){
+    const result=this.platformResult;
+    const title=result?(result.void?'Game cancelled':result.draw?'Draw':`${this.partyParticipants?.find(p=>p.id===result.ranking?.[0])?.name??'Winner'} wins`):this.partyPhase==='confirming'?'Recording the game…':'Preparing the game…';
+    return `<div class="comp-heading"><p class="comp-eyebrow">FRIENDS</p><h1 tabindex="-1">${esc(title)}</h1></div>${result?button('Return to lobby','return-lobby','','class="comp-primary"'):''}`;
+  }
   async connect(queue){
     if(!this.adapterFactory||this.connecting)return;
     this.connecting=true;this.preview=false;const attempt=this.attempt=(this.attempt??0)+1;this.render();
     try {
-      const room=await this.sdk.multiplayer.open({players:2,mode:COMPETITIVE_PROTOCOL,queue});
+      const room=await this.sdk.multiplayer.joinLobby({players:queue==='friends'?4:2,minPlayers:2,maxLocalPlayers:queue==='friends'?4:1,mode:COMPETITIVE_PROTOCOL,compatibility:this.build,queue});
       if(attempt!==this.attempt){room.leave();return;}
-      this.room=room;this.invited=false;room.on('ready',this.readyHandler);this.beginRound();
-    }catch(error){if(attempt===this.attempt){this.screen='queues';if(error.message!=='Cancelled')this.notice='Connection ended. Choose a mode to try again.';}}
+      this.room=room;this.invited=false;this.screen='lobby';this.root.hidden=false;
+      this.roomClose=()=>{
+        this.lobby?.destroy();
+        if(this.platformResult)return;
+        this.session?.stop();this.session=null;this.room=null;this.screen='queues';this.notice='You left the lobby.';this.root.hidden=false;this.render();
+      };
+      room.on('close',this.roomClose);
+      this.lobby=new GameLobby({room,protocol:COMPETITIVE_PROTOCOL+':lobby',validSelection:p=>p&&Number.isInteger(p.fighter)&&FIGHTERS.some(f=>f.id===p.fighter)&&Number.isInteger(p.color)&&p.color>=0&&p.color<4,
+        onChange:()=>{if(this.screen==='lobby')this.render();},onError:error=>{this.notice=error.message;this.render();},onStart:participants=>this.beginRound(participants)});
+      for(const p of room.localParticipants??[])this.lobby.pick(p.id,this.selection);
+      this.render();
+    }catch(error){if(attempt===this.attempt){this.screen='queues';if(error.message!=='Cancelled')this.notice=error.message;}}
     finally{this.connecting=false;this.render();}
   }
-  beginRound(){
+  beginRound(participants){
     if(!this.room||this.session?.round===this.room.round)return;
     const roundRoom=this.room,roundId=roundRoom.round;
     const current=()=>this.room===roundRoom&&this.session?.round===roundId;
+    if(!participants?.some(p=>p.connectionId===roundRoom.me))return;
+    this.selection={...participants.find(p=>p.connectionId===roundRoom.me).selection};
+    if(roundRoom.queue==='private'){
+      this.session?.stop();this.model=null;this.platformResult=null;this.partyParticipants=participants;this.screen='party';
+      this.session=new MeleePartyMatch({room:roundRoom,participants,adapter:this.adapterFactory(roundRoom),
+        onChange:phase=>{if(!current())return;this.partyPhase=phase;this.root.hidden=phase==='playing';this.render();},
+        onError:error=>{if(!current())return;this.notice=error.message;this.screen='error';this.root.hidden=false;this.render();},
+        onResult:result=>{if(!current())return;this.platformResult=result;this.root.hidden=false;this.render();}});
+      return;
+    }
     const bag=this.session?.model?.state.mode!=='ranked'?this.session?.model?.snapshot.bag:null;
     this.session?.stop();this.model=null;this.roundResult=null;this.notice='';this.screen='set';this.root.hidden=false;this.names=this.room.players.map(p=>p.name);
     this.session=new MeleeCompetitiveRoom({room:this.room,build:this.build,selection:this.selection,bag:bag??null,adapter:this.adapterFactory(this.room),

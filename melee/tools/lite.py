@@ -40,8 +40,8 @@ def main():
             u32 cache = 0x80432078u + 4u + 8u;
             mem_write32(ctx,cache+4u,melee_match_option(1));
             for (int i=0;i<8;i++) {
-                mem_write32(ctx,cache+8u+i*8u,i<2?melee_match_option(2+i*2):0x21);
-                mem_write8(ctx,cache+12u+i*8u,i<2?melee_match_option(3+i*2):0);
+                mem_write32(ctx,cache+8u+i*8u,(i<4 && (melee_match_option(12)&(1<<i)))?melee_match_option(i<2?2+i*2:4+i*2):0x21);
+                mem_write8(ctx,cache+12u+i*8u,(i<4 && (melee_match_option(12)&(1<<i)))?melee_match_option(i<2?3+i*2:5+i*2):0);
                 mem_write8(ctx,cache+13u+i*8u,1);
             }
         }'''),
@@ -50,10 +50,10 @@ def main():
         if (melee_match_option(6) == 1) {
             // GameModeState.info.exit_data -> CSSData.vs.start.players.
             u32 css = mem_read32(ctx,ctx->gpr[3]+0x14u);
-            for (int i=0;i<2;i++) {
+            for (int i=0;i<4;i++) {
                 u32 p=css+8u+0x68u+i*0x24u;
-                mem_write8(ctx,p,melee_match_option(2+i*2));
-                mem_write8(ctx,p+3,melee_match_option(3+i*2));
+                mem_write8(ctx,p,(melee_match_option(12)&(1<<i))?melee_match_option(i<2?2+i*2:4+i*2):0x21);
+                mem_write8(ctx,p+3,(melee_match_option(12)&(1<<i))?melee_match_option(i<2?3+i*2:5+i*2):0);
             }
         }'''),
         ('chunk_0836_text1_801A5140.c', '801A57A8',
@@ -95,10 +95,10 @@ def main():
             for (u32 i=0x2c;i<=0x34;i+=4) mem_write32(ctx,rules+i,0x3f800000);
             for (int i=0;i<6;i++) {
                 u32 p=vs+0x68u+i*0x24u;
-                mem_write8(ctx,p,i<2?melee_match_option(2+i*2):0x21);
-                mem_write8(ctx,p+1,i<2?0:3);
-                mem_write8(ctx,p+2,i<2?4:0);
-                mem_write8(ctx,p+3,i<2?melee_match_option(3+i*2):0);
+                mem_write8(ctx,p,(i<4 && (melee_match_option(12)&(1<<i)))?melee_match_option(i<2?2+i*2:4+i*2):0x21);
+                mem_write8(ctx,p+1,(i<4 && (melee_match_option(12)&(1<<i)))?0:3);
+                mem_write8(ctx,p+2,(i<4 && (melee_match_option(12)&(1<<i)))?4:0);
+                mem_write8(ctx,p+3,(i<4 && (melee_match_option(12)&(1<<i)))?melee_match_option(i<2?3+i*2:5+i*2):0);
                 mem_write8(ctx,p+4,0); // 0 uses this slot's own controller port
                 mem_write8(ctx,p+5,0xff);
                 mem_write8(ctx,p+8,9);

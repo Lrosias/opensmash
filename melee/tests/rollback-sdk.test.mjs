@@ -50,3 +50,14 @@ test('invalid setup, window or controller values never step the engine',async()=
   await assert.rejects(f.options.step(0,{guest:neutralPad(),host:[0,NaN,0,0,0,0,0]},{replaying:false}),/Invalid remote/);
   assert.deepEqual(f.calls,['manage']);
 });
+
+test('two devices control four non-compacted ports and live joiners never enter the active input map',async()=>{
+ const f=fixture();
+ f.room.activeConnections=['host','guest'];
+ f.room.activeParticipants=[{id:'h0',connectionId:'host',slot:0,localIndex:0},{id:'g0',connectionId:'guest',slot:1,localIndex:0},{id:'h1',connectionId:'host',slot:2,localIndex:1},{id:'g1',connectionId:'guest',slot:3,localIndex:1}];
+ const host=[1,2,0,0].map(n=>[n,0,0,0,0,0,0]),guest=[4,8,0,0].map(n=>[n,0,0,0,0,0,0]);
+ await createMeleeSync({...f,input:()=>guest});
+ f.room.players.push({id:'late'});f.room.participants=[{id:'late-player',connectionId:'late',slot:0,localIndex:0}];
+ await f.options.step(0,{host,guest,late:'ignored'},{replaying:false});
+ assert.deepEqual(f.calls.at(-1).pads.map(p=>p[0]),[1,4,2,8]);assert.equal(f.options.delay,3);assert.equal(f.options.maxRollback,0);
+});

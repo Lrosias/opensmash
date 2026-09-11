@@ -9,21 +9,26 @@ export class NativeRollbackEngine {
   constructor(module,{timeout=30000}={}) {
     this.module=module;this.timeout=timeout;this.sequence=0;this.active=false;this.closed=false;
   }
-  receive(sequence,status,frame,handle,hash,bytes,ms,active=0,outcome=0,stocks0=0,stocks1=0,percent0=0,percent1=0,seconds=0,gameFrame=0,packedConfig=-1) {
+  receive(sequence,status,frame,handle,hash,bytes,ms,active=0,outcome=0,stocks0=0,stocks1=0,percent0=0,percent1=0,seconds=0,gameFrame=0,packedConfig=-1,stocks2=0,stocks3=0,percent2=0,percent3=0,fighter2=0,fighter3=0,mask=3) {
     const pending=this.pending;
     if(!pending||pending.sequence!==sequence)return;
     clearTimeout(pending.timer);this.pending=null;
     if(status!==1){this.closed=true;pending.reject(Error(`Melee checkpoint operation failed (${status})`));return;}
     this.frame=frame;
+    const slots=[0,1,2,3].filter(slot=>mask&(1<<slot));
+    const stocks=[stocks0,stocks1,stocks2,stocks3],percent=[percent0,percent1,percent2,percent3];
+    const fighters=[packedConfig&255,(packedConfig>>>8)&255,fighter2,fighter3];
     let result=null;
     if(active&&outcome){
       if(outcome!==1&&outcome!==2){pending.reject(Error('Melee ended without a competitive result.'));return;}
-      const winner=stocks0!==stocks1?(stocks0>stocks1?0:1):percent0!==percent1?(percent0<percent1?0:1):null;
-      result={winner,outcome,stocks:[stocks0,stocks1],percent:[percent0,percent1],seconds,gameFrame};
+      const ranked=slots.slice().sort((a,b)=>stocks[b]-stocks[a]||percent[a]-percent[b]);
+      const [a,b]=ranked;
+      const winner=a===undefined||b===undefined||stocks[a]===stocks[b]&&percent[a]===percent[b]?null:a;
+      result={winner,outcome,stocks:slots.map(i=>stocks[i]),percent:slots.map(i=>percent[i]),seconds,gameFrame};
     }
     pending.resolve({frame,handle,hash:hash>>>0,checksum:String(hash>>>0),bytes,ms,result,active:!!active,
-      match:{stocks:[stocks0,stocks1],percent:[percent0,percent1],seconds,gameFrame,outcome,
-        fighters:packedConfig<0?[]:[packedConfig&255,(packedConfig>>>8)&255],stage:packedConfig<0?-1:packedConfig>>>16}});
+      match:{slots,stocks:slots.map(i=>stocks[i]),percent:slots.map(i=>percent[i]),seconds,gameFrame,outcome,
+        fighters:packedConfig<0?[]:slots.map(i=>fighters[i]),stage:packedConfig<0?-1:packedConfig>>>16}});
   }
   wait(sequence,send) {
     if(this.closed)return Promise.reject(Error('Melee rollback engine is closed'));

@@ -12,9 +12,9 @@ export function stageFor(seed,round,game,ranked,profile=ACTIVE_PROFILE){
 // One platform round is a whole ranked set. Game results are independently
 // derived from confirmed simulation, agreed by both peers, then accumulated.
 export class CompetitiveSet {
- constructor({room,round,fighter,build,rotationSeed=room.seed,onChange,onGame,onError,profile=ACTIVE_PROFILE}){
+ constructor({room,round,fighter,participants,build,rotationSeed=room.seed,onChange,onGame,onError,profile=ACTIVE_PROFILE}){
   Object.assign(this,{room,round,build,rotationSeed,onChange,onGame,onError,profile});
-  this.players=room.players.map(p=>p.id);this.seat=this.players.indexOf(room.me);
+  this.players=(participants||room.players).map(p=>p.id);this.seat=this.players.indexOf(room.me);
   if(this.players.length!==2||this.seat<0||!validFighter(fighter,this.profile))throw new Error('Invalid competitive room');
   this.peer=this.players[1-this.seat];this.ranked=room.ranked===true;this.target=this.ranked?2:1;
   this.game=1;this.wins=[0,0];this.fighters=[null,null];this.fighters[this.seat]=fighter;this.picks=[null,null];this.picks[this.seat]=fighter;
@@ -22,7 +22,8 @@ export class CompetitiveSet {
   this.message=e=>{if(e.from!==this.peer||e.data?.p!==this.profile.mode||e.data.round!==round||this.closed)return;try{this.receive(e.data);}catch(err){this.fail(err.message);}};
   room.on('message',this.message);
   this.timer=setInterval(()=>{if(this.closed)return;if(Date.now()-this.lastProgress>120000&&this.phase!=='playing')return this.fail('Opponent did not finish set preparation.');if(this.game===1&&this.phase==='connecting')this.hello();},1000);
-  this.publish();queueMicrotask(()=>{if(!this.closed)this.hello();});
+  if(participants){this.fighters=participants.map(p=>p.selection);this.picks=[...this.fighters];this.initialPeer=this.fighters[1-this.seat];this.gotHello=true;}
+  this.publish();queueMicrotask(()=>{if(!this.closed){if(participants)this.startGame();else this.hello();}});
  }
  send(data){this.room.send({p:this.profile.mode,round:this.round,...data},this.peer);}
  hello(){this.send({type:'hello',build:this.build,fighter:this.fighters[this.seat],ranked:this.ranked});}
@@ -63,6 +64,12 @@ export class CompetitiveSet {
   this.results[seat]=clean;if(!this.results[this.seat])return;this.phase='confirming';this.publish();
   if(this.results.some(v=>!v))return;
   if(JSON.stringify(this.results[0])!==JSON.stringify(this.results[1]))throw new Error('Game results disagreed. The set was voided.');
+  if(!this.room.reportGame){this.advance(clean);return;}
+  if(this.recording)return;this.recording=true;
+  const report=clean.result===2?{draw:true}:{winner:this.players[clean.result]};
+  Promise.resolve(this.room.reportGame?.({id:`game-${this.game}`,...report})).then(()=>{if(this.closed)return;this.recording=false;this.advance(clean);}).catch(error=>this.fail(error.message));
+ }
+ advance(clean){
   const winner=clean.result;this.history.push({game:this.game,winner,fighters:[...this.fighters],stage:stageFor(this.rotationSeed,this.round,this.game,this.ranked,this.profile)});
   if(winner<2)this.wins[winner]++;
   if(this.wins.some(n=>n>=this.target)||(!this.ranked&&winner===2)){
@@ -84,4 +91,31 @@ export function ratingSummary(event){
  if(r.rank?.placed===false)return label;
  if(!Number.isFinite(r.before)||!Number.isFinite(r.after))return label;
  return `${label} · ${r.before} → ${r.after} (${r.after-r.before>=0?'+':''}${r.after-r.before})`;
+}
+
+// Friend games may have several people on one connection. The engine returns
+// participant order; every connection confirms that outcome before settlement.
+export class PrivateSet {
+ constructor({room,round,participants,build,rotationSeed=room.seed,onChange,onGame,onError,profile=ACTIVE_PROFILE}){
+  Object.assign(this,{room,round,participants,build,onChange,onGame,onError,profile});
+  if(room.ranked||participants.length<2||participants.length>4)throw Error('Invalid private match');
+  this.connections=[...new Set(participants.map(p=>p.connectionId))];this.players=participants.map(p=>p.id);this.fighters=participants.map(p=>p.selection);this.wins=participants.map(()=>0);this.game=1;this.phase='playing';this.stage=stageFor(rotationSeed,round,1,false,profile);this.reports=new Map();
+  this.message=({from,data:d})=>{if(d?.p!==profile.mode||d.round!==round||d.type!=='party-result'||!this.connections.includes(from)||this.closed)return;try{this.accept(from,d.result);}catch(e){this.fail(e.message);}};
+  room.on('message',this.message);
+  queueMicrotask(()=>{if(this.closed)return;onChange?.(this.view());onGame({game:1,fighters:this.fighters,stage:this.stage,seed:gameSeed(room.seed,round,1),stocks:profile.stocks});});
+ }
+ view(){return {phase:this.phase,round:this.round,game:1,ranked:false,private:true,participants:this.participants,wins:[...this.wins],fighters:[...this.fighters],history:[],stage:this.stage,seat:this.participants.findIndex(p=>p.connectionId===this.room.me)};}
+ completeGame(result){if(this.closed)return;this.room.send({p:this.profile.mode,round:this.round,type:'party-result',result});this.accept(this.room.me,result);}
+ accept(from,result){
+  if(!result||!Number.isInteger(result.result)||result.result<0||result.result>this.players.length||!Number.isInteger(result.hash)||!Array.isArray(result.stocks)||result.stocks.length!==this.players.length||result.stocks.some(n=>!Number.isInteger(n)||n<0||n>99))throw Error('Invalid game result');
+  const clean={result:result.result,hash:result.hash,stocks:[...result.stocks]};const previous=this.reports.get(from);
+  if(previous&&JSON.stringify(previous)!==JSON.stringify(clean))throw Error('Game result changed');
+  this.reports.set(from,clean);if(this.reports.size!==this.connections.length||this.recording)return;
+  if([...this.reports.values()].some(r=>JSON.stringify(r)!==JSON.stringify(clean)))throw Error('Players disagree on the game result');
+  this.recording=true;const report=clean.result===this.players.length?{draw:true}:{winner:this.players[clean.result]};
+  if(clean.result<this.players.length)this.wins[clean.result]=1;
+  Promise.resolve(this.room.reportGame({id:'game-1',...report})).then(()=>{if(this.closed)return;this.phase='complete';this.onChange?.(this.view());return this.room.finish(report);}).catch(error=>this.fail(error.message));
+ }
+ fail(message){if(this.closed)return;this.destroy();Promise.resolve(this.room.finish({void:true})).catch(()=>{}).finally(()=>this.onError?.(message));}
+ destroy(){if(this.closed)return;this.closed=true;this.room.off('message',this.message);}
 }
