@@ -973,3 +973,27 @@
          Common::Timer::GetLocalTimeSinceJan1970() - ExpansionInterface::CEXIIPL::GC_EPOCH;
      Memcard::GCMemcard::Format(&m_memcard_data[0], flash_id, size_mbits, shift_jis, rtc_bias,
                                 sram_language, format_time);
+--- a/vendor/dolphin/Source/Core/Core/HW/EXI/EXI.cpp
++++ b/vendor/dolphin/Source/Core/Core/HW/EXI/EXI.cpp
+@@ -2,6 +2,9 @@
+ // SPDX-License-Identifier: GPL-2.0-or-later
+
+ #include "Core/HW/EXI/EXI.h"
++#ifdef __EMSCRIPTEN__
++#include "MeleeRollback.h"
++#endif
+
+ #include <array>
+ #include <memory>
+@@ -130,6 +133,11 @@
+     const u32 rtc_bias = sram.settings.rtc_bias;
+     const u32 sram_language = static_cast<u32>(sram.settings.language);
+     const u64 format_time =
++#ifdef __EMSCRIPTEN__
++        // Folder cards receive their initial serial and timestamp from this channel header.
++        melee_rb_mode.load() ? ExpansionInterface::CEXIIPL::GetEmulatedTime(
++                                   m_system, ExpansionInterface::CEXIIPL::GC_EPOCH) :
++#endif
+         Common::Timer::GetLocalTimeSinceJan1970() - ExpansionInterface::CEXIIPL::GC_EPOCH;
+
+     for (u32 i = 0; i < MAX_EXI_CHANNELS; i++)
