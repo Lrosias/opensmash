@@ -211,11 +211,19 @@ int port_remix_spawn(int player,Vec3f *pos){
 extern void port_yougame_menu_font(void);
 extern void port_yougame_menu_text(GObj*,const char*,float,float,float,int);
 extern int port_yougame_menu_context,port_yougame_queue_kind;
+extern int port_yougame_session_enabled(void);
 static const int picks[]={0,1,2,3,4,5,6,7,8,9,10,11,29,30,31,32,33,52,55,56,57,58,59,62,63,64,65,68,73,72,34,38,74,75};
 static const char *names[]={"MARIO","FOX","DONKEY KONG","SAMUS","LUIGI","LINK","YOSHI","CAPTAIN FALCON","KIRBY","PIKACHU","JIGGLYPUFF","NESS","FALCO","GANONDORF","YOUNG LINK","DR MARIO","WARIO","BOWSER","WOLF","CONKER","MEWTWO","MARTH","SONIC","SHEIK","MARINA","DEDEDE","GOEMON","BANJO KAZOOIE","PEACH","CRASH","DARK SAMUS","LUCAS","ROY","DR LUIGI"};
 static const int stage_ids[]={6,16,9,10,11,12,13,14};
 static const char *stage_names[]={"DREAM LAND","FINAL DESTINATION","FRAYS STAGE","FIRST DESTINATION","POKEMON STADIUM","POKEMON STADIUM 2","GOOMBA ROAD","BATTLEFIELD"};
 static int cursor,phase,wait_ticks,chosen[4],stage_cursor,select_slot,confirmed,local_human[4],local_active[4];
+unsigned int port_remix_session_hash(void){
+ unsigned int hash=2166136261u;int i;
+ const int values[]={cursor,phase,wait_ticks,stage_cursor,select_slot,confirmed};
+ for(i=0;i<6;i++)hash=(hash^(unsigned int)values[i])*16777619u;
+ for(i=0;i<4;i++){hash=(hash^(unsigned int)chosen[i])*16777619u;hash=(hash^(unsigned int)local_human[i])*16777619u;hash=(hash^(unsigned int)local_active[i])*16777619u;}
+ return hash;
+}
 static int local_setup_saved,local_saved_chosen[4],local_saved_human[4],local_saved_active[4],local_saved_stage;
 static void reset_results_online(void);
 static GObj *words;
@@ -317,12 +325,14 @@ static void draw_menu(void){
  EM_ASM({Module.remixMenu=({phase:$0,cursor:$1,stage:$2,p1:$3,p2:$4,hover:$5,selectSlot:$6,confirmed:$7,humans:$8,active:$9});},phase,cursor,stage_cursor,chosen[0],chosen[1],remix_menu_layout[cursor],select_slot,confirmed,local_human[0]|local_human[1]<<1|local_human[2]<<2|local_human[3]<<3,local_active[0]|local_active[1]<<1|local_active[2]<<2|local_active[3]<<3);
 }
 static void menu_run(GObj *gobj){
- int controller=phase<2&&local_human[select_slot]?select_slot:0;
+ int menu_controller=0;
+ if(port_yougame_session_enabled())while(menu_controller<3&&!local_human[menu_controller])menu_controller++;
+ int controller=phase<2&&local_human[select_slot]?select_slot:menu_controller;
  int taps=gSYControllerDevices[controller].button_tap,x=gSYControllerDevices[controller].stick_range.x,y=gSYControllerDevices[controller].stick_range.y;
- if(!port_yougame_menu_context)for(int p=1;p<4;p++)if((gSYControllerDevices[p].button_tap&START_BUTTON)&&!local_human[p]){local_human[p]=local_active[p]=1;confirmed&=~(1<<p);select_slot=p;phase=1;cursor=portrait_index(chosen[p]);wait_ticks=12;func_800269C0_275C0(nSYAudioFGMMenuSelect);draw_menu();return;}
+ if(!port_yougame_menu_context&&!port_yougame_session_enabled())for(int p=1;p<4;p++)if((gSYControllerDevices[p].button_tap&START_BUTTON)&&!local_human[p]){local_human[p]=local_active[p]=1;confirmed&=~(1<<p);select_slot=p;phase=1;cursor=portrait_index(chosen[p]);wait_ticks=12;func_800269C0_275C0(nSYAudioFGMMenuSelect);draw_menu();return;}
  int step=0,count=phase==2?8:34;
  if(wait_ticks){wait_ticks--;return;}
- if(taps&B_BUTTON){func_800269C0_275C0(nSYAudioFGMMenuDenied);if(phase){if(phase==2)phase=3;else{if(phase==3){select_slot=1;for(int p=1;p<4;p++)if(local_active[p])select_slot=p;}else if(select_slot){do{select_slot--;}while(select_slot&&!local_active[select_slot]);}phase=select_slot?1:0;confirmed&=~(1<<select_slot);cursor=portrait_index(chosen[select_slot]);}draw_menu();wait_ticks=12;}else scene(nSCKindVSMode);return;}
+ if(taps&B_BUTTON){func_800269C0_275C0(nSYAudioFGMMenuDenied);if(port_yougame_session_enabled()&&phase<2&&select_slot==menu_controller){scene(nSCKindVSMode);return;}if(phase){if(phase==2)phase=3;else{if(phase==3){select_slot=port_yougame_session_enabled()?menu_controller:1;for(int p=select_slot;p<4;p++)if(local_active[p])select_slot=p;}else if(select_slot){do{select_slot--;}while(select_slot&&!local_active[select_slot]);}phase=select_slot?1:0;confirmed&=~(1<<select_slot);cursor=portrait_index(chosen[select_slot]);}draw_menu();wait_ticks=12;}else scene(nSCKindVSMode);return;}
  if(phase==3)step=0;
  else if(y>35||(taps&U_JPAD))step=phase==2?-4:cursor>=30?23+(cursor-30)-cursor:cursor>=10?-10:20;
  else if(y< -35||(taps&D_JPAD))step=phase==2?4:cursor<20?10:cursor<30?30+((cursor%10)<3?0:(cursor%10)>6?3:cursor%10-3)-cursor:3+(cursor-30)-cursor;
@@ -350,6 +360,12 @@ void port_remix_css_start(void){
  menu_stage_icons=files[5];menu_stage_ui=files[6];preview_stage=-1;memset(stage_layers,0,sizeof(stage_layers));memset(stage_ground,0,sizeof(stage_ground));
  port_yougame_menu_font();cursor=portrait_index(0);phase=0;stage_cursor=0;wait_ticks=20;words=NULL;chosen[0]=0;chosen[1]=8;chosen[2]=1;chosen[3]=2;select_slot=confirmed=0;for(int p=0;p<4;p++){local_human[p]=p==0;local_active[p]=p<2;}
  if(!port_yougame_menu_context&&local_setup_saved){stage_cursor=local_saved_stage;memcpy(chosen,local_saved_chosen,sizeof(chosen));memcpy(local_human,local_saved_human,sizeof(local_human));memcpy(local_active,local_saved_active,sizeof(local_active));cursor=portrait_index(chosen[0]);}
+ if(port_yougame_session_enabled()){
+  const char *slots=getenv("SSB64_BOOT_SLOTS");
+  for(int p=0;p<4;p++)local_human[p]=local_active[p]=slots&&strlen(slots)==4&&slots[p]=='h';
+  select_slot=0;while(select_slot<3&&!local_active[select_slot])select_slot++;
+  phase=select_slot?1:0;cursor=portrait_index(chosen[select_slot]);
+ }
  efParticleInitAll();efManagerInitEffects();ftManagerAllocFighter(FTDATA_FLAG_SUBMOTION,4);
  {int i;for(i=0;i<4;i++){menu_previews[i]=NULL;menu_preview_kinds[i]=-1;menu_preview_heaps[i]=syTaskmanMalloc(gFTManagerFigatreeHeapSize,16);}}
  gcMakeDefaultCameraGObj(16,GOBJ_PRIORITY_DEFAULT,100,COBJ_FLAG_ZBUFFER|COBJ_FLAG_FILLCOLOR,GPACK_RGBA8888(0x0B,0x14,0x25,0xFF));

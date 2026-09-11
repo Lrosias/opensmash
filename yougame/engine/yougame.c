@@ -6,6 +6,7 @@
 #include <ft/fighter.h>
 #include <sys/netsync.h>
 #include <sys/utils.h>
+#include <mn/menu.h>
 #include <stdlib.h>
 /* The decomp supplies its own N64 stdlib.h without the host environment API. */
 extern char *getenv(const char *);
@@ -19,6 +20,25 @@ EMSCRIPTEN_KEEPALIVE unsigned int *port_yougame_scene_unused(void) {
 }
 static int enabled = -1;
 static unsigned int battle_ticks = 0;
+static unsigned int session_ticks = 0, session_battle = 0;
+static int session_scene = -1;
+extern MNPlayersSlotVS sMNPlayersVSSlots[4];
+extern unsigned int port_remix_session_hash(void) __attribute__((weak));
+int port_yougame_session_enabled(void) {
+    static int session = -1;
+    if (session < 0) session = getenv("SSB64_YOUGAME_SESSION") != NULL;
+    return session;
+}
+/* The browser session advances emulated time only after completed native ticks.
+ * Link wrapping preserves the original host clock in every existing mode. */
+extern unsigned long long __real_osGetTime(void);
+extern unsigned int __real_osGetCount(void);
+unsigned long long __wrap_osGetTime(void) {
+    return port_yougame_session_enabled() ? (unsigned long long)session_ticks * 781250ULL : __real_osGetTime();
+}
+unsigned int __wrap_osGetCount(void) {
+    return port_yougame_session_enabled() ? (unsigned int)((unsigned long long)session_ticks * 781250ULL) : __real_osGetCount();
+}
 extern int port_yougame_menu_context, port_yougame_queue_kind;
 int port_yougame_enabled(void) {
     if (enabled < 0) enabled = getenv("SSB64_YOUGAME") != NULL;
@@ -28,7 +48,7 @@ int port_yougame_before_tick(void) {
     static int seeded = 0, menu_initialized = 0;
     if (!menu_initialized) {
         menu_initialized = 1;
-        if (getenv("SSB64_YOUGAME_INVITE")) { port_yougame_menu_context=1; port_yougame_queue_kind=3; }
+        if (!port_yougame_session_enabled() && getenv("SSB64_YOUGAME_INVITE")) { port_yougame_menu_context=1; port_yougame_queue_kind=3; }
     }
     if (!port_yougame_enabled()) return EM_ASM_INT({ return !Module.beforeGameTick || Module.beforeGameTick() ? 1 : 0; });
     if (!seeded) {
@@ -43,8 +63,16 @@ void port_yougame_after_tick(void) {
     SCBattleState *bs = gSCManagerBattleState;
     unsigned int hash;
     int result = -1, stocks[4] = {0,0,0,0}, percent[4] = {0,0,0,0}, i, mask = 0;
+    int scene = gSCManagerSceneData.scene_curr;
+    EM_ASM({Module.nativeScene=$0;}, scene);
+    if (port_yougame_session_enabled()) {
+        session_ticks++;
+        if (scene != session_scene) {
+            if (scene == nSCKindVSBattle) { battle_ticks = 0; session_battle++; }
+            session_scene = scene;
+        }
+    }
     if (!port_yougame_enabled()) {
-        EM_ASM({Module.nativeScene=$0;}, gSCManagerSceneData.scene_curr);
         return;
     }
     hash = ((unsigned int)syUtilsRandSeed() * 16777619u) ^ gSCManagerSceneData.scene_curr;
@@ -63,6 +91,23 @@ void port_yougame_after_tick(void) {
             else if (stocks[i] == stocks[best] && percent[i] == percent[best]) tied = 1;
         }
         if (battle_ticks > 0 && best >= 0 && (alive <= 1 || battle_ticks >= 8*60*60)) result = tied ? 4 : best;
+    }
+    if (port_yougame_session_enabled()) {
+        int seat_mask = 0;
+        const char *roles = getenv("SSB64_BOOT_SLOTS");
+        for (i = 0; roles && i < 4 && roles[i]; i++) if (roles[i] == 'h') seat_mask |= 1 << i;
+        hash = (hash ^ session_ticks) * 16777619u;
+        hash = (hash ^ session_battle) * 16777619u;
+        hash = (hash ^ gSCManagerSceneData.gkind) * 16777619u;
+        if (scene == nSCKindPlayersVS) for (i = 0; i < 4; i++) {
+            hash = (hash ^ (unsigned int)sMNPlayersVSSlots[i].fkind) * 16777619u;
+            hash = (hash ^ (unsigned int)sMNPlayersVSSlots[i].pkind) * 16777619u;
+            hash = (hash ^ (unsigned int)sMNPlayersVSSlots[i].is_fighter_selected) * 16777619u;
+            hash = (hash ^ (unsigned int)sMNPlayersVSSlots[i].costume) * 16777619u;
+        }
+        if (port_remix_session_hash) hash = (hash ^ port_remix_session_hash()) * 16777619u;
+        EM_ASM({Module.yougameSession=({scene:$0,frame:$1,battleId:$2,battleTicks:$3,hash:$4>>>0,mask:$5,stage:$6,seatMask:$7});},
+               scene,session_ticks,session_battle,battle_ticks,hash,mask,gSCManagerSceneData.gkind,seat_mask);
     }
     EM_ASM({ if (Module.onYouGameState) Module.onYouGameState($0 >>> 0,$1,$2,$3,$4,$5,$6,$7); },
            hash, result, stocks[0], stocks[1], battle_ticks, stocks[2], stocks[3], mask);
