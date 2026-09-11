@@ -16,6 +16,17 @@ export function nativePads(participants,inputs){
  }
  return pads;
 }
+// The engine publishes this only after native rankings (including Sudden Death)
+// are final. Legacy per-battle stock/timer observations are never results here.
+export function nativeResultReceipt(meta,participants,lastBattle){
+ const r=meta.receipt;if(!r)return null;
+ if(!Number.isSafeInteger(r.battleId)||r.battleId<1||!['winner','unscored'].includes(r.kind)||!Number.isInteger(r.participantsMask)||r.participantsMask<0||r.participantsMask>15||!Number.isInteger(r.humanMask)||r.humanMask<0||r.humanMask>15||(r.humanMask&~r.participantsMask)||typeof r.teamBattle!=='boolean'||typeof r.noContest!=='boolean'||!Array.isArray(r.places)||r.places.length!==4||!r.places.every(Number.isInteger))throw Error('Invalid completed native result receipt');
+ if(r.battleId<=lastBattle)return null;
+ const unscored=r.kind==='unscored',mask=participants.reduce((bits,p)=>bits|(1<<p.slot),0);
+ const winner=unscored?null:participants.find(p=>p.slot===r.winnerSlot)?.id;
+ if(!unscored&&(!winner||r.participantsMask!==mask||r.humanMask!==mask||r.teamBattle||r.noContest))throw Error('Native winner receipt does not match the active human roster');
+ return {frame:meta.frame,battleId:r.battleId,hash:meta.hash>>>0,winner,unscored,receipt:{kind:r.kind,winnerSlot:unscored?null:r.winnerSlot,participantsMask:r.participantsMask,humanMask:r.humanMask,teamBattle:r.teamBattle,noContest:r.noContest,places:[...r.places]}};
+}
 export function nativeSessionParams({participants,seed,profile}){
  const slots=Array(4).fill('o');for(const p of nativeRoster(participants))slots[p.slot]='h';
  return new URLSearchParams({SSB64_YOUGAME_SESSION:'1',SSB64_YOUGAME:'1',SSB64_YOUGAME_ROLLBACK:'1',SSB64_YOUGAME_SEED:String(seed),SSB64_START_SCENE:'16',
@@ -110,29 +121,30 @@ export class NativeRoomSession {
  step(frame,inputs){
   if(this.terminal||this.closed)return;
   if(frame!==this.frame)throw Error('Native timeline advanced out of order');
-  const {state,meta}=this.engine.step(nativePads(this.participants,inputs));this.frame++;
-  if(!Number.isInteger(meta.frame)||state.length!==8)throw Error('Native session metadata is unavailable');
-  const result=state[1];
-  if(meta.scene===22&&meta.battleId>this.lastBattle&&meta.battleTicks>0&&result>=0){
-   const winner=result===4?null:this.participants.find(p=>p.slot===result)?.id;
-   if(result!==4&&!winner)throw Error('Native game returned an unoccupied winner');
-   this.lastBattle=meta.battleId;this.terminal={frame:meta.frame,battleId:meta.battleId,hash:state[0]>>>0,winner,draw:result===4};this.stopSync();this.onStatus('CONFIRMING GAME RESULT');this.pulse();
-  }
+  const {meta}=this.engine.step(nativePads(this.participants,inputs));this.frame++;
+  if(!Number.isSafeInteger(meta.frame)||!Number.isInteger(meta.hash))throw Error('Native session metadata is unavailable');
+  const terminal=nativeResultReceipt(meta,this.participants,this.lastBattle);
+  if(terminal){this.lastBattle=terminal.battleId;this.terminal=terminal;this.stopSync();this.onStatus('CONFIRMING GAME RESULT');this.pulse();}
  }
  finishIfAgreed(){
   if(!this.terminal||this.reported)return;
   const value=JSON.stringify(this.terminal);
   for(const report of this.reports.values())if(report!==value){this.fail('Players disagree on the native result');return;}
   if(!this.connections.filter(id=>id!==this.room.me).every(id=>this.reports.get(id)===value))return;
-  this.reported=true;const report=this.terminal.draw?{draw:true}:{winner:this.terminal.winner};
-  Promise.resolve(this.room.reportGame({id:`native-${this.terminal.battleId}`,...report})).then(()=>{if(!this.closed)return this.room.finish(report);}).catch(error=>this.fail(error.message));
+  this.reported=true;const report=this.terminal.unscored?{void:true}:{winner:this.terminal.winner};
+  // Teams, CPUs and no-contests have no honest single-winner platform score.
+  // Close that platform round neutrally without inventing a draw/game report.
+  const recorded=this.terminal.unscored?Promise.resolve():Promise.resolve(this.room.reportGame({id:`native-${this.terminal.battleId}`,...report}));
+  recorded.then(()=>{if(!this.closed)return this.room.finish(report);}).catch(error=>this.fail(error.message));
  }
  settled(event){
   if(this.closed||event.round!==this.round||this.settling)return;
+  const expectedVoid=this.reported&&this.terminal?.unscored===true;
+  if(!this.terminal||!this.reported||!!event.void!==expectedVoid){this.fail('Native game ended without its agreed result');return;}
   this.stopSync();this.settling=true;
   // Let the SDK finish dispatching result (which stops its old controller)
   // before registering a new round. The native machine stays at its exact tick.
-  queueMicrotask(()=>{if(this.closed)return;if(event.void){this.fail('Native game ended without a confirmed result');return;}this.terminal=null;this.peers.clear();this.reports.clear();this.settling=false;this.refresh();});
+  queueMicrotask(()=>{if(this.closed)return;this.terminal=null;this.peers.clear();this.reports.clear();this.settling=false;this.refresh();});
  }
  stopSync(){this.sync?.stop();this.sync=null;this.running=false;this.restoreSend?.();this.restoreSend=null;}
  fail(message){if(this.closed)return;const playing=this.room.playing;this.destroy();if(playing)Promise.resolve(this.room.finish({void:true})).catch(()=>{});this.onError(message);}

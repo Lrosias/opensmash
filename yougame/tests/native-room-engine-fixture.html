@@ -7,7 +7,7 @@ const bridge=parent.openSmashAttachEngine(window);
 if(native){
  Module.yougameSession={scene:16,frame:0,battleId:0,battleTicks:0,hash:11,seatMask:5,mask:0,stage:6};
  const raw={step(){if(!bridge.beforeTick())throw Error('Raw native fixture stepped outside ownership');record.steps++;const heap=new Int32Array(16);bridge.readPorts(0,heap);record.ports=Array.from(heap);const m=Module.yougameSession;m.frame++;
- if(fixture.terminal&&!record.ended){record.ended=true;m.scene=22;m.battleId=1;m.battleTicks=60;m.mask=5;}else if(record.ended)m.scene=27;
+ if(fixture.terminal&&!record.ended){record.ended=true;m.scene=27;m.battleId=1;m.battleTicks=60;m.mask=5;m.receipt={battleId:1,kind:fixture.unscored?'unscored':'winner',winnerSlot:fixture.unscored?null:2,participantsMask:5,humanMask:5,teamBattle:!!fixture.unscored,noContest:false,places:[1,-1,0,-1]};}else if(record.ended)m.scene=27;
  Module.nativeScene=m.scene;bridge.afterTick(11,m.scene===22?2:-1,0,0,m.battleTicks,4,0,m.mask);
  const ctx=document.querySelector('canvas').getContext('2d');ctx.fillStyle='#234';ctx.fillRect(0,0,640,480);ctx.fillStyle='white';ctx.font='24px system-ui';ctx.fillText('Native bridge fixture scene '+m.scene,20,60);
  }};bridge.ready(raw);
