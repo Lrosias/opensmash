@@ -1,0 +1,15 @@
+<!doctype html><html><body style="margin:0;background:#234;color:white"><canvas width="640" height="480"></canvas><script>
+// Deterministic bridge fixture only; no native game or renderer qualification.
+const native=new URLSearchParams(location.search).has('SSB64_YOUGAME_SESSION');
+const fixture=parent.nativeRoomFixture,record={native,steps:0,ports:[],disposed:false};fixture.engines.push(record);
+window.Module={nativeScene:native?16:9,yougameDispose(){record.disposed=true;}};
+const bridge=parent.openSmashAttachEngine(window);
+if(native){
+ Module.yougameSession={scene:16,frame:0,battleId:0,battleTicks:0,hash:11,seatMask:5,mask:0,stage:6};
+ const raw={step(){if(!bridge.beforeTick())throw Error('Raw native fixture stepped outside ownership');record.steps++;const heap=new Int32Array(16);bridge.readPorts(0,heap);record.ports=Array.from(heap);const m=Module.yougameSession;m.frame++;
+ if(fixture.terminal&&!record.ended){record.ended=true;m.scene=22;m.battleId=1;m.battleTicks=60;m.mask=5;}else if(record.ended)m.scene=27;
+ Module.nativeScene=m.scene;bridge.afterTick(11,m.scene===22?2:-1,0,0,m.battleTicks,4,0,m.mask);
+ const ctx=document.querySelector('canvas').getContext('2d');ctx.fillStyle='#234';ctx.fillRect(0,0,640,480);ctx.fillStyle='white';ctx.font='24px system-ui';ctx.fillText('Native bridge fixture scene '+m.scene,20,60);
+ }};bridge.ready(raw);
+}else{const ctx=document.querySelector('canvas').getContext('2d');ctx.fillStyle='white';ctx.font='24px system-ui';ctx.fillText('Local menu bridge fixture',20,60);bridge.ready({});}
+</script></body></html>

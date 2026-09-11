@@ -1,3 +1,4 @@
+import {NativeRoomSession,nativeSessionParams,prepareNativeSessionEngine} from './native-room-session.mjs';
 import {GameLobby} from '../../controllers/online-lobby.mjs';
 import {readAdapterMenu} from '../../controllers/controller-menu.mjs';
 import {createMatchClock} from './match-clock.mjs';
@@ -46,7 +47,7 @@ function cleanup(message='',phase=0){clearPresentation();disconnect();if(onlineM
 function listen(r,event,handler){r.on(event,handler);listeners.push([r,event,handler]);}
 function createEngine(params,duel=null,result=null){
  const frame=document.createElement('iframe');frame.title=duel?'OpenSmash64 online battle':result?'OpenSmash64 native results':'OpenSmash64 native menus';frame.allow='autoplay; gamepad; fullscreen';
- const input=createInput({adapter,allowStart:!duel,readTouch:()=>touch.read(),enabled:()=>!competitive.visible&&!platformLobby});input.attach(window);
+ const input=createInput({adapter,allowStart:!duel||duel.nativeMenu,readTouch:()=>touch.read(),enabled:()=>!competitive.visible&&!platformLobby});input.attach(window);
  engines.set(frame,{input,duel,result});frame.src=`./engine/index.html?${params}`;document.getElementById('game').append(frame);return frame;
 }
 function launch(fighters,duel){
@@ -54,6 +55,10 @@ function launch(fighters,duel){
  touch.clear();touch.context(true,22);removeEngine(battle);menu.hidden=true;engineAudioContext(menu.contentWindow)?.suspend().catch(()=>{});
  const params=engineParams({battle:{fighters,stage:duel.stage,participants:duel.participants},seed:duel.seed});
  battle=createEngine(params,duel);status('LOADING MATCH',3);
+}
+function launchNative(owner,token){
+ clearPresentation();competitive.hide();touch.clear();removeEngine(battle);menu.hidden=true;engineAudioContext(menu.contentWindow)?.suspend().catch(()=>{});
+ battle=createEngine(nativeSessionParams({participants:owner.participants,seed:owner.seed,profile:ACTIVE_PROFILE}),owner);engines.get(battle).bootToken=token;status('LOADING ONLINE CHARACTER SELECT',1);
 }
 function menuAction(action,value){
  if(resultsPresentation||(platformLobby&&menuState.phase===4))return;
@@ -72,7 +77,7 @@ function menuAction(action,value){
 window.openSmashAttachEngine=win=>{
  const frame=[...engines.keys()].find(f=>f.contentWindow===win);
  if(!frame)throw new Error('Unexpected game frame');
- const {input,duel,result}=engines.get(frame);let pads=[[0,0,0],[0,0,0]],nativeState=null;input.attach(win);
+ const {input,duel,result,bootToken}=engines.get(frame);let pads=[[0,0,0],[0,0,0]],nativeState=null;input.attach(win);
  const resumeAudio=()=>engineAudioContext(win)?.resume().catch(()=>{});
  win.addEventListener('pointerdown',resumeAudio,true);win.addEventListener('keydown',resumeAudio,true);
  // Own controller mapping in menus too; SDL must not also interpret the same keys.
@@ -80,8 +85,12 @@ window.openSmashAttachEngine=win=>{
  for(const kind of ['keydown','keyup'])win.addEventListener(kind,e=>{e.preventDefault();e.stopImmediatePropagation();},true);
  return {
   menuState:()=>menuState,
-  menuAction:result?()=>{}:menuAction,
+  menuAction:result||duel?.nativeMenu?()=>{}:menuAction,
   async ready(raw){
+   if(duel?.nativeMenu){
+    try{const driver=await prepareNativeSessionEngine(raw,{owner:duel,cancelled:()=>duel.closed||bootToken!==duel.bootToken,getState:()=>nativeState,getMeta:()=>win.Module.yougameSession,setPads:p=>{pads=p;}});if(driver)duel.attach(driver,bootToken);}catch(error){duel.fail(error.message);}
+    if(!duel.closed)win.focus();return;
+   }
    if(result){
     if(frame!==presentation||room!==result.room||set?.round!==result.round)return;
     // callMain yields before the first menu scene is initialized. Let that
@@ -103,7 +112,7 @@ window.openSmashAttachEngine=win=>{
    if(duel)try{const driver=await prepareRollbackEngine(raw,{getState:()=>nativeState,setPads:p=>{pads=p;},cancelled:()=>duel.closed});if(driver)duel.attach(driver);}catch(e){duel.fail(e.message);}
    if(!duel?.closed&&!touch.active()&&!competitive.visible&&!platformLobby)win.focus();
   },
-  beforeTick(){if(result)return frame===presentation&&(result.booting||resultsPresentation&&!frame.hidden);if(!duel){onlineEntry.hidden=busy||![7,9,16].includes(win.Module.nativeScene);if(competitive.visible&&!resultsPresentation)return false;if(platformLobby&&busy&&!room?.playing&&!resultsPresentation)return false;if(!frame.hidden)touch.context(false,win.Module.nativeScene);return !frame.hidden;}return !duel.closed;},
+  beforeTick(){if(result)return frame===presentation&&(result.booting||resultsPresentation&&!frame.hidden);if(!duel){onlineEntry.hidden=busy||![7,9,16].includes(win.Module.nativeScene);if(competitive.visible&&!resultsPresentation)return false;if(platformLobby&&busy&&!room?.playing&&!resultsPresentation)return false;if(!frame.hidden)touch.context(false,win.Module.nativeScene);return !frame.hidden;}if(duel.nativeMenu){touch.context(false,win.Module.nativeScene);return !duel.closed&&duel.stepping;}return !duel.closed;},
   afterTick(...args){nativeState=args;},
   readPorts(ptr,H){const local=duel?null:(result||competitive.visible||platformLobby||resultsPresentation)?[[0,0,0],[0,0,0],null,null]:input.readPorts();for(let i=0;i<4;i++){
    const p=duel?pads[i]:local[i];const base=(ptr>>2)+i*4;
@@ -130,6 +139,9 @@ function startRound(r,round,participants=matchParticipants){
 }
 function bind(r){
  if(room===r)return;room=r;
+ if(r.queue!=='ranked'){
+  competitive.hide();session=new NativeRoomSession({room:r,build:BUILD,profile:ACTIVE_PROFILE,launch:launchNative,readPorts:()=>engines.get(battle)?.input.readPorts()||[],onStatus:text=>status(text,1),onError:message=>cleanup(message,6)});return;
+ }
  lobby=new GameLobby({room:r,protocol:COMPETITIVE_MODE+':lobby-v1',validSelection:validFighter,onChange:view=>{view.capacity=r.queue==='private'?4:2;if((!r.playing||view.waitingNext)&&!lastResult)competitive.lobby(view);},onStart:participants=>{matchParticipants=participants;lastResult=null;startRound(r,r.round,participants);},onError:error=>{competitive.notice(error.message);}});
  listen(r,'leave',player=>{
   if(r.playing&&matchParticipants&&!matchParticipants.some(p=>p.connectionId===player?.id))return;
@@ -164,7 +176,7 @@ async function online(entry=onlineMenu){
  if(platformLobby)window.focus();
  status(queueKind===2?'CREATING FRIEND LOBBY':queueKind===3?'JOINING FRIEND ROOM':queueKind===1?'SEARCHING RANKED':'SEARCHING CASUAL',1);const token=++generation;
  try{
-  const options={players:queueKind>=2?4:2,minPlayers:2,maxLocalPlayers:queueKind>=2?4:1,compatibility:BUILD+':slots-v1',mode:COMPETITIVE_MODE,queue:queueKind===1?'ranked':queueKind>=2?'friends':'casual',onStatus:s=>{
+  const options={players:queueKind>=2?4:2,minPlayers:2,maxLocalPlayers:queueKind>=2?4:1,compatibility:BUILD+(queueKind===1?':slots-v1':':native-menu-v1'),mode:COMPETITIVE_MODE,queue:queueKind===1?'ranked':queueKind>=2?'friends':'casual',onStatus:s=>{
    if(token!==generation){s.room?.leave();return;}
    if(s.room)bind(s.room);
   }};
