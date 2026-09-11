@@ -1,0 +1,13 @@
+# Native session qualification
+
+Scope: normal in-game Casual and Friends menus for Original 64 and Remix. Ranked set rules and its existing UI are retained. No predictive rollback across scene/resource transitions is claimed: this path uses deterministic lockstep with a fixed two-frame input buffer.
+
+Original candidate BUILD417ae7d48cdc8b12, Wasm b7c63df0f0e9cc7b33cedaa825d75879421c4125819d21492a9e3342370cac7a, has passed paired actual native stepping through character/stage selection, Random stage, stock results, repeated battles, and sparse P2/P4 ports. Native A+B+R+Z quit produces matching unscored receipts, then returns normally after the native results delay.
+
+Its actual hosted private candidate passed Casual cancel/retry into native CSS with matching peer state, and two sandbox accounts joining Friends, automatic native CSS, native keyboard selection/Start/stage/game/results/rematch, one platform winner receipt, native No Contest producing void without a fabricated draw, and a new roster epoch with four seats. Browser virtual gamepads verified each device’s second local controller maps to its assigned global port: driving only P3 depleted P3 while P1/P2/P4 retained four stocks. This does not establish physical-adapter behavior.
+
+Source verification: 38 focused JavaScript tests pass; one optional SDK fixture test is skipped, with actual hosted SDK evidence recorded separately. Actual compiled C clock and receipt tests pass. Independent review resolved loading/departure preparation races and sparse Remix menu controls.
+
+Remix receipt candidate d627d4fe passed paired actual stock results for sparse P2/P4, but runtime testing found its results screen still read P1. Fix859d782 selects the first assigned human; final Remix visual/input candidate requires its own final runtime pass.
+
+Known boundaries: roster changes take effect after the current platform round, with a fresh agreed engine when membership changes. Unchanged rosters keep the same engine through native results and menus. CPU, team, no-contest, and ambiguous native outcomes are unscored by the platform; native presentation continues. N64 sudden-death handling is verified by source and compiled receipt logic, not a full timed sudden-death runtime here. Mobile rotation changes are excluded. Melee has separate native lifecycle qualification and is not covered by N64 evidence.
