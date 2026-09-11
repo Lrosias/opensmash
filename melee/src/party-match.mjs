@@ -8,24 +8,29 @@ export class MeleePartyMatch {
     this.round=room.round;
     this.connections=new Set(participants.map(p=>p.connectionId));
     this.result=event=>{if(!this.closed&&!this.settled&&event.round===this.round){this.settled=true;this.stop();onResult(event);}};
-    this.leave=player=>{if(this.connections.has(player.id)&&!this.settled)this.fail(Error('A player left the game.'));};
+    this.leave=player=>{
+      if(this.closed||this.interrupted||!this.connections.has(player?.id))return;
+      // The platform sends departure before the completed-round receipt. Stop
+      // the engine now, but retain that receipt listener and the private lobby.
+      this.interrupted=true;this.stopEngine();this.onChange('interrupted');
+    };
     this.close=()=>{if(!this.settled)this.fail(Error('The lobby connection closed.'));};
     room.on('result',this.result);room.on('leave',this.leave);room.on('close',this.close);
-    this.run().catch(error=>this.fail(error));
+    this.run().catch(error=>{if(!this.interrupted)this.fail(error);});
   }
   async run(){
     this.onChange('preparing');
     const launch={round:this.round,game:1,seed:this.room.seed>>>0,stage:31,rules:MELEE_RULES,
       selections:this.participants.map(p=>p.selection),slots:this.participants.map(p=>p.slot)};
-    await this.adapter.prepare(launch);if(this.closed)return;
+    await this.adapter.prepare(launch);if(this.closed||this.interrupted)return;
     this.onChange('playing');
-    const result=await this.adapter.play();if(this.closed)return;
+    const result=await this.adapter.play();if(this.closed||this.interrupted)return;
     if(result?.confirmed!==true)throw Error('The engine result has not been confirmed.');
     const winner=result.winner===null?null:this.participants.find(p=>p.slot===result.winner)?.id;
     if(result.winner!==null&&!winner)throw Error('The engine reported an unoccupied winning port.');
     const outcome=winner?{winner}:{draw:true};
     this.onChange('confirming');
-    await this.room.reportGame({id:'game-1',...outcome});if(this.closed)return;
+    await this.room.reportGame({id:'game-1',...outcome});if(this.closed||this.interrupted)return;
     const accepted=await this.room.completeMatch(outcome);if(!this.closed)this.result(accepted);
   }
   fail(error){
@@ -37,6 +42,9 @@ export class MeleePartyMatch {
   stop(){
     if(this.closed)return this.stopping;
     this.closed=true;this.room.off('result',this.result);this.room.off('leave',this.leave);this.room.off('close',this.close);
-    return this.stopping=Promise.resolve(this.adapter.stop()).catch(()=>{});
+    return this.stopEngine();
+  }
+  stopEngine(){
+    return this.stopping??=Promise.resolve().then(()=>this.adapter.stop()).catch(()=>{});
   }
 }
