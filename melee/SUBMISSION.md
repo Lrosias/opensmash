@@ -4,7 +4,7 @@
 
 **v1.17 is live** at https://yougame.co/g/opensmash-melee, upload `UPLOAD_ID`,
 on the v1.16 assets with a rebuilt engine
-`b72e5e81777a5ff81a0eb6f4f3e1c5087149cc29988d57a06fe82185c8f56966`.
+`30c94b6e53084930a2be0e8587b6a69534470502f0387b68b41adfcb600dcfcc`.
 
 - The page boots straight into Melee. The mode menu is native: `Menu.cpp` draws
   LOCAL VERSUS / ONLINE (FRIENDS, CASUAL, RANKED) with the game's SIS text
@@ -24,7 +24,7 @@ on the v1.16 assets with a rebuilt engine
   the real engine (screenshots of both lists, LOCAL VERSUS and the return);
   `tests/native-room-app-browser.mjs` drove casual, friends, invite, cancel and
   ranked through the menu callback with fixture transport and engines.
-- Package: `/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-20260911-r1/melee`
+- Package: `/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-20260911-r2/melee`
   (`-release.json` records the base package, commit, engine and changed files).
 
 ## Just-in-time loading v1.16 — September 11, 2026
