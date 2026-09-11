@@ -1,8 +1,8 @@
 # Just-in-time loading — September 11, 2026
 
 Engine SHA-256 unchanged: `e7e6cfaf1cc448cecc65ff34ac934c5fc7db2497e439d91c5746d25f5ccb7fa4`
-(v1.13). This is a wrapper-only release; the hooks below are the ones the engine
-already had.
+(v1.15). This is a wrapper-only release on top of the phone touch scheme; the hooks
+below are the ones the engine already had.
 
 ## Player experience
 
