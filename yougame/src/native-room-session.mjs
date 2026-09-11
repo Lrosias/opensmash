@@ -107,7 +107,9 @@ export class NativeRoomSession {
   if(!this.engine||JSON.stringify(frozen)!==this.rosterKey)throw Error('Native controller roster changed before start');
   this.round=this.room.round;this.scope=JSON.stringify([this.build,this.round,this.room.matchId,this.rosterKey,this.checkpoint()]);this.peers.clear();this.reports.clear();this.terminal=null;this.reported=false;this.frame=0;
   const local=frozen.filter(p=>p.connectionId===this.room.me);
-  this.sync=this.room.lockstep({hz:60,delay:2,players:this.connections,checksumEvery:30,stallTimeout:10000,
+  // This timeline cannot predict inputs. Let the SDK buffer for measured relay
+  // latency; a fixed two-frame pipeline repeatedly stalls ordinary Internet play.
+  this.sync=this.room.lockstep({hz:60,delay:'auto',players:this.connections,checksumEvery:30,stallTimeout:10000,
    input:()=>{const ports=this.readPorts();return local.map(p=>ports[p.localIndex]||neutral());},
    step:(frame,inputs)=>this.guard(()=>this.step(frame,inputs)),checksum:()=>this.engine.metadata().hash});
   const send=this.room.send,scope=this.scope,receive=this.sync.receive.bind(this.sync);
@@ -117,7 +119,7 @@ export class NativeRoomSession {
   for(const event of ['desync','timeout'])this.sync.on(event,()=>this.fail('The native game could not stay synchronized.'));
   this.pulse();
  });}
- startIfArmed(){if(this.sync&&!this.running&&this.connections.filter(id=>id!==this.room.me).every(id=>this.peers.get(id)?.armed===this.scope)){this.running=true;this.onStatus('ONLINE · 2-FRAME INPUT BUFFER');this.sync.start();}}
+ startIfArmed(){if(this.sync&&!this.running&&this.connections.filter(id=>id!==this.room.me).every(id=>this.peers.get(id)?.armed===this.scope)){this.running=true;this.onStatus('ONLINE');this.sync.start();}}
  step(frame,inputs){
   if(this.terminal||this.closed)return;
   if(frame!==this.frame)throw Error('Native timeline advanced out of order');

@@ -1,0 +1,872 @@
+{
+  "original": {
+    "date": "2026-09-11T07:33:25.083Z",
+    "browser": "152.0.7977.83",
+    "buildRoot": "/Volumes/OpenSmashBuilds/publisher/build/native-menu-mobile-release-20260911-r1/original",
+    "engineSha256": "b7c63df0f0e9cc7b33cedaa825d75879421c4125819d21492a9e3342370cac7a",
+    "sdkSha256": "c7087e338cdacd355b569dae4898db37e89aee97eed9d194919b3f6051fa3357",
+    "limitations": "One released battle engine with synthetic peer. No rollback snapshots; checksums disabled for synthetic peer. Local transport delay, not live Internet/iOS.",
+    "results": [
+      {
+        "rate": 1,
+        "delay": "offline",
+        "latencyMs": 0,
+        "elapsedMs": 6000.870000000112,
+        "simFps": 59.82465875781234,
+        "presentationOpportunitiesFps": 59.491373750805025,
+        "rafCallbacks": 823,
+        "multiTickCallbacks": 1,
+        "stepMs": {
+          "n": 359,
+          "mean": 1.2692896935953901,
+          "p95": 2.5,
+          "max": 3.6550000000279397
+        },
+        "intervalMs": {
+          "n": 358,
+          "mean": 16.667905027932598,
+          "p95": 23.34499999997206,
+          "max": 32.04000000003725
+        },
+        "longTasks": {
+          "n": 0,
+          "mean": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "stalls": [
+          0
+        ],
+        "actualDelay": [
+          null
+        ],
+        "state": [
+          4153422953,
+          -1,
+          5,
+          5,
+          360,
+          0,
+          0,
+          3
+        ],
+        "visibility": "visible",
+        "errors": []
+      },
+      {
+        "rate": 1,
+        "delay": 2,
+        "latencyMs": 100,
+        "elapsedMs": 6001.14000000013,
+        "simFps": 35.15998626927474,
+        "presentationOpportunitiesFps": 34.8267162572437,
+        "rafCallbacks": 798,
+        "multiTickCallbacks": 2,
+        "stepMs": {
+          "n": 211,
+          "mean": 1.5035071090024883,
+          "p95": 2.840000000083819,
+          "max": 4.129999999888241
+        },
+        "intervalMs": {
+          "n": 210,
+          "mean": 27.857738095238094,
+          "p95": 58.71000000019558,
+          "max": 71.5800000000745
+        },
+        "longTasks": {
+          "n": 0,
+          "mean": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "stalls": [
+          209,
+          209
+        ],
+        "actualDelay": [
+          2,
+          2
+        ],
+        "state": [
+          3756830364,
+          -1,
+          5,
+          5,
+          212,
+          0,
+          0,
+          3
+        ],
+        "visibility": "visible",
+        "errors": []
+      },
+      {
+        "rate": 1,
+        "delay": "auto",
+        "latencyMs": 100,
+        "elapsedMs": 6000.85999999987,
+        "simFps": 58.991544545283126,
+        "presentationOpportunitiesFps": 58.6582589828804,
+        "rafCallbacks": 806,
+        "multiTickCallbacks": 2,
+        "stepMs": {
+          "n": 354,
+          "mean": 1.2387853107351998,
+          "p95": 2.4050000000279397,
+          "max": 3.209999999962747
+        },
+        "intervalMs": {
+          "n": 353,
+          "mean": 16.618555240793466,
+          "p95": 22.68999999994412,
+          "max": 27.78000000002794
+        },
+        "longTasks": {
+          "n": 0,
+          "mean": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "stalls": [
+          1,
+          1
+        ],
+        "actualDelay": [
+          8,
+          8
+        ],
+        "state": [
+          3253818473,
+          -1,
+          5,
+          5,
+          355,
+          0,
+          0,
+          3
+        ],
+        "visibility": "visible",
+        "errors": []
+      },
+      {
+        "rate": 1,
+        "delay": 2,
+        "latencyMs": 160,
+        "elapsedMs": 6000.895000000019,
+        "simFps": 23.329853296883144,
+        "presentationOpportunitiesFps": 23.16321148761969,
+        "rafCallbacks": 750,
+        "multiTickCallbacks": 1,
+        "stepMs": {
+          "n": 140,
+          "mean": 1.2913214285774821,
+          "p95": 2.3449999999720603,
+          "max": 3.4749999998603016
+        },
+        "intervalMs": {
+          "n": 139,
+          "mean": 41.4910071942446,
+          "p95": 117.2949999999255,
+          "max": 141.47999999998137
+        },
+        "longTasks": {
+          "n": 0,
+          "mean": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "stalls": [
+          138,
+          138
+        ],
+        "actualDelay": [
+          2,
+          2
+        ],
+        "state": [
+          597558897,
+          -1,
+          5,
+          5,
+          141,
+          0,
+          0,
+          3
+        ],
+        "visibility": "visible",
+        "errors": []
+      },
+      {
+        "rate": 1,
+        "delay": "auto",
+        "latencyMs": 160,
+        "elapsedMs": 6000.905000000028,
+        "simFps": 58.491177580714634,
+        "presentationOpportunitiesFps": 58.32453604914565,
+        "rafCallbacks": 781,
+        "multiTickCallbacks": 1,
+        "stepMs": {
+          "n": 351,
+          "mean": 1.2663960114069697,
+          "p95": 2.4400000001769513,
+          "max": 3.455000000074506
+        },
+        "intervalMs": {
+          "n": 350,
+          "mean": 16.593757142857648,
+          "p95": 21.869999999878928,
+          "max": 26.135000000009313
+        },
+        "longTasks": {
+          "n": 0,
+          "mean": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "stalls": [
+          33,
+          28
+        ],
+        "actualDelay": [
+          10,
+          10
+        ],
+        "state": [
+          2739467369,
+          -1,
+          5,
+          5,
+          352,
+          0,
+          0,
+          3
+        ],
+        "visibility": "visible",
+        "errors": []
+      }
+    ]
+  },
+  "remix": {
+    "date": "2026-09-11T07:34:19.355Z",
+    "browser": "152.0.7977.83",
+    "buildRoot": "/Volumes/OpenSmashBuilds/publisher/build/native-menu-mobile-release-20260911-r1/remix",
+    "engineSha256": "3994e4f59942ea671af6fcdea5e0823e6057541fdcc1e51629b3812b9eb0549f",
+    "sdkSha256": "c7087e338cdacd355b569dae4898db37e89aee97eed9d194919b3f6051fa3357",
+    "limitations": "One released battle engine with synthetic peer. No rollback snapshots; checksums disabled for synthetic peer. Local transport delay, not live Internet/iOS.",
+    "results": [
+      {
+        "rate": 1,
+        "delay": "offline",
+        "latencyMs": 0,
+        "elapsedMs": 6000.385000000009,
+        "simFps": 59.829494274117316,
+        "presentationOpportunitiesFps": 59.662838301208915,
+        "rafCallbacks": 728,
+        "multiTickCallbacks": 0,
+        "stepMs": {
+          "n": 359,
+          "mean": 1.3045543175441028,
+          "p95": 2.5049999998882413,
+          "max": 3.9299999999348074
+        },
+        "intervalMs": {
+          "n": 358,
+          "mean": 16.678351955307523,
+          "p95": 18.5,
+          "max": 25.739999999990687
+        },
+        "longTasks": {
+          "n": 0,
+          "mean": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "stalls": [
+          0
+        ],
+        "actualDelay": [
+          null
+        ],
+        "state": [
+          4153422953,
+          -1,
+          5,
+          5,
+          360,
+          0,
+          0,
+          3
+        ],
+        "visibility": "visible",
+        "errors": []
+      },
+      {
+        "rate": 1,
+        "delay": 2,
+        "latencyMs": 100,
+        "elapsedMs": 6000.700000000186,
+        "simFps": 34.32932824503701,
+        "presentationOpportunitiesFps": 34.16268102054654,
+        "rafCallbacks": 736,
+        "multiTickCallbacks": 1,
+        "stepMs": {
+          "n": 206,
+          "mean": 1.188859223307888,
+          "p95": 1.9899999999906868,
+          "max": 3.449999999953434
+        },
+        "intervalMs": {
+          "n": 205,
+          "mean": 28.631121951220102,
+          "p95": 51.50499999988824,
+          "max": 84.92500000004657
+        },
+        "longTasks": {
+          "n": 0,
+          "mean": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "stalls": [
+          204,
+          204
+        ],
+        "actualDelay": [
+          2,
+          2
+        ],
+        "state": [
+          2130120348,
+          -1,
+          5,
+          5,
+          207,
+          0,
+          0,
+          3
+        ],
+        "visibility": "visible",
+        "errors": []
+      },
+      {
+        "rate": 1,
+        "delay": "auto",
+        "latencyMs": 100,
+        "elapsedMs": 6000.989999999991,
+        "simFps": 58.9902666060101,
+        "presentationOpportunitiesFps": 58.490349092399846,
+        "rafCallbacks": 738,
+        "multiTickCallbacks": 2,
+        "stepMs": {
+          "n": 354,
+          "mean": 1.4224293785318365,
+          "p95": 2.709999999962747,
+          "max": 3.7299999999813735
+        },
+        "intervalMs": {
+          "n": 353,
+          "mean": 16.641062322945963,
+          "p95": 19.62999999988824,
+          "max": 32.75
+        },
+        "longTasks": {
+          "n": 0,
+          "mean": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "stalls": [
+          1,
+          1
+        ],
+        "actualDelay": [
+          8,
+          8
+        ],
+        "state": [
+          3253818473,
+          -1,
+          5,
+          5,
+          355,
+          0,
+          0,
+          3
+        ],
+        "visibility": "visible",
+        "errors": []
+      },
+      {
+        "rate": 1,
+        "delay": 2,
+        "latencyMs": 160,
+        "elapsedMs": 6001.370000000112,
+        "simFps": 23.328006771786676,
+        "presentationOpportunitiesFps": 23.1613781519882,
+        "rafCallbacks": 734,
+        "multiTickCallbacks": 1,
+        "stepMs": {
+          "n": 140,
+          "mean": 1.1786428571445868,
+          "p95": 1.994999999878928,
+          "max": 3.055000000167638
+        },
+        "intervalMs": {
+          "n": 139,
+          "mean": 41.5147841726614,
+          "p95": 116.50499999988824,
+          "max": 146.19999999995343
+        },
+        "longTasks": {
+          "n": 0,
+          "mean": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "stalls": [
+          138,
+          138
+        ],
+        "actualDelay": [
+          2,
+          2
+        ],
+        "state": [
+          597558897,
+          -1,
+          5,
+          5,
+          141,
+          0,
+          0,
+          3
+        ],
+        "visibility": "visible",
+        "errors": []
+      },
+      {
+        "rate": 1,
+        "delay": "auto",
+        "latencyMs": 160,
+        "elapsedMs": 6001.5,
+        "simFps": 58.48537865533616,
+        "presentationOpportunitiesFps": 58.15212863450804,
+        "rafCallbacks": 734,
+        "multiTickCallbacks": 1,
+        "stepMs": {
+          "n": 351,
+          "mean": 1.0971652421698324,
+          "p95": 1.8549999999813735,
+          "max": 2.949999999953434
+        },
+        "intervalMs": {
+          "n": 350,
+          "mean": 16.5984857142863,
+          "p95": 18.550000000046566,
+          "max": 25.43500000005588
+        },
+        "longTasks": {
+          "n": 0,
+          "mean": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "stalls": [
+          18,
+          12
+        ],
+        "actualDelay": [
+          10,
+          10
+        ],
+        "state": [
+          2739467369,
+          -1,
+          5,
+          5,
+          352,
+          0,
+          0,
+          3
+        ],
+        "visibility": "visible",
+        "errors": []
+      }
+    ]
+  },
+  "sdkTransport": {
+    "sdkSha256": "c7087e338cdacd355b569dae4898db37e89aee97eed9d194919b3f6051fa3357",
+    "note": "latencyMs is simulated one-way peer delivery, and separately the supplied room RTT estimate; render opportunities are 60Hz observations, not physical scanout.",
+    "results": [
+      {
+        "latencyMs": 0,
+        "jitterMs": 0,
+        "delay": 2,
+        "actualDelay": [
+          2,
+          2
+        ],
+        "simFps": [
+          59.95,
+          59.95
+        ],
+        "presentationOpportunitiesFps": [
+          59.9,
+          59.9
+        ],
+        "stalls": [
+          1,
+          1
+        ],
+        "confirmedFrames": 1199,
+        "agreement": true
+      },
+      {
+        "latencyMs": 0,
+        "jitterMs": 0,
+        "delay": "auto",
+        "actualDelay": [
+          2,
+          2
+        ],
+        "simFps": [
+          59.95,
+          59.95
+        ],
+        "presentationOpportunitiesFps": [
+          59.9,
+          59.9
+        ],
+        "stalls": [
+          1,
+          1
+        ],
+        "confirmedFrames": 1199,
+        "agreement": true
+      },
+      {
+        "latencyMs": 30,
+        "jitterMs": 0,
+        "delay": 2,
+        "actualDelay": [
+          2,
+          2
+        ],
+        "simFps": [
+          59.95,
+          59.95
+        ],
+        "presentationOpportunitiesFps": [
+          59.85,
+          59.85
+        ],
+        "stalls": [
+          1,
+          1
+        ],
+        "confirmedFrames": 1199,
+        "agreement": true
+      },
+      {
+        "latencyMs": 30,
+        "jitterMs": 0,
+        "delay": "auto",
+        "actualDelay": [
+          3,
+          3
+        ],
+        "simFps": [
+          59.95,
+          59.95
+        ],
+        "presentationOpportunitiesFps": [
+          59.85,
+          59.85
+        ],
+        "stalls": [
+          1,
+          1
+        ],
+        "confirmedFrames": 1199,
+        "agreement": true
+      },
+      {
+        "latencyMs": 60,
+        "jitterMs": 0,
+        "delay": 2,
+        "actualDelay": [
+          2,
+          2
+        ],
+        "simFps": [
+          59.8,
+          59.8
+        ],
+        "presentationOpportunitiesFps": [
+          59.65,
+          59.65
+        ],
+        "stalls": [
+          1194,
+          1194
+        ],
+        "confirmedFrames": 1196,
+        "agreement": true
+      },
+      {
+        "latencyMs": 60,
+        "jitterMs": 0,
+        "delay": "auto",
+        "actualDelay": [
+          5,
+          5
+        ],
+        "simFps": [
+          59.85,
+          59.85
+        ],
+        "presentationOpportunitiesFps": [
+          59.75,
+          59.75
+        ],
+        "stalls": [
+          1,
+          1
+        ],
+        "confirmedFrames": 1197,
+        "agreement": true
+      },
+      {
+        "latencyMs": 100,
+        "jitterMs": 0,
+        "delay": 2,
+        "actualDelay": [
+          2,
+          2
+        ],
+        "simFps": [
+          39.8,
+          39.8
+        ],
+        "presentationOpportunitiesFps": [
+          39.65,
+          39.65
+        ],
+        "stalls": [
+          794,
+          794
+        ],
+        "confirmedFrames": 796,
+        "agreement": true
+      },
+      {
+        "latencyMs": 100,
+        "jitterMs": 0,
+        "delay": "auto",
+        "actualDelay": [
+          8,
+          8
+        ],
+        "simFps": [
+          59.75,
+          59.75
+        ],
+        "presentationOpportunitiesFps": [
+          59.65,
+          59.65
+        ],
+        "stalls": [
+          1,
+          1
+        ],
+        "confirmedFrames": 1195,
+        "agreement": true
+      },
+      {
+        "latencyMs": 160,
+        "jitterMs": 0,
+        "delay": 2,
+        "actualDelay": [
+          2,
+          2
+        ],
+        "simFps": [
+          23.8,
+          23.8
+        ],
+        "presentationOpportunitiesFps": [
+          23.7,
+          23.7
+        ],
+        "stalls": [
+          474,
+          474
+        ],
+        "confirmedFrames": 476,
+        "agreement": true
+      },
+      {
+        "latencyMs": 160,
+        "jitterMs": 0,
+        "delay": "auto",
+        "actualDelay": [
+          10,
+          10
+        ],
+        "simFps": [
+          59.55,
+          59.55
+        ],
+        "presentationOpportunitiesFps": [
+          59.45,
+          59.45
+        ],
+        "stalls": [
+          1,
+          1
+        ],
+        "confirmedFrames": 1191,
+        "agreement": true
+      },
+      {
+        "latencyMs": 250,
+        "jitterMs": 0,
+        "delay": 2,
+        "actualDelay": [
+          2,
+          2
+        ],
+        "simFps": [
+          15.8,
+          15.8
+        ],
+        "presentationOpportunitiesFps": [
+          15.65,
+          15.65
+        ],
+        "stalls": [
+          314,
+          314
+        ],
+        "confirmedFrames": 316,
+        "agreement": true
+      },
+      {
+        "latencyMs": 250,
+        "jitterMs": 0,
+        "delay": "auto",
+        "actualDelay": [
+          10,
+          10
+        ],
+        "simFps": [
+          47.35,
+          47.35
+        ],
+        "presentationOpportunitiesFps": [
+          46.85,
+          46.85
+        ],
+        "stalls": [
+          937,
+          937
+        ],
+        "confirmedFrames": 947,
+        "agreement": true
+      },
+      {
+        "latencyMs": 500,
+        "jitterMs": 0,
+        "delay": 2,
+        "actualDelay": [
+          2,
+          2
+        ],
+        "simFps": [
+          7.8,
+          7.8
+        ],
+        "presentationOpportunitiesFps": [
+          7.65,
+          7.65
+        ],
+        "stalls": [
+          154,
+          154
+        ],
+        "confirmedFrames": 156,
+        "agreement": true
+      },
+      {
+        "latencyMs": 500,
+        "jitterMs": 0,
+        "delay": "auto",
+        "actualDelay": [
+          10,
+          10
+        ],
+        "simFps": [
+          23.4,
+          23.4
+        ],
+        "presentationOpportunitiesFps": [
+          23,
+          23
+        ],
+        "stalls": [
+          458,
+          458
+        ],
+        "confirmedFrames": 468,
+        "agreement": true
+      },
+      {
+        "latencyMs": 800,
+        "jitterMs": 0,
+        "delay": 2,
+        "actualDelay": [
+          2,
+          2
+        ],
+        "simFps": [
+          4.8,
+          4.8
+        ],
+        "presentationOpportunitiesFps": [
+          4.65,
+          4.65
+        ],
+        "stalls": [
+          94,
+          94
+        ],
+        "confirmedFrames": 96,
+        "agreement": true
+      },
+      {
+        "latencyMs": 800,
+        "jitterMs": 0,
+        "delay": "auto",
+        "actualDelay": [
+          10,
+          10
+        ],
+        "simFps": [
+          14.4,
+          14.4
+        ],
+        "presentationOpportunitiesFps": [
+          14,
+          14
+        ],
+        "stalls": [
+          278,
+          278
+        ],
+        "confirmedFrames": 288,
+        "agreement": true
+      }
+    ]
+  }
+}
