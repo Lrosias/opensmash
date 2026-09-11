@@ -1,0 +1,7 @@
+{
+  "remix": {
+    "release": "/Volumes/OpenSmashBuilds/lobby/build/lobby-remix",
+    "candidate": "/Volumes/OpenSmashBuilds/publisher/build/native-menu-session-20260911/remix-result-places-r1/candidate",
+    "wasm": "3994e4f59942ea671af6fcdea5e0823e6057541fdcc1e51629b3812b9eb0549f"
+  }
+}
