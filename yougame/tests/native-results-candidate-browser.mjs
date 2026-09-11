@@ -13,7 +13,7 @@ const sdk=(await readFile(path.join(root,'yougame/tests/native-results-sdk-fixtu
 // Keep the real app's agreed fighters, but do not boot a battle or claim combat.
 resultFixture.room.send=function(data){resultFixture.sent.push(structuredClone(data));if(data.p==='opensmash64-remix-competitive-v1'&&data.type==='hello')queueMicrotask(()=>this.emit('message',{from:'b',data:{...data,fighter:59}}));};
 resultFixture.rawPads=null;
-YouGame.controllers.snapshot=()=>({owned:!!resultFixture.rawPads,state:resultFixture.rawPads?'connected':'native-required',stale:false,suspended:false,ports:Array.from({length:4},(_,port)=>({port,connected:!!resultFixture.rawPads&&port<2,buttons:resultFixture.rawPads?.[port]||0,axes:[128,128,128,128],triggers:[0,0]}))});
+YouGame.controllers.snapshot=()=>({owned:!!resultFixture.rawPads,state:resultFixture.rawPads?'connected':'native-required',stale:false,suspended:false,ports:Array.from({length:4},(_,port)=>({port,connected:!!resultFixture.rawPads&&port<2,buttons:resultFixture.rawPads?.[port]||0,axes:resultFixture.rawAxes?.[port]||[128,128,128,128],triggers:[0,0]}))});
 YouGame.ui.getLayout=()=>({insets:{top:80,bottom:100,left:20,right:20}});
 `;
 const server=createServer(async(req,res)=>{try{
@@ -48,8 +48,10 @@ try{
   await page.evaluate(()=>document.querySelector('iframe').contentWindow.focus());
   for(let n=0;n<3&&!await page.evaluate(()=>!!nativeEvidence.original.remixMenu);n++){await page.keyboard.press('KeyX');await page.waitForTimeout(500);}
   await page.waitForFunction(()=>!!nativeEvidence.original.remixMenu);
-  await page.keyboard.press('ArrowRight');await page.waitForTimeout(250);await page.keyboard.press('KeyX');
-  await page.waitForFunction(()=>nativeEvidence.original.remixMenu.phase===1);
+  // The native select: hold the stick to carry the hand onto the top portrait row, A drops the puck there.
+  // Closed loop: a puck lands on the second portrait row while the hand's y is in [69,93), so nudge until it is well inside.
+  for(let n=0;n<6;n++){const y=await page.evaluate(()=>nativeEvidence.original.remixMenu.y);if(y>=72&&y<=88)break;const key=y>88?'ArrowUp':'ArrowDown';await page.keyboard.down(key);await page.waitForFunction(key=>{const y=nativeEvidence.original.remixMenu.y;return key==='ArrowUp'?y<=86:y>=74;},key);await page.keyboard.up(key);}
+  await page.keyboard.press('KeyX');await page.waitForFunction(()=>nativeEvidence.original.remixMenu.confirmed&1);
   await page.evaluate(()=>{resultFixture.rawPads=[0,256];});await page.waitForFunction(()=>nativeEvidence.original.remixMenu.humans===3);
   await page.evaluate(()=>{resultFixture.rawPads=[0,0];nativeEvidence.savedMenu=structuredClone(nativeEvidence.original.remixMenu);});
   await page.screenshot({path:path.join(out,`${mobile?'phone':'desktop'}-local-before.png`)});
@@ -80,7 +82,10 @@ try{
   // The native CSS intentionally debounces the preceding port-join selection.
   // Let its preserved wait counter drain before issuing a fresh A edge.
   const localTicks=await page.evaluate(()=>nativeEvidence.localTicks);await page.waitForFunction(ticks=>nativeEvidence.localTicks>ticks+20,localTicks);
-  await page.evaluate(()=>{document.querySelector('iframe').contentWindow.focus();resultFixture.rawPads=[0,1];});await page.waitForFunction(()=>nativeEvidence.original.remixMenu.phase===3);
+  // Port 2 pushes its stick up until its hand reaches the top row, drops its puck with A, then port 1's Start opens the stages (via the READY TO FIGHT beat).
+  await page.evaluate(()=>{document.querySelector('iframe').contentWindow.focus();resultFixture.rawPads=[0,0];});
+  for(let n=0;n<6;n++){const y=await page.evaluate(()=>nativeEvidence.original.remixMenu.hy[1]);if(y>=72&&y<=88)break;const up=y>88;await page.evaluate(up=>{resultFixture.rawAxes=[null,[128,up?148:108,128,128]];},up);await page.waitForFunction(up=>{const y=nativeEvidence.original.remixMenu.hy[1];return up?y<=86:y>=74;},up);await page.evaluate(()=>{resultFixture.rawAxes=null;});}
+  await page.evaluate(()=>{resultFixture.rawPads=[0,1];});await page.waitForFunction(()=>nativeEvidence.original.remixMenu.confirmed===3&&!nativeEvidence.original.remixMenu.held);
   await page.evaluate(()=>{resultFixture.rawPads=[0,0];});await page.waitForTimeout(300);await page.evaluate(()=>{resultFixture.rawPads=[256,0];});await page.waitForFunction(()=>nativeEvidence.original.remixMenu.phase===2);await page.evaluate(()=>{resultFixture.rawPads=null;});
   await page.screenshot({path:path.join(out,`${mobile?'phone':'desktop'}-local-return.png`)});
   assert.deepEqual(errors,[]);evidence.push({mobile,viewport,gcBox,hostReserve:64,pickerAndNativeHide:true,localRestored:true,originalMenuRosterPortsPreserved:true,localAConfirmsAndStartOpensStages:true,pendingDesktopCopy:true,memory:await page.evaluate(()=>nativeEvidence.memory),memoryScope:'RAF-sampled attached engine Wasm capacity and Chromium used JS heap; not process RSS or a combat transition measurement',cases,errors});await page.close();
