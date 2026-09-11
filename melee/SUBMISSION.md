@@ -1,5 +1,28 @@
 # OpenSmash Melee submission
 
+## Just-in-time loading v1.16 — September 11, 2026
+
+**v1.16 is live** at https://yougame.co/g/opensmash-melee, upload `443341e99f5148e9b1b000dd2f891f94`,
+a wrapper-only minor update on the v1.15 package (assets and engine
+`e7e6cfaf1cc448cecc65ff34ac934c5fc7db2497e439d91c5746d25f5ccb7fa4` unchanged).
+Details and measurements: [PROGRESSIVE-LOADING.md](PROGRESSIVE-LOADING.md).
+
+- The title screen downloads the engine and the menu data at once and keeps both
+  in CacheStorage; a warm reload needs no network before the roster.
+- The menu gate is 14.1 MB (was 22.6 MB): region twins the NTSC-U game never
+  opens are out of every group.
+- In the menus a plan preloads match essentials, the roster in tier order, the
+  three selectable tournament stages, then the rest, decoded into memory within a
+  budget; placed tokens jump ahead and abort planned downloads.
+- A small corner pill (top-left, in the letterbox gutter on 16:9) replaces the
+  box that covered the P4 name plate; it names what is loading and turns yellow
+  only while play is blocked.
+- Nine loader unit tests and the two catalog tests pass; headless Chromium runs at
+  50 Mbps and 6 Mbps covered roster, picks, stage select, an Onett match and pause
+  with zero missing reads on the fast line, and a 2 s blocked pick on the slow one.
+- Package: `/Volumes/OpenSmashBuilds/publisher/build/melee-jit-loading-20260911-r1/melee`
+  (`manifest.json` records the base package, commit and changed-file hashes).
+
 ## Competitive release v1.7 — September 10, 2026
 
 **v1.7 is live** at https://yougame.co/g/opensmash-melee, upload

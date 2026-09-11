@@ -24,7 +24,18 @@ body:not(.playing) header{top:max(12px,env(safe-area-inset-top));bottom:auto;rig
 @media(min-aspect-ratio:2/1){.title-art{object-fit:contain}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
-#download-status{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(76px,calc(env(safe-area-inset-bottom) + 76px));z-index:8;width:min(300px,calc(100vw - 32px));padding:14px 16px;border:1px solid #5d6478;border-radius:12px;background:#111729f0;box-shadow:0 4px 24px #0006;color:#fff;pointer-events:none;font-size:13px;display:flex;flex-direction:column;gap:7px}#download-status[hidden]{display:none}#download-status strong{font-size:14px}#download-status span{color:#d5dbea}#download-status progress{width:100%;height:6px;border:0;border-radius:8px;accent-color:#ffd45e}#download-status progress::-webkit-progress-bar{background:#353d50;border-radius:8px}#download-status progress::-webkit-progress-value{background:#ffd45e;border-radius:8px}#download-status.blocking{border-color:#ffd45e}#download-retry{pointer-events:auto;align-self:flex-start}#download-retry[hidden]{display:none}
+#welcome-retry{margin-top:8px;min-height:36px;padding:7px 16px;font-size:12px;border-color:#ff8a65}#welcome-retry[hidden]{display:none}
+#download-status{position:fixed;z-index:8;top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));display:inline-flex;align-items:center;gap:8px;max-width:min(360px,calc(100vw - 24px));padding:7px 13px 8px;border:1px solid #ffffff2e;border-radius:999px;background:#0b1020e6;box-shadow:0 2px 12px #0008;color:#f2f5ff;font-size:12px;line-height:1.2;pointer-events:none;overflow:hidden;white-space:nowrap;font-variant-numeric:tabular-nums}
+body.host-layout-ready #download-status{top:max(12px,env(safe-area-inset-top),var(--yg-ui-top,0px));left:max(12px,env(safe-area-inset-left),var(--yg-ui-left,0px))}
+#download-status[hidden]{display:none}#download-label{font-weight:700}#download-detail{color:#c5cde0;overflow:hidden;text-overflow:ellipsis}
+#download-icon{flex:none;width:8px;height:8px;border-radius:50%;background:#7fb4ff;animation:download-pulse 1.2s ease-in-out infinite}
+#download-bar{position:absolute;left:0;bottom:0;height:2px;width:0;background:#7fb4ff;transition:width .15s linear}
+#download-status[data-kind=blocking]{border-color:#ffd45e}#download-status[data-kind=blocking] #download-icon,#download-status[data-kind=blocking] #download-bar{background:#ffd45e}
+#download-status[data-kind=preparing]{opacity:.7}#download-status[data-kind=preparing] #download-icon{animation:none}#download-status[data-kind=preparing] #download-icon,#download-status[data-kind=preparing] #download-bar{background:#8a94a8}
+#download-status[data-kind=error]{border-color:#ff8a65;pointer-events:auto}#download-status[data-kind=error] #download-icon{background:#ff8a65;animation:none}
+#download-retry{min-height:24px;padding:2px 10px;margin-left:2px;font-size:11px;border-radius:999px;pointer-events:auto}#download-retry[hidden]{display:none}
+@keyframes download-pulse{50%{opacity:.3}}
+@media(prefers-reduced-motion:reduce){#download-icon{animation:none}}
 
 /* Phones: the OpenSmash64 touch scheme with Melee's buttons. The picture sits between a
    control stick on the left and the C-stick plus face buttons on the right; a controller
@@ -38,7 +49,7 @@ body.touch{--stick-gutter:clamp(110px,calc(16 * var(--play-vw)),168px);--stick-i
 .touch.rotated #play-surface{transform-origin:top left;transform:translateX(var(--play-height)) rotate(90deg)}
 .touch.playing:not(.pad) #canvas,.touch.playing:not(.pad) .native-match{left:calc(var(--left) + var(--safe-left));top:var(--safe-top);width:calc(100% - var(--left) - var(--right) - var(--safe-left) - var(--safe-right));height:calc(100% - var(--safe-top) - var(--safe-bottom))}
 .touch.playing header{display:none}
-.touch.playing #download-status{right:auto;left:50%;transform:translateX(-50%);bottom:max(8px,var(--safe-bottom));width:min(300px,calc(100vw - 32px))}
+.touch.playing #download-status{top:auto;left:50%;transform:translateX(-50%);bottom:max(8px,var(--safe-bottom))}
 .touch.playing #touch-controls{display:block;position:absolute;inset:0;z-index:2;pointer-events:none;color:#eee;font:600 12px system-ui}
 body:has(#competitive:not([hidden])) #touch-controls{display:none}
 #touch-controls button{color:#eee;background:#242424;border:1px solid #666;font:600 12px system-ui;min-height:44px;min-width:44px;padding:0;border-radius:10px;touch-action:none;pointer-events:auto;-webkit-tap-highlight-color:transparent;cursor:default}

@@ -28,7 +28,7 @@
       <button class="touch-button grab" data-mask="16" type="button" tabindex="-1" aria-label="Grab (Z)"><b>Grab</b></button>
     </div>
   </section>
-  <aside id="download-status" hidden aria-label="Game downloads"><strong id="download-label" role="status" aria-live="polite"></strong><progress id="download-progress" aria-label="Download progress" max="1" value="0"></progress><span id="download-detail"></span><button id="download-retry" hidden>Retry download</button></aside>
+  <aside id="download-status" hidden aria-label="Game downloads"><span id="download-icon" aria-hidden="true"></span><span id="download-label" role="status" aria-live="polite"></span><span id="download-detail"></span><button id="download-retry" hidden>Retry</button><i id="download-bar" aria-hidden="true"></i></aside>
   </div>
   <header aria-label="Game tools"><output id="metrics"></output><div><button id="report">Report</button><button id="controls">Controls</button><button id="fullscreen">Fullscreen</button></div></header>
   <section id="welcome" aria-labelledby="game-title">
@@ -41,7 +41,8 @@
         <button id="online">Online · Casual / Ranked / Friends</button>
         <button id="welcome-controls">Set up controls</button>
         <div id="loading" hidden><div class="progress-track"><div id="progress-bar"></div></div><p id="progress-detail"></p></div>
-        <p id="status" role="status">Menu first · Fighters and stages download as needed</p>
+        <p id="status" role="status">Menus first · fighters and stages download as you pick them</p>
+        <button id="welcome-retry" hidden>Retry download</button>
       </div>
     </main>
   </section>
