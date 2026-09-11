@@ -35,10 +35,10 @@ test('native terminal requires peer agreement, settles once and resumes same eng
   p.rooms[1].syncs[0].options.step(0,{});await flush();p.sessions.forEach(s=>s.pulse());await flush();
   assert.deepEqual(p.rooms.map(r=>r.finishes),[[{winner:'p3'}],[{winner:'p3'}]]);
   const oldScopes=p.sessions.map(s=>s.scope),frames=p.engines.map(e=>e.meta.frame);
-  for(const r of p.rooms){r.playing=false;r.round=2;r.emit('result',{round:1,void:false});}
+  for(const r of p.rooms){r.playing=false;r.round=2;r.emit('result',{round:1,void:false,ranking:['p3','p1']});}
   await flush();p.sessions.forEach(s=>s.pulse());await flush();
   assert.equal(p.engines.length,2);assert.deepEqual(p.engines.map(e=>e.meta.frame),frames);assert.ok(p.sessions.every((s,i)=>s.scope!==oldScopes[i]&&s.running));
-  for(const r of p.rooms){r.emit('result',{round:1,void:false});r.syncs[1].options.step(0,{});}
+  for(const r of p.rooms){r.emit('result',{round:1,void:false,ranking:['p3','p1']});r.syncs[1].options.step(0,{});}
   await flush();assert.deepEqual(p.rooms.map(r=>r.finishes.length),[1,1],'Same battle terminal cannot score twice');assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });
@@ -51,7 +51,7 @@ test('late join during terminal wait cannot restart input; next roster epoch col
  const p=pair();try{await flush();p.sessions.forEach(s=>s.pulse());await flush();p.engines.forEach(e=>e.end=true);p.rooms.forEach(r=>r.syncs[0].options.step(0,{}));await flush();
   const next={id:'p2',connectionId:'a',slot:1,localIndex:2};for(const r of p.rooms){r.participants.push(next);r.revision++;r.emit('participants',{});}
   assert.equal(p.engines.length,2);assert.ok(p.sessions.every(s=>s.terminal&&!s.sync));
-  for(const r of p.rooms){r.playing=false;r.round=2;r.emit('result',{round:1,void:false});}await flush();p.sessions.forEach(s=>s.pulse());await flush();
+  for(const r of p.rooms){r.playing=false;r.round=2;r.emit('result',{round:1,void:false,ranking:['p3','p1']});}await flush();p.sessions.forEach(s=>s.pulse());await flush();
   assert.equal(p.engines.length,4);assert.ok(p.engines.slice(0,2).every(e=>e.destroyed));assert.ok(p.sessions.every(s=>s.participants.map(p=>p.slot).join(',')==='0,1,2'));assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });
@@ -87,4 +87,16 @@ test('completed human winner receipts must match the frozen native controller ro
  const receipt={battleId:1,kind:'winner',winnerSlot:2,participantsMask:5,humanMask:5,teamBattle:false,noContest:false,places:[1,-1,0,-1]},meta={frame:120,hash:15,receipt};
  assert.equal(nativeResultReceipt(meta,members,0).winner,'p3');assert.equal(nativeResultReceipt(meta,members,1),null);
  assert.throws(()=>nativeResultReceipt({...meta,receipt:{...receipt,winnerSlot:1}},members,0));assert.throws(()=>nativeResultReceipt({...meta,receipt:{...receipt,humanMask:1}},members,0));assert.throws(()=>nativeResultReceipt({...meta,receipt:{...receipt,kind:'draw'}},members,0));
+});
+
+test('late connection observes the active round result then prepares its first native roster',async()=>{
+ const events=new Map(),launches=[],errors=[];const room={me:'late',round:1,revision:1,playing:true,matchParticipants:structuredClone(members),participants:[...structuredClone(members),{id:'late-p2',connectionId:'late',slot:1,localIndex:0}],on(e,f){events.set(e,f);},off(){},send(){}};
+ const session=new NativeRoomSession({room,build:'b',profile,readPorts:()=>[],launch(owner,token){launches.push({slots:owner.participants.map(p=>p.slot),token});},onError:e=>errors.push(e)});
+ try{assert.equal(launches.length,0);room.playing=false;room.round=2;events.get('result')({round:1,void:false,ranking:['p3','p1']});await flush();assert.equal(session.closed,undefined);assert.deepEqual(launches.map(l=>l.slots),[[0,1,2]]);assert.deepEqual(errors,[]);}finally{session.destroy();}
+});
+test('platform winner must match the locally agreed native winner',async()=>{
+ const p=pair();try{await flush();p.sessions.forEach(s=>s.pulse());await flush();p.engines.forEach(e=>e.end=true);p.rooms.forEach(r=>r.syncs[0].options.step(0,{}));await flush();p.sessions.forEach(s=>s.pulse());await flush();p.rooms[0].playing=false;p.rooms[0].round=2;p.rooms[0].emit('result',{round:1,void:false,ranking:['p1','p3']});assert.equal(p.sessions[0].closed,true);assert.ok(p.errors.length);}finally{p.close();}
+});
+test('a delayed prepared packet cannot compare a running engine against its old boot checkpoint',async()=>{
+ const p=pair();try{await flush();p.sessions.forEach(s=>s.pulse());await flush();const packet=p.packets.find(p=>p.from==='b'&&p.data.type==='native-prepared');p.rooms[0].syncs[0].options.step(0,{});p.rooms[0].emit('message',{from:'b',data:packet.data});assert.equal(p.sessions[0].closed,undefined);assert.deepEqual(p.errors,[]);}finally{p.close();}
 });

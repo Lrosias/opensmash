@@ -94,7 +94,7 @@ export class NativeRoomSession {
  });}
  receive({from,data:d}){return this.guard(()=>{
   if(from===this.room.me||!this.connections?.includes(from)||d?.p!==this.profile.protocol)return;
-  if(d.type==='native-prepared'&&d.key===this.prepareKey){
+  if(d.type==='native-prepared'&&!this.room.playing&&!this.terminal&&!this.settling&&d.key===this.prepareKey){
    if(this.engine&&d.checkpoint!==this.checkpoint())throw Error('Native menus prepared different states');
    this.peers.set(from,{key:d.key,checkpoint:d.checkpoint});this.pulse(false);
   }else if(d.type==='native-armed'&&d.scope===this.scope){this.peers.set(from,{armed:d.scope});this.startIfArmed();}
@@ -103,7 +103,7 @@ export class NativeRoomSession {
  started(){return this.guard(()=>{
   if(!this.room.playing||this.sync||this.settling||this.terminal)return;
   const frozen=nativeRoster(this.room.matchParticipants||this.room.participants);
-  if(!frozen.some(p=>p.connectionId===this.room.me)){this.onStatus('WAITING FOR THE NEXT GAME');return;}
+  if(!frozen.some(p=>p.connectionId===this.room.me)){this.waitingRound=this.room.round;this.onStatus('WAITING FOR THE NEXT GAME');return;}
   if(!this.engine||JSON.stringify(frozen)!==this.rosterKey)throw Error('Native controller roster changed before start');
   this.round=this.room.round;this.scope=JSON.stringify([this.build,this.round,this.room.matchId,this.rosterKey,this.checkpoint()]);this.peers.clear();this.reports.clear();this.terminal=null;this.reported=false;this.frame=0;
   const local=frozen.filter(p=>p.connectionId===this.room.me);
@@ -139,8 +139,11 @@ export class NativeRoomSession {
  }
  settled(event){
   if(this.closed||event.round!==this.round||this.settling)return;
+  // A newly joined connection has no frozen native ports in the active game.
+  // Observe its settlement, then prepare the next roster without reporting it.
+  if(this.waitingRound===event.round&&!this.engine){this.waitingRound=null;queueMicrotask(()=>this.refresh());return;}
   const expectedVoid=this.reported&&this.terminal?.unscored===true;
-  if(!this.terminal||!this.reported||!!event.void!==expectedVoid){this.fail('Native game ended without its agreed result');return;}
+  if(!this.terminal||!this.reported||!!event.void!==expectedVoid||(!expectedVoid&&(event.draw||event.ranking?.[0]!==this.terminal.winner))){this.fail('Native game ended without its agreed result');return;}
   this.stopSync();this.settling=true;
   // Let the SDK finish dispatching result (which stops its old controller)
   // before registering a new round. The native machine stays at its exact tick.
