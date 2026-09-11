@@ -1,5 +1,32 @@
 # OpenSmash Melee submission
 
+## Native mode menu v1.17 — September 11, 2026
+
+**v1.17 is live** at https://yougame.co/g/opensmash-melee, upload `UPLOAD_ID`,
+on the v1.16 assets with a rebuilt engine
+`b72e5e81777a5ff81a0eb6f4f3e1c5087149cc29988d57a06fe82185c8f56966`.
+
+- The page boots straight into Melee. The mode menu is native: `Menu.cpp` draws
+  LOCAL VERSUS / ONLINE (FRIENDS, CASUAL, RANKED) with the game's SIS text
+  renderer over the versus character select, from the `HSD_PadRenewMasterStatus`
+  hook, calling the recompiled text functions through the module dispatcher.
+  Stick or D-pad moves, A selects, B backs out; B on an empty roster returns to
+  the menu. The online status line (searching, waiting, failed) with BACK and
+  TRY AGAIN is native too.
+- The browser title screen, the Online button, the HTML find-a-match, lobby,
+  set, pick and result screens, the header buttons and the report dialog are gone.
+  Every online queue runs the native room session (Melee's own character select,
+  stage select and results in a second engine); Ranked uses it as well, one rated
+  game per round, instead of the removed HTML best-of-three flow.
+- lite.py raises the SIS text pool to 48 KB in every scene (the character select
+  allotted 9 KB); `?log` routes the game's OSReport lines to the console.
+- Tests: 48 unit tests pass; `tests/native-menu-browser.mjs` drove the menu on
+  the real engine (screenshots of both lists, LOCAL VERSUS and the return);
+  `tests/native-room-app-browser.mjs` drove casual, friends, invite, cancel and
+  ranked through the menu callback with fixture transport and engines.
+- Package: `/Volumes/OpenSmashBuilds/publisher/build/melee-native-menu-20260911-r1/melee`
+  (`-release.json` records the base package, commit, engine and changed files).
+
 ## Just-in-time loading v1.16 — September 11, 2026
 
 **v1.16 is live** at https://yougame.co/g/opensmash-melee, upload `443341e99f5148e9b1b000dd2f891f94`,
@@ -31,7 +58,7 @@ build after known hosting stamps. The listing enables local and online play
 and the ranked ladder while preserving media and history. This release preserves
 v1.6 ThinLTO, exact-FMA, Lite Fountain,
 persistent pipeline caching and HTTP-gzip streaming. It adds configured native
-online matches and the competitive flows in [COMPETITIVE.md](COMPETITIVE.md).
+online matches and the competitive flows in COMPETITIVE.md (removed with the HTML flows in v1.17).
 
 - Native engine SHA256: `ec79f2015598d73f4031613634cb0ee4463e58b10290862ed67116141bc983f6`.
 - 32 unit tests pass against deployed SDK `25aa37a75b1d36daa03156e134da58a95adcc50b1b6ab62427c23d0666e7e4f4`.

@@ -33,7 +33,7 @@ try {
  for await(const line of commands){
   try {
    const c=JSON.parse(line),start=Date.now();
-   if(c.start)await page.locator('#play').click();
+   if(c.start)/* the page boots on load */await page.waitForFunction(()=>['running','error'].includes(window.melee?.phase),null,{timeout:240000});
    if(c.ready)await page.waitForFunction(()=>window.melee?.samples?.at(-1)?.presents>120,null,{timeout:120000});
    if(c.saveState){
      await page.evaluate(()=>melee.module._melee_save_state());

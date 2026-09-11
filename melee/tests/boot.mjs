@@ -15,7 +15,7 @@ page.on('pageerror',e=>{events.push({type:'pageerror',text:String(e)});console.e
 page.on('requestfailed',r=>events.push({type:'requestfailed',url:r.url(),failure:r.failure()}));
 try {
   await page.goto(process.env.MELEE_URL||'http://127.0.0.1:8073');
-  await page.locator('#play').click();
+  /* the page boots on load */await page.waitForFunction(()=>['running','error'].includes(window.melee?.phase),null,{timeout:240000});
   const started=Date.now();
   let snapshot;
   for(let i=0;i<24;i++){

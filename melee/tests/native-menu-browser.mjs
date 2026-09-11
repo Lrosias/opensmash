@@ -34,5 +34,6 @@ try {
   await press(2,0,0,300);await page.waitForTimeout(3000);await shot('07-after-back');
   await page.waitForFunction(()=>melee.module._melee_menu_active()===1,null,{timeout:30000});
   await page.waitForTimeout(2500);await shot('07-mode-menu-again');
-  console.log(JSON.stringify({passed:true,menuLogs:logs.filter(l=>/\[menu\]|PAGEERROR/.test(l))}));
+  assert.deepEqual(logs.filter(l=>/\[menu\]|PAGEERROR/.test(l)),[]);
+  console.log(JSON.stringify({passed:true}));
 } finally { await writeFile(path.join(shots,'console.log'),logs.join('\n')); await browser.close(); }

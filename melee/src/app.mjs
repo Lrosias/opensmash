@@ -14,6 +14,7 @@ import {createTouch} from './touch.mjs';
 // The browser only relays the platform's status line into that native screen.
 const $ = id => document.getElementById(id);
 const adapter=mountAdapterControls();
+document.querySelector('button[aria-label="GameCube adapter controls"]')?.classList.add('melee-adapter-entry');
 const state = window.melee = {phase:'idle', errors:[], samples:[], module:null, displayedFrames:0, menu:{phase:0,text:'',revision:0}, queueKind:0, room:null, session:null, build:null};
 let input, audio, node, assetLoader, lastFrame=0, generation=0, busy=false;
 state.assetBlocked=false;
@@ -82,9 +83,10 @@ function sessionStatus(status) {
 }
 function disconnect() {
   generation++;busy=false;
-  const session=state.session;state.session=null;session?.destroy();
-  const room=state.room;state.room=null;room?.leave();
-  window.YouGame?.multiplayer?.leave?.();
+  const session=state.session;state.session=null;
+  const room=state.room;state.room=null;
+  // Leaving must never take the page down: a rejected leave is logged, not fatal.
+  for(const step of [()=>session?.destroy(),()=>room?.leave(),()=>window.YouGame?.multiplayer?.leave?.()])try{Promise.resolve(step()).catch(error=>console.warn(error));}catch(error){console.warn(error);}
   const box=$('download-status');if(box.dataset.kind==='session')box.hidden=true;
 }
 // Leaving online always lands back on the native online list of the local engine.
@@ -134,7 +136,7 @@ adapter.subscribe(()=>touch.sync());
 state.touch=touch;
 $('canvas').addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')touch.touched();},true);
 for(const kind of ['pointerdown','keydown'])window.addEventListener(kind,()=>{audio?.resume().catch(()=>{});state.session?.engine?.resumeAudio?.().catch(()=>{});},true);
-window.addEventListener('keydown',e=>{if(e.code==='Escape'&&state.session)setTimeout(()=>cleanup('YOU LEFT THE MATCH',6),0);},true);
+window.addEventListener('keydown',e=>{if(e.code==='Escape'&&(state.session||busy))setTimeout(()=>cleanup(state.session?'YOU LEFT THE MATCH':'',state.session?6:0),0);},true);
 window.addEventListener('pagehide',disconnect);
 function fail(error) {
   const message = error?.message || String(error);
@@ -159,13 +161,14 @@ function readSeat(seat,snapshot=adapter.snapshot(),peek=false) {
 }
 function sampleInput() {
   const snapshot=adapter.snapshot();
-  // An online session consumes touch taps through readPorts; the local engine only peeks then.
+  // An online session owns the pads through readPorts: the local engine and its native
+  // menu see neutral until the session ends, so B in a match can never leave the room.
   const online=!!state.session;touch.context(online);
   if (state.module && input && !state.rollback?.active) for (let seat=0; seat<4; seat++) {
     const s=input.player(seat)?.state;
     if (!s) continue;
     // A blocked engine still drains touch taps, so none fires late when the download ends.
-    state.module._melee_input(seat,...(state.assetBlocked?(seat===0&&touch.read(online),[0,0,0,0,0,0,0]):readSeat(seat,snapshot,online)));
+    state.module._melee_input(seat,...(state.assetBlocked||online?(seat===0&&!online&&touch.read(false),[0,0,0,0,0,0,0]):readSeat(seat,snapshot,false)));
   }
   requestAnimationFrame(sampleInput);
 }

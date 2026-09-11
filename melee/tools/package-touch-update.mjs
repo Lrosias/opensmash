@@ -9,8 +9,8 @@ import {execSync} from 'node:child_process';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-const args=process.argv.slice(2),engineAt=args.indexOf('--engine'),engineDir=engineAt>=0?path.resolve(args.splice(engineAt,2)[1]):null;
-if(args.length!==2)throw new Error('Expected released-package-dir and new-output-dir');
+const args=process.argv.slice(2),engineAt=args.indexOf('--engine'),engineDir=engineAt>=0?args.splice(engineAt,2)[1]:null;
+if(args.length!==2||engineAt>=0&&!engineDir)throw new Error('Expected released-package-dir and new-output-dir [--engine <dir>]');
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const base=path.resolve(args[0]),out=path.resolve(args[1]);
 if(out===base||out.startsWith(base+path.sep))throw new Error('Output must be separate from the base package');
@@ -39,8 +39,12 @@ for(const entry of await readdir(out,{withFileTypes:true})){
 await mkdir(path.join(out,'controllers'),{recursive:true});
 await overlay(path.join(root,'controllers'),'controllers',false);
 if(engineDir){
- for(const name of ['melee.js','melee.wasm.gz','wasm.json'])await stat(path.join(engineDir,name));
- await overlay(engineDir,'engine',false);
+ for(const name of ['melee.js','melee.wasm.gz','wasm.json']){
+  const bytes=await readFile(path.join(path.resolve(engineDir),name)),target=path.join(out,'engine',name);
+  let before=null;try{before=await readFile(target);}catch{}
+  if(before&&before.equals(bytes))continue;
+  await writeFile(target,bytes);changed.push('engine/'+name);
+ }
 }
 const files=[];
 async function collect(dir,prefix=''){

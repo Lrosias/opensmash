@@ -12,7 +12,7 @@ try {
   if(process.env.MELEE_SDK_PATH)await page.route('https://yougame.co/sdk.js',route=>route.fulfill({path:process.env.MELEE_SDK_PATH,contentType:'text/javascript'}));
   await page.addInitScript(()=>{window.keyboardTestGamepad=null;Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.keyboardTestGamepad,null,null,null]});});
   await page.goto(process.env.MELEE_URL||'http://127.0.0.1:8075');
-  await page.locator('#play').click();
+  /* the page boots on load */await page.waitForFunction(()=>['running','error'].includes(window.melee?.phase),null,{timeout:240000});
   await page.waitForFunction(()=>window.melee?.samples?.at(-1)?.presents>180,null,{timeout:180000});
   await page.locator('#canvas').click();
   await page.evaluate(async()=>{
