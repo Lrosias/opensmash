@@ -71,7 +71,8 @@ test('the in-memory mirror compares live pages with no copy and matches the JS r
  let brk=65536*2;const allocate=n=>{const at=brk;brk+=n;while(brk>memory.buffer.byteLength)memory.grow(4);return at;};
  const compare=createPageComparator({memory,allocate},module);
  let used=65540,excluded=[[16384,32768]];
- const driver={memory:()=>new Uint8Array(memory.buffer),used:()=>used,exclusions:()=>[...excluded,...compare.ranges()]};
+ // used() reports the heap top, mirror allocations included, as the engine's allocator does.
+ const driver={memory:()=>new Uint8Array(memory.buffer),used:()=>Math.max(used,brk),exclusions:()=>[...excluded,...compare.ranges()]};
  const mirrored=new NativeCheckpoints({...driver,comparePage:compare.samePage,mirror:compare.mirror},{window:64});
  const reference=new NativeCheckpoints(driver,{window:64});
  let seed=7;const handles=[];
@@ -79,27 +80,32 @@ test('the in-memory mirror compares live pages with no copy and matches the JS r
   if(frame===12){used=200004;}                 // the heap fills: the mirror must grow to cover it
   if(frame===20)excluded=[];
   if(frame===40){memory.grow(2);used=300000;}   // wasm memory itself grows: views refresh
+  // Sizing the mirror moves the heap top; both stores must see the same top for this frame.
+  compare.mirror.ensure(driver.used());
   const bytes=new Uint8Array(memory.buffer);
   for(let j=0;j<120;j++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;bytes[seed%used]^=seed>>>24;}
   const state=[frame,seed];handles.push(mirrored.save(frame,state));reference.save(frame,state);
   assert.deepEqual(mirrored.pages,reference.pages,'frame '+frame);
  }
  assert.ok(compare.mirror.capacity>=used,'the mirror covers the used heap');
+ const capacityAfter=compare.mirror.capacity;compare.mirror.ensure(driver.used());assert.equal(compare.mirror.capacity,capacityAfter,'a heap that only grew by the mirror itself never regrows it');
  // After a few frames every live page is compared against the mirror: the scratch path is idle.
  let scratchCompares=0;const spy={...driver,comparePage:(...a)=>{scratchCompares++;return compare.samePage(...a);},mirror:compare.mirror};
  const steady=new NativeCheckpoints(spy,{window:8});steady.save(0,[0]);scratchCompares=0;steady.save(1,[1]);
- assert.equal(scratchCompares,0,'no page went through the copy-and-compare path once mirrored');
+ // Only pages the mirror cannot hold (above its capacity, or partial) still take the copy-and-compare path.
+ const uncovered=steady.pages.filter((p,i)=>p&&!(p.length===4096&&compare.mirror.covers(i*4096,p.length))).length;
+ assert.ok(uncovered<=2&&scratchCompares===uncovered,`copy-and-compare only for the ${uncovered} page(s) the mirror cannot hold: ${scratchCompares}`);
  for(const frame of [50,30,20,10,0]){
   // The reference restores into clobbered memory first (the clobber reaches the mirror too, as a
   // stray write would); the mirrored store then restores over that and must land on the same bytes.
-  driver.memory().fill(123,0,used);reference.load(handles[frame]);const expected=driver.memory().slice(0,used);
+  driver.memory().fill(123,0,used);reference.load(handles[frame]);const expected=driver.memory().slice(0,driver.used());
   mirrored.load(handles[frame]);const actual=driver.memory();
   for(let page=0;page<mirrored.pages.length;page++)if(mirrored.pages[page]){
    const begin=page*mirrored.pageBytes,end=begin+mirrored.pages[page].byteLength;
    assert.deepEqual(actual.slice(begin,end),expected.slice(begin,end),'page '+page+' after rewind to '+frame);
   }
   // Restoring re-syncs the mirror, so the next save (of the heap as it was then) finds nothing changed.
-  used=mirrored.frames.get(frame).bytes;
+  used=mirrored.frames.get(frame).bytes;brk=Math.max(brk,used);
   const before=mirrored.pages;mirrored.save(frame+1,[frame]);
   for(let page=0;page<before.length;page++)if(before[page])assert.equal(mirrored.pages[page],before[page],'page '+page+' unchanged after rewind to '+frame);
  }

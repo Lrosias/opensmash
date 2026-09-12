@@ -23,11 +23,13 @@ export function createPageComparator({memory,allocate,free},module,pageBytes=163
    return instance.exports.equal(start*4,scratch,length*4)!==0;
   },
   mirror:{
-   // Room for `need` bytes of live memory; grows in steps so a heap that fills during loading is
-   // covered by one or two allocations (the old block is freed when the engine lets us).
+   // Room for the live heap. The mirror is itself part of that heap once allocated (used() grows by
+   // its size), so the need is measured without it, and it grows in 8 MiB steps only when the
+   // heap really outgrew it; the old block is freed when the engine lets us.
    ensure(need){
-    if(need<=mirrorCap)return true;
-    const cap=Math.ceil((need+(8<<20))/pageBytes)*pageBytes,raw=allocate(cap+pageBytes);
+    const own=mirrorCap&&mirrorRaw<need?Math.min(need,mirrorRaw+mirrorCap+pageBytes)-mirrorRaw:0;
+    if(need-own<=mirrorCap)return true;
+    const cap=Math.ceil((need-own+(8<<20))/pageBytes)*pageBytes,raw=allocate(cap+pageBytes);
     if(!raw)return false;
     refresh();
     const at=Math.ceil(raw/pageBytes)*pageBytes;
@@ -36,8 +38,12 @@ export function createPageComparator({memory,allocate,free},module,pageBytes=163
     mirrorAt=at;mirrorCap=cap;mirrorRaw=raw;
     return true;
    },
+   // Whether live words [start, start+length) have a place in the mirror (the mirror's own pages and anything above it do not).
+   covers(start,length){return (start+length)*4<=mirrorCap;},
    // Live words [start, start+length) against the mirror's copy of them.
    same(start,length){refresh();return instance.exports.equal(start*4,mirrorAt+start*4,length*4)!==0;},
+   // The word offset (from start) of the first difference in [start, start+length), or -1: one call per run of pages.
+   firstDifference(start,length){refresh();const at=instance.exports.first_diff(start*4,mirrorAt+start*4,length*4)>>>0;return at===0xFFFFFFFF?-1:at>>2;},
    // The mirror takes the live words [start, start+length).
    sync(start,length){refresh();bytes.copyWithin(mirrorAt+start*4,start*4,start*4+length*4);},
    get capacity(){return mirrorCap;},
