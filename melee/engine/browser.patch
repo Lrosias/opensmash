@@ -975,14 +975,13 @@
                                 sram_language, format_time);
 --- a/vendor/dolphin/Source/Core/Core/HW/EXI/EXI.cpp
 +++ b/vendor/dolphin/Source/Core/Core/HW/EXI/EXI.cpp
-@@ -2,6 +2,9 @@
- // SPDX-License-Identifier: GPL-2.0-or-later
-
+@@ -4,4 +4,7 @@
  #include "Core/HW/EXI/EXI.h"
 +#ifdef __EMSCRIPTEN__
 +#include "MeleeRollback.h"
 +#endif
-
+-
++
  #include <array>
  #include <memory>
 @@ -130,6 +133,11 @@
