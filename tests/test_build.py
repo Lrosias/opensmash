@@ -20,6 +20,13 @@ class BuildTests(unittest.TestCase):
     def args(self, *args):
         return build.parser().parse_args(args)
 
+    def test_site_is_required_unless_the_roster_is_skipped(self):
+        with patch.dict(os.environ, {'OPENSMASH_SITE': ''}):
+            with self.assertRaisesRegex(ValueError, 'OPENSMASH_SITE'):
+                build.plan(self.args('native', '--dry-run'))
+            build.plan(self.args('native', '--dry-run', '--vanilla'))
+            build.plan(self.args('native', '--dry-run', '--site', 'https://opensmash.test'))
+
     def test_native_does_not_require_rom_exporter_dependencies(self):
         result = subprocess.run([sys.executable, '-S', str(build.ROOT/'build.py'),
                                  'native', '--dry-run'], capture_output=True, text=True)

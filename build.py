@@ -100,7 +100,7 @@ def plan(args):
         raise ValueError('Use a dedicated output directory, not a repository root or its parent')
     if not getattr(args, 'vanilla', False) and not getattr(args, 'loadout', None):
         if not args.site:
-            raise ValueError('Website character selection needs --site or OPENSMASH_SITE; the upstream smash.fun catalog is no longer a default. Use --loadout for a build without website fighters.')
+            raise ValueError('Website character selection needs --site or OPENSMASH_SITE; the upstream smash.fun catalog is no longer a default. Use --vanilla (native) or --loadout (rom) for a build without website fighters.')
         prepare = [sys.executable, str(ROOT/'targets/characters.py'), '--target', args.target,
                    '--output', str(output), '--site', args.site,
                    '--catalog', args.catalog or args.site.rstrip('/')+'/api/characters']

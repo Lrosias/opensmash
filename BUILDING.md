@@ -16,13 +16,14 @@ The BattleShip revision needs the optional `SSB64_BASEROM` CMake cache setting
 included in the companion `feature/build-targets` branch. Its ordinary direct
 CMake workflow remains supported.
 
-## Desktop: the full roster by default
+## Desktop: the full roster of a character website
 
 ```sh
+export OPENSMASH_SITE=https://your-character-site.example   # or pass --site
 python3 build.py native --rom /path/to/baserom.us.z64
 ```
 
-This builds BattleShip, fetches the public website catalog, and stages every
+This builds BattleShip, fetches the site's character catalog, and stages every
 character's mesh, portraits, names, stock UI and announcer audio. Each character
 retains the website's assigned moveset. The engine loads assets from disk when
 needed; it does not keep every mesh in RAM. The normal vanilla roster is page 0;

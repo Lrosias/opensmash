@@ -22,7 +22,8 @@ Full trailer: [youtu.be/Uj3N_CbYMHs](https://youtu.be/Uj3N_CbYMHs).
 **Origin:** OpenSmash is derived from [smash.fun](https://smash.fun), the browser
 port and fighter generator by Thomas Dimson and Joey Flynn
 ([turtlesoupy/opensmash](https://github.com/turtlesoupy/opensmash), MIT). This fork
-carries the OpenSmash / OpenSmash64 name throughout; the upstream site is not used.
+carries the OpenSmash / OpenSmash64 name; the build tooling no longer points at the
+upstream site (`web-prototype/` still holds that site's own source as it was).
 
 No Nintendo assets are in this repo or served by the site. The engine is
 [BattleShip](https://github.com/turtlesoupy/BattleShip), a decomp-based PC
@@ -97,15 +98,16 @@ for prerequisites and other checkout layouts.
 
 ### Native: a desktop version of the website's game
 
-The native build runs through BattleShip and includes the full public website
-roster by default. Custom fighters appear on additional character-select pages;
+The native build runs through BattleShip and stages the roster of the character
+website named by `--site` or `OPENSMASH_SITE` (there is no default site). Custom fighters appear on additional character-select pages;
 use L/R or the on-screen arrows to switch. Once built and downloaded, the game
 works offline.
 
 Install [BattleShip's platform prerequisites](https://github.com/turtlesoupy/BattleShip/blob/main/BUILDING.md), then:
 
 ```sh
-# Build with the full public roster:
+# Build with a character website's full roster:
+export OPENSMASH_SITE=https://your-character-site.example
 python3 build.py native
 
 # Or choose just a few website fighters:
