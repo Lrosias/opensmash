@@ -23,29 +23,29 @@ export function createPageComparator({memory,allocate,free},module,pageBytes=163
    return instance.exports.equal(start*4,scratch,length*4)!==0;
   },
   mirror:{
-   // Room for the live heap. The mirror is itself part of that heap once allocated (used() grows by
-   // its size), so the need is measured without it, and it grows in 8 MiB steps only when the
-   // heap really outgrew it; the old block is freed when the engine lets us.
+   // The mirror sits inside the heap it mirrors, so live addresses map to slots by skipping the
+   // mirror's own block: address a is slot a below the block and slot a - block above it. A
+   // block that no longer fits is replaced (not copied): `generation` tells the checkpoint store
+   // to forget which pages the mirror held, and one frame of slow compares refills it.
+   generation:0,
    ensure(need){
     const own=mirrorCap&&mirrorRaw<need?Math.min(need,mirrorRaw+mirrorCap+pageBytes)-mirrorRaw:0;
     if(need-own<=mirrorCap)return true;
     const cap=Math.ceil((need-own+(8<<20))/pageBytes)*pageBytes,raw=allocate(cap+pageBytes);
     if(!raw)return false;
     refresh();
-    const at=Math.ceil(raw/pageBytes)*pageBytes;
-    if(mirrorCap)bytes.copyWithin(at,mirrorAt,mirrorAt+mirrorCap);
     if(mirrorRaw&&free)free(mirrorRaw);
-    mirrorAt=at;mirrorCap=cap;mirrorRaw=raw;
+    mirrorRaw=raw;mirrorAt=Math.ceil(raw/pageBytes)*pageBytes;mirrorCap=cap;comparator.mirror.generation++;
     return true;
    },
-   // Whether live words [start, start+length) have a place in the mirror (the mirror's own pages and anything above it do not).
-   covers(start,length){return (start+length)*4<=mirrorCap;},
-   // Live words [start, start+length) against the mirror's copy of them.
-   same(start,length){refresh();return instance.exports.equal(start*4,mirrorAt+start*4,length*4)!==0;},
+   // The mirror slot (byte offset) of live byte `a`, or -1 inside the mirror's own block.
+   slot(a){const end=mirrorRaw+mirrorCap+pageBytes;return a<mirrorRaw?a:a>=end?a-(end-mirrorRaw):-1;},
+   // Whether live words [start, start+length) have a slot in the mirror.
+   covers(start,length){const a=start*4,b=(start+length)*4,end=mirrorRaw+mirrorCap+pageBytes;if(a<mirrorRaw&&b>mirrorRaw)return false;const s=comparator.mirror.slot(a);return s>=0&&s+(b-a)<=mirrorCap;},
    // The word offset (from start) of the first difference in [start, start+length), or -1: one call per run of pages.
-   firstDifference(start,length){refresh();const at=instance.exports.first_diff(start*4,mirrorAt+start*4,length*4)>>>0;return at===0xFFFFFFFF?-1:at>>2;},
+   firstDifference(start,length){refresh();const at=instance.exports.first_diff(start*4,mirrorAt+comparator.mirror.slot(start*4),length*4)>>>0;return at===0xFFFFFFFF?-1:at>>2;},
    // The mirror takes the live words [start, start+length).
-   sync(start,length){refresh();bytes.copyWithin(mirrorAt+start*4,start*4,start*4+length*4);},
+   sync(start,length){refresh();const s=mirrorAt+comparator.mirror.slot(start*4);bytes.copyWithin(s,start*4,start*4+length*4);},
    get capacity(){return mirrorCap;},
   },
  };

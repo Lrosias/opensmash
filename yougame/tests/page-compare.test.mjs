@@ -69,7 +69,7 @@ test('the in-memory mirror compares live pages with no copy and matches the JS r
  const memory=new WebAssembly.Memory({initial:8,maximum:1024});
  // A bump allocator over the top of the "heap": the engine's malloc stands in here.
  let brk=65536*2;const allocate=n=>{const at=brk;brk+=n;while(brk>memory.buffer.byteLength)memory.grow(4);return at;};
- const compare=createPageComparator({memory,allocate},module);
+ const freed=[];const compare=createPageComparator({memory,allocate,free:p=>freed.push(p)},module);
  let used=65540,excluded=[[16384,32768]];
  // used() reports the heap top, mirror allocations included, as the engine's allocator does.
  const driver={memory:()=>new Uint8Array(memory.buffer),used:()=>Math.max(used,brk),exclusions:()=>[...excluded,...compare.ranges()]};
@@ -77,17 +77,20 @@ test('the in-memory mirror compares live pages with no copy and matches the JS r
  const reference=new NativeCheckpoints(driver,{window:64});
  let seed=7;const handles=[];
  for(let frame=0;frame<60;frame++){
-  if(frame===12){used=200004;}                 // the heap fills: the mirror must grow to cover it
+  if(frame===12){used=20<<20;}                 // the heap fills past the mirror's capacity: it must regrow (and copy itself)
   if(frame===20)excluded=[];
-  if(frame===40){memory.grow(2);used=300000;}   // wasm memory itself grows: views refresh
+  if(frame===40){memory.grow(2);used=45<<20;}   // wasm memory itself grows and the heap fills again: a second regrow
   // Sizing the mirror moves the heap top; both stores must see the same top for this frame.
   compare.mirror.ensure(driver.used());
   const bytes=new Uint8Array(memory.buffer);
-  for(let j=0;j<120;j++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;bytes[seed%used]^=seed>>>24;}
+  // Live writes land anywhere in the heap except the comparator's own blocks (an engine never writes there).
+  const inMirror=a=>compare.ranges().some(([b,e])=>a>=b&&a<e);
+  for(let j=0;j<120;j++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const a=seed%used;if(!inMirror(a))bytes[a]^=seed>>>24;}
   const state=[frame,seed];handles.push(mirrored.save(frame,state));reference.save(frame,state);
   assert.deepEqual(mirrored.pages,reference.pages,'frame '+frame);
  }
- assert.ok(compare.mirror.capacity>=used,'the mirror covers the used heap');
+ assert.ok(compare.mirror.generation>=2&&freed.length===compare.mirror.generation-1,`the mirror was replaced as the heap outgrew it, freeing each old block: ${compare.mirror.generation} blocks, ${freed.length} freed`);
+ // Pages above the mirror block (allocated after it) have slots too: the steady-state check below counts the uncovered ones.
  const capacityAfter=compare.mirror.capacity;compare.mirror.ensure(driver.used());assert.equal(compare.mirror.capacity,capacityAfter,'a heap that only grew by the mirror itself never regrows it');
  // After a few frames every live page is compared against the mirror: the scratch path is idle.
  let scratchCompares=0;const spy={...driver,comparePage:(...a)=>{scratchCompares++;return compare.samePage(...a);},mirror:compare.mirror};
