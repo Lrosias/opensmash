@@ -92,34 +92,34 @@ class CharacterTests(unittest.TestCase):
     def test_private_build_link_and_unicode(self):
         raw=row('mine', ownerId='must-not-be-copied')
         raw['name']='私の fighter'
-        url='https://smash.fun/#'+urlencode({'opensmash-character':json.dumps(raw)})
+        url='https://opensmash.test/#'+urlencode({'opensmash-character':json.dumps(raw)})
         self.assertEqual(c.from_url(url)['name'], raw['name'])
         self.assertEqual(c.from_url(url)['bundleUrl'], raw['bundleUrl'])
 
     def test_existing_engine_launch_link(self):
-        url='https://smash.fun/engine/?'+urlencode(dict(inject='bundles/mine-AbCd012345678901.osb6',
+        url='https://opensmash.test/engine/?'+urlencode(dict(inject='bundles/mine-AbCd012345678901.osb6',
             inject_ui='bundles/mine-AbCd012345678901.osbui',fkind=4,inject_name='Private Fighter'))
         result=c.from_url(url)
         self.assertEqual(result['fkind'],4)
-        self.assertEqual(result['bundleUrl'],'https://smash.fun/engine/bundles/mine-AbCd012345678901.osb6')
+        self.assertEqual(result['bundleUrl'],'https://opensmash.test/engine/bundles/mine-AbCd012345678901.osb6')
 
     def test_selection_order_missing_and_private_only(self):
         with tempfile.TemporaryDirectory() as tmp:
             catalog=Path(tmp)/'catalog.json'
             catalog.write_text(json.dumps({'characters':[row('first'),row('second')]}))
-            rows=c.resolve(str(catalog),'https://smash.fun',['second,first'],[])
+            rows=c.resolve(str(catalog),'https://opensmash.test',['second,first'],[])
             self.assertEqual([r['slug'] for r in rows],['second','first'])
             with self.assertRaisesRegex(ValueError,'Unknown character'):
-                c.resolve(str(catalog),'https://smash.fun',['third'],[])
+                c.resolve(str(catalog),'https://opensmash.test',['third'],[])
         with patch.object(c,'fetch',side_effect=AssertionError('unexpected catalog request')):
-            rows=c.resolve('unused','https://smash.fun',['none'],['https://assets.test/private.osb6'])
+            rows=c.resolve('unused','https://opensmash.test',['none'],['https://assets.test/private.osb6'])
             self.assertEqual(rows[0]['slug'],'private')
 
     def test_private_download_discovers_companion_capability_urls(self):
-        url = 'https://smash.fun/engine/bundles/mine-AbCd012345678901.osb6'
+        url = 'https://opensmash.test/engine/bundles/mine-AbCd012345678901.osb6'
         with patch.object(c, 'fetch', return_value=json.dumps(custom_manifest()).encode()) as fetch:
             result = c.from_url(url)
-        fetch.assert_called_once_with('https://smash.fun/engine/fighters/mine-AbCd012345678901/manifest.json')
+        fetch.assert_called_once_with('https://opensmash.test/engine/fighters/mine-AbCd012345678901/manifest.json')
         self.assertEqual(result['uiUrl'], url[:-5]+'.osbui')
         self.assertEqual(result['voiceUrl'], url[:-5]+'.wav')
         self.assertEqual(result['name'], 'My Custom Fighter')
@@ -141,7 +141,7 @@ class CharacterTests(unittest.TestCase):
             manifest['character']['slug'] = 'someoneelse'
             with patch.object(c, 'fetch', return_value=json.dumps(manifest).encode()):
                 with self.assertRaisesRegex(ValueError, 'manifest'):
-                    c.from_url('https://smash.fun/engine/bundles/mine-AbCd012345678901.osb6')
+                    c.from_url('https://opensmash.test/engine/bundles/mine-AbCd012345678901.osb6')
 
     def test_voice_and_emblem_validation(self):
         c.validate_voice(voice())
@@ -207,7 +207,7 @@ class CharacterTests(unittest.TestCase):
 
     def test_path_traversal_slug_rejected(self):
         for slug in ['../escape','x/y','x|y','x\nx']:
-            with self.assertRaises(ValueError):c.clean_character(row(slug),'https://smash.fun')
+            with self.assertRaises(ValueError):c.clean_character(row(slug),'https://opensmash.test')
 
     def test_c_field_limits_are_bytes_and_no_delimiters(self):
         value=c.field('é'*20+'|\n',10)
@@ -216,8 +216,8 @@ class CharacterTests(unittest.TestCase):
 
     def test_native_stages_two_pages_and_no_private_urls_in_output(self):
         with tempfile.TemporaryDirectory() as tmp:
-            args=type('Args',(),dict(target='native',output=Path(tmp),catalog='unused',site='https://smash.fun',characters=None,character_url=[]))()
-            with patch.object(c,'resolve',return_value=[c.clean_character(row('c'+str(i)),'https://smash.fun') for i in range(13)]), \
+            args=type('Args',(),dict(target='native',output=Path(tmp),catalog='unused',site='https://opensmash.test',characters=None,character_url=[]))()
+            with patch.object(c,'resolve',return_value=[c.clean_character(row('c'+str(i)),'https://opensmash.test') for i in range(13)]), \
                  patch.object(c,'fetch',return_value=bundle()), contextlib.redirect_stdout(io.StringIO()):
                 c.prepare(args)
             rows=(Path(tmp)/'roster.txt').read_text().splitlines()
@@ -230,8 +230,8 @@ class CharacterTests(unittest.TestCase):
 
     def test_rom_stages_custom_ui_and_voice_in_loadout(self):
         with tempfile.TemporaryDirectory() as tmp:
-            args=type('Args',(),dict(target='rom',output=Path(tmp),catalog='unused',site='https://smash.fun',characters=None,character_url=[]))()
-            character=c.clean_character(row('private',uiUrl='https://assets.test/private.osbui',voiceUrl='https://assets.test/private.wav'),'https://smash.fun')
+            args=type('Args',(),dict(target='rom',output=Path(tmp),catalog='unused',site='https://opensmash.test',characters=None,character_url=[]))()
+            character=c.clean_character(row('private',uiUrl='https://assets.test/private.osbui',voiceUrl='https://assets.test/private.wav'),'https://opensmash.test')
             assets={character['bundleUrl']:bundle(),character['uiUrl']:b'OSBV'+bytes(10544)+b'\xff'*2304,character['voiceUrl']:voice()}
             with patch.object(c,'resolve',return_value=[character]), patch.object(c,'fetch',side_effect=assets.__getitem__), contextlib.redirect_stdout(io.StringIO()):
                 c.prepare(args)
@@ -245,7 +245,7 @@ class CharacterTests(unittest.TestCase):
     def test_rom_full_catalog_fails_before_downloading_or_creating_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             output=Path(tmp)/'not-created'
-            args=type('Args',(),dict(target='rom',output=output,catalog='unused',site='https://smash.fun',characters=None,character_url=[]))()
+            args=type('Args',(),dict(target='rom',output=output,catalog='unused',site='https://opensmash.test',characters=None,character_url=[]))()
             with patch.object(c,'resolve',return_value=[row('c'+str(i)) for i in range(13)]), \
                  patch.object(c,'fetch') as fetch, self.assertRaisesRegex(ValueError,'12 fixed slots'):
                 c.prepare(args)
@@ -269,7 +269,7 @@ class CharacterTests(unittest.TestCase):
                 c.cached_asset('https://assets.test/objects/'+'0'*64+'/file.osb6',Path(tmp))
 
     def test_javascript_export_is_importable_in_python(self):
-        script="import {characterBuildLink} from './web-prototype/shared/character-build-link.js'; console.log(characterBuildLink({slug:'mine',name:'私',bundleUrl:'/private.osb6'},'https://smash.fun'));"
+        script="import {characterBuildLink} from './web-prototype/shared/character-build-link.js'; console.log(characterBuildLink({slug:'mine',name:'私',bundleUrl:'/private.osb6'},'https://opensmash.test'));"
         result=subprocess.run(['node','--input-type=module','-e',script],cwd=Path(__file__).resolve().parents[1],capture_output=True,text=True,check=True)
         self.assertEqual(c.from_url(result.stdout.strip())['name'],'私')
 

@@ -294,6 +294,10 @@ def assign_rom(available, preferred):
 
 def prepare(args):
     output = args.output.resolve()
+    if not args.site:
+        raise ValueError('Set --site or OPENSMASH_SITE to the character website; the upstream smash.fun catalog is no longer a default')
+    if not args.catalog:
+        args.catalog = args.site.rstrip('/') + '/api/characters'
     # Resolve first: invalid selections must not create an output directory.
     characters = resolve(args.catalog, args.site, args.characters, args.character_url)
     if args.target == 'rom' and len(characters) > 12:
@@ -410,8 +414,8 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--target', choices=['rom', 'native'], required=True)
     p.add_argument('--output', type=Path, required=True)
-    p.add_argument('--site', default='https://smash.fun')
-    p.add_argument('--catalog', default='https://smash.fun/api/characters')
+    p.add_argument('--site', default=os.environ.get('OPENSMASH_SITE'), help='Character website origin (default: $OPENSMASH_SITE)')
+    p.add_argument('--catalog', help='Catalog JSON path or URL (default: SITE/api/characters)')
     p.add_argument('--characters', nargs='+')
     p.add_argument('--character-url', action='append', default=[])
     args = p.parse_args()

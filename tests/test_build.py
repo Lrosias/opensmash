@@ -2,6 +2,7 @@
 import contextlib
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -10,12 +11,21 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# The character site is explicit in this fork; give the contract tests one.
+os.environ.setdefault('OPENSMASH_SITE', 'https://opensmash.test')
 import build
 
 
 class BuildTests(unittest.TestCase):
     def args(self, *args):
         return build.parser().parse_args(args)
+
+    def test_site_is_required_unless_the_roster_is_skipped(self):
+        with patch.dict(os.environ, {'OPENSMASH_SITE': ''}):
+            with self.assertRaisesRegex(ValueError, 'OPENSMASH_SITE'):
+                build.plan(self.args('native', '--dry-run'))
+            build.plan(self.args('native', '--dry-run', '--vanilla'))
+            build.plan(self.args('native', '--dry-run', '--site', 'https://opensmash.test'))
 
     def test_native_does_not_require_rom_exporter_dependencies(self):
         result = subprocess.run([sys.executable, '-S', str(build.ROOT/'build.py'),

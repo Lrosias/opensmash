@@ -2,6 +2,7 @@
 """Build OpenSmash targets without changing the website or engine checkout."""
 import argparse
 import json
+import os
 from pathlib import Path
 import platform
 import shlex
@@ -22,7 +23,7 @@ def parser():
         p.add_argument('--output-dir', type=Path, help='Dedicated target build directory')
         p.add_argument('--characters', nargs='+', help='Character slugs (comma or space separated), all (default), or none for links only')
         p.add_argument('--character-url', action='append', default=[], help='Copied character build link; may be repeated')
-        p.add_argument('--site', default='https://smash.fun', help='Website origin for relative asset URLs')
+        p.add_argument('--site', default=os.environ.get('OPENSMASH_SITE'), help='Character website origin for relative asset URLs (default: $OPENSMASH_SITE)')
         p.add_argument('--catalog', help='Catalog JSON path or URL (default: SITE/api/characters)')
         p.add_argument('--dry-run', action='store_true', help='Print commands without running or creating files')
     rom = targets.choices['rom']
@@ -98,6 +99,8 @@ def plan(args):
     if output in (ROOT, engine) or output in ROOT.parents or output in engine.parents:
         raise ValueError('Use a dedicated output directory, not a repository root or its parent')
     if not getattr(args, 'vanilla', False) and not getattr(args, 'loadout', None):
+        if not args.site:
+            raise ValueError('Website character selection needs --site or OPENSMASH_SITE; the upstream smash.fun catalog is no longer a default. Use --vanilla (native) or --loadout (rom) for a build without website fighters.')
         prepare = [sys.executable, str(ROOT/'targets/characters.py'), '--target', args.target,
                    '--output', str(output), '--site', args.site,
                    '--catalog', args.catalog or args.site.rstrip('/')+'/api/characters']

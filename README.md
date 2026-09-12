@@ -17,7 +17,13 @@ original skeletons.
 
 https://github.com/user-attachments/assets/d3a589cf-1443-4926-8914-97371bd40b97
 
-Full trailer: [youtu.be/Uj3N_CbYMHs](https://youtu.be/Uj3N_CbYMHs). Play it at [smash.fun](https://smash.fun).
+Full trailer: [youtu.be/Uj3N_CbYMHs](https://youtu.be/Uj3N_CbYMHs).
+
+**Origin:** OpenSmash is derived from [smash.fun](https://smash.fun), the browser
+port and fighter generator by Thomas Dimson and Joey Flynn
+([turtlesoupy/opensmash](https://github.com/turtlesoupy/opensmash), MIT). This fork
+carries the OpenSmash / OpenSmash64 name; the build tooling no longer points at the
+upstream site (`web-prototype/` still holds that site's own source as it was).
 
 No Nintendo assets are in this repo or served by the site. The engine is
 [BattleShip](https://github.com/turtlesoupy/BattleShip), a decomp-based PC
@@ -34,6 +40,7 @@ at these copies.
 
 | Our copy | Forked from | What it is |
 |---|---|---|
+| [Lrosias/opensmash](https://github.com/Lrosias/opensmash) (this repo) | [turtlesoupy/opensmash](https://github.com/turtlesoupy/opensmash) (smash.fun) | The generator, build tooling, Remix and YouGame editions. |
 | [turtlesoupy/BattleShip](https://github.com/turtlesoupy/BattleShip) | [JRickey/BattleShip](https://github.com/JRickey/BattleShip) | The PC port. Native macOS/Linux/Windows/Android plus our Emscripten build, the fighter-injection code (`port/`), and the pipeline dump hooks. |
 | [turtlesoupy/ssb-decomp-re](https://github.com/turtlesoupy/ssb-decomp-re) | [VetriTheRetri/ssb-decomp-re](https://github.com/VetriTheRetri/ssb-decomp-re) | The game decompilation. Vendored as `decomp/`. |
 | [turtlesoupy/libultraship](https://github.com/turtlesoupy/libultraship) | [JRickey/libultraship](https://github.com/JRickey/libultraship/tree/ssb64) ← [Kenix3/libultraship](https://github.com/Kenix3/libultraship) | Rendering, audio, and input layer for N64 ports. Vendored as `libultraship/`. |
@@ -48,7 +55,7 @@ Clone the two repos next to each other, with emsdk alongside:
 ```
 opensmash/
   BattleShip/    git clone https://github.com/turtlesoupy/BattleShip
-  pipeline/      git clone https://github.com/turtlesoupy/opensmash   (this repo)
+  pipeline/      git clone https://github.com/Lrosias/opensmash      (this repo)
   emsdk/         https://github.com/emscripten-core/emsdk
 ```
 
@@ -91,15 +98,16 @@ for prerequisites and other checkout layouts.
 
 ### Native: a desktop version of the website's game
 
-The native build runs through BattleShip and includes the full public website
-roster by default. Custom fighters appear on additional character-select pages;
+The native build runs through BattleShip and stages the roster of the character
+website named by `--site` or `OPENSMASH_SITE` (there is no default site). Custom fighters appear on additional character-select pages;
 use L/R or the on-screen arrows to switch. Once built and downloaded, the game
 works offline.
 
 Install [BattleShip's platform prerequisites](https://github.com/turtlesoupy/BattleShip/blob/main/BUILDING.md), then:
 
 ```sh
-# Build with the full public roster:
+# Build with a character website's full roster:
+export OPENSMASH_SITE=https://your-character-site.example
 python3 build.py native
 
 # Or choose just a few website fighters:
