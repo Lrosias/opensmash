@@ -4,7 +4,7 @@
 // one-page scratch buffer still lets Wasm compare an immutable JS page. Every allocation lasts for
 // this engine's lifetime and is excluded from checkpoints (ranges()), while allocator metadata
 // stays captured.
-export function createPageComparator({memory,allocate,free},module,pageBytes=16384){
+export function createPageComparator({memory,allocate},module,pageBytes=16384){
  if(!Number.isInteger(pageBytes)||pageBytes<8||pageBytes%8)throw new Error('Invalid comparison page size');
  const instance=new WebAssembly.Instance(module,{env:{memory}});
  const allocation=allocate(pageBytes*2);
@@ -24,17 +24,19 @@ export function createPageComparator({memory,allocate,free},module,pageBytes=163
   },
   mirror:{
    // The mirror sits inside the heap it mirrors, so live addresses map to slots by skipping the
-   // mirror's own block: address a is slot a below the block and slot a - block above it. A
-   // block that no longer fits is replaced (not copied): `generation` tells the checkpoint store
-   // to forget which pages the mirror held, and one frame of slow compares refills it.
+   // mirror's own block: address a is slot a below the block and slot a - block above it.
+   // Allocate once. used() is the allocator's high-water mark, not live allocation
+   // size: replacing a mirror leaves its freed space below that mark. Counting
+   // that space as game memory creates a self-amplifying allocation loop. Pages
+   // beyond this fixed mirror use the exact one-page comparison fallback.
    generation:0,
    ensure(need){
     const own=mirrorCap&&mirrorRaw<need?Math.min(need,mirrorRaw+mirrorCap+pageBytes)-mirrorRaw:0;
+    if(mirrorCap)return need-own<=mirrorCap;
     if(need-own<=mirrorCap)return true;
     const cap=Math.ceil((need-own+(8<<20))/pageBytes)*pageBytes,raw=allocate(cap+pageBytes);
     if(!raw)return false;
     refresh();
-    if(mirrorRaw&&free)free(mirrorRaw);
     mirrorRaw=raw;mirrorAt=Math.ceil(raw/pageBytes)*pageBytes;mirrorCap=cap;comparator.mirror.generation++;
     return true;
    },

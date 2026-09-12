@@ -11,8 +11,8 @@ export class NativeCheckpoints {
   this.mirrorOf=[];this.mirrorGeneration=0;
  }
  save(frame,state){
-  // The mirror may grow wasm memory, which detaches every earlier view: size it before looking.
-  // A regrow that fails (no memory) leaves the old mirror valid for the pages it covers.
+  // Initial mirror allocation may grow Wasm memory and detach earlier views.
+  // Later game growth keeps this fixed mirror; uncovered pages use the fallback.
   const bytes=this.driver.used();if(this.driver.mirror)this.driver.mirror.ensure(bytes);
   const mirror=this.driver.mirror&&this.driver.mirror.capacity?this.driver.mirror:null;
   // A replaced mirror holds nothing yet: forget which pages it had.
@@ -25,11 +25,16 @@ export class NativeCheckpoints {
   // A page is "mirrored" while the mirror provably holds its previous version: those pages are
   // compared in runs, one Wasm call per run, and the run stops at the first page that changed.
   const mirrored=index=>{const old=this.pages[index];return !!(mirror&&old&&!excluded[index]&&old.length===size&&(index+1)*size<=words.length&&this.mirrorOf[index]===old&&mirror.covers(index*size,size));};
+  let mirroredEnd=0;
   for(let index=0;index<total;index++){
    const start=index*size,end=Math.min(start+size,words.length);
    if(excluded[index]){pages.push(null);continue;}
    if(mirrored(index)){
-    let stop=index+1;while(stop<total&&mirrored(stop))stop++;
+    // Validate a run once. Finding a changed page only updates that page; the
+    // remaining pages still have their original mirror identities. Rewalking
+    // that suffix after every change makes busy frames quadratic in page count.
+    if(index>=mirroredEnd){mirroredEnd=index+1;while(mirroredEnd<total&&mirrored(mirroredEnd))mirroredEnd++;}
+    const stop=mirroredEnd;
     const at=mirror.firstDifference(start,(stop-index)*size);
     const changed=at<0?stop:index+Math.floor(at/size);
     for(let i=index;i<changed;i++)pages.push(this.pages[i]);
@@ -74,5 +79,7 @@ export class NativeCheckpoints {
   for(const f of this.frames.keys())if(f>handle.frame)this.frames.delete(f);
   return [...checkpoint.state];
  }
+ // A new timeline reuses the frame numbers; the diff base stays valid.
+ reset(){this.frames.clear();}
  destroy(){this.frames.clear();this.pages=[];this.mirrorOf=[];}
 }
