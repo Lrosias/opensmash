@@ -31,9 +31,9 @@ window.Module = {
     try {
         Module.callMain([]);
         if(Asyncify.currData)await Asyncify.whenDone();
-        const comparator=rollback?await loadPageComparator({memory:wasmMemory,allocate:_malloc}):null;
+        const comparator=rollback?await loadPageComparator({memory:wasmMemory,allocate:_malloc,free:typeof _free==='function'?_free:null}):null;
         const driver={
-          comparePage:comparator?.samePage,
+          comparePage:comparator?.samePage,mirror:comparator?.mirror,
           silence(value){Module.yougameReplay=value;if(value)Module._port_yougame_audio_rewind();},
           rollback(){Module._port_yougame_audio_rewind();Module.yougameReplay=true;queueMicrotask(()=>{Module.yougameReplay=false;});},
           step(){Module._PortPushFrame();if(Asyncify.currData)throw new Error('Native frame did not complete synchronously');},
@@ -41,7 +41,7 @@ window.Module = {
           exclusions(){
             const p=Module._port_yougame_stack_exclusions()>>2,n=HEAPU32[p];
             const ranges=Module.yougameTextureScratch?[Module.yougameTextureScratch]:[];
-            if(comparator)ranges.push(comparator.range);
+            if(comparator)ranges.push(...comparator.ranges());
             const scene=Module._port_yougame_scene_unused()>>2;ranges.push([HEAPU32[scene],HEAPU32[scene+1]]);
             for(let i=1;i<=n;i+=2)ranges.push([HEAPU32[p+i],HEAPU32[p+i+1]]);
             return ranges;

@@ -198,10 +198,13 @@ node --test yougame/tests/*.test.mjs
 
 Rollback page comparison uses the optional `src/page-compare.wasm` helper, built
 from `engine/page-compare.c` with `node yougame/build-page-compare.mjs` (also run by
-`build.sh`). It imports the existing engine memory and uses scalar integer loads;
-no SIMD or threading requirement. A 32 KiB engine allocation supplies an aligned
-16 KiB scratch page excluded from checkpoints. Allocation metadata remains in
-history. Failed helper loading falls back to the exact JavaScript comparison.
+`build.sh`). It imports the existing engine memory and needs Wasm SIMD (`-msimd128`,
+no threading): a browser without it fails `WebAssembly.compile` and checkpoints take the
+exact JavaScript comparison. Besides a 32 KiB scratch page it keeps a mirror of the used
+heap inside that heap (the heap's size plus 8 MiB, replaced when the heap outgrows it,
+within the committed `INITIAL_MEMORY`) and compares live pages against it in runs with no
+copy. Both allocations stay out of checkpoints through `ranges()`; allocation metadata
+remains in history.
 The checkpoint bookkeeping uses a byte mask instead of rebuilding a large Set.
 
 `tests/performance.mjs` benchmarks the packaged engine with deterministic inputs,
