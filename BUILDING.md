@@ -154,7 +154,8 @@ python3 build.py rom --loadout hardware-rom/loadout.json --assets /path/to/play
 
 ## Configuration and validation
 
-`--site URL` selects another website (default `https://smash.fun`). `--catalog`
+`--site URL` (or `OPENSMASH_SITE`) names the character website; there is no default,
+since this fork does not point at the upstream smash.fun catalog. `--catalog`
 accepts an API-shaped JSON file or URL; by default it uses `SITE/api/characters`.
 Selections refresh on each build, while cached asset downloads are reused.
 Use separate `--output-dir` directories to keep different loadouts installed.

@@ -17,7 +17,12 @@ original skeletons.
 
 https://github.com/user-attachments/assets/d3a589cf-1443-4926-8914-97371bd40b97
 
-Full trailer: [youtu.be/Uj3N_CbYMHs](https://youtu.be/Uj3N_CbYMHs). Play it at [smash.fun](https://smash.fun).
+Full trailer: [youtu.be/Uj3N_CbYMHs](https://youtu.be/Uj3N_CbYMHs).
+
+**Origin:** OpenSmash is derived from [smash.fun](https://smash.fun), the browser
+port and fighter generator by Thomas Dimson and Joey Flynn
+([turtlesoupy/opensmash](https://github.com/turtlesoupy/opensmash), MIT). This fork
+carries the OpenSmash / OpenSmash64 name throughout; the upstream site is not used.
 
 No Nintendo assets are in this repo or served by the site. The engine is
 [BattleShip](https://github.com/turtlesoupy/BattleShip), a decomp-based PC
@@ -34,6 +39,7 @@ at these copies.
 
 | Our copy | Forked from | What it is |
 |---|---|---|
+| [Lrosias/opensmash](https://github.com/Lrosias/opensmash) (this repo) | [turtlesoupy/opensmash](https://github.com/turtlesoupy/opensmash) (smash.fun) | The generator, build tooling, Remix and YouGame editions. |
 | [turtlesoupy/BattleShip](https://github.com/turtlesoupy/BattleShip) | [JRickey/BattleShip](https://github.com/JRickey/BattleShip) | The PC port. Native macOS/Linux/Windows/Android plus our Emscripten build, the fighter-injection code (`port/`), and the pipeline dump hooks. |
 | [turtlesoupy/ssb-decomp-re](https://github.com/turtlesoupy/ssb-decomp-re) | [VetriTheRetri/ssb-decomp-re](https://github.com/VetriTheRetri/ssb-decomp-re) | The game decompilation. Vendored as `decomp/`. |
 | [turtlesoupy/libultraship](https://github.com/turtlesoupy/libultraship) | [JRickey/libultraship](https://github.com/JRickey/libultraship/tree/ssb64) ← [Kenix3/libultraship](https://github.com/Kenix3/libultraship) | Rendering, audio, and input layer for N64 ports. Vendored as `libultraship/`. |
@@ -48,7 +54,7 @@ Clone the two repos next to each other, with emsdk alongside:
 ```
 opensmash/
   BattleShip/    git clone https://github.com/turtlesoupy/BattleShip
-  pipeline/      git clone https://github.com/turtlesoupy/opensmash   (this repo)
+  pipeline/      git clone https://github.com/Lrosias/opensmash      (this repo)
   emsdk/         https://github.com/emscripten-core/emsdk
 ```
 

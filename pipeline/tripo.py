@@ -30,7 +30,7 @@ if not KEY:
     raise RuntimeError("TRIPO_API_KEY is missing; set it in the environment or .env")
 BASE = "https://api.tripo3d.ai/v2/openapi"
 # Tripo rejects urllib's generic client signature at its edge (403 / 1010).
-USER_AGENT = "OpenSmash/1.0 (+https://smash.fun)"
+USER_AGENT = "OpenSmash/1.0 (+https://github.com/Lrosias/opensmash)"
 
 
 def http(url, body=None):
