@@ -2,9 +2,6 @@ from pathlib import Path
 import shutil
 from prepare import replace,ROOT,ENGINE,install_hooks
 install_hooks()
-# Hide the baked-in personal-credit footer on the start screen.
-p=ENGINE/'port/title_brand.cpp'
-replace(p,'\t\tstd::memcpy(p + patch.offset, patch.data, patch.length);','\t\tif (patch.offset >= 0x11AF8u && patch.offset < 0x15320u)\n\t\t\tstd::memset(p + patch.offset, 0, patch.length);\n\t\telse std::memcpy(p + patch.offset, patch.data, patch.length);')
 for name in ['roster_data.h','stage_data.h','main_sizes.h','menu_data.h','normal_data.h','kirby_data.h','trail_data.h']:
  shutil.copyfile(ROOT/'build/remix/main/assets'/name,ENGINE/'port/stubs'/name)
 shutil.copyfile(ROOT/'remix/main.c',ENGINE/'port/stubs/remix_marth.c')
