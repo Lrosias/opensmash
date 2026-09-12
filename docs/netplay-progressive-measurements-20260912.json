@@ -1,0 +1,283 @@
+{
+  "scalingBefore": [
+    {
+      "liveMiB": 40,
+      "heapMiB": 88.078125,
+      "dirtyPages": 10,
+      "samples": [
+        {
+          "ms": 2.385542000000001,
+          "covers": 16632
+        },
+        {
+          "ms": 1.9099580000000032,
+          "covers": 16632
+        },
+        {
+          "ms": 1.1553749999999994,
+          "covers": 16632
+        }
+      ]
+    },
+    {
+      "liveMiB": 40,
+      "heapMiB": 88.078125,
+      "dirtyPages": 160,
+      "samples": [
+        {
+          "ms": 6.745624999999997,
+          "covers": 208482
+        },
+        {
+          "ms": 4.861041,
+          "covers": 208482
+        },
+        {
+          "ms": 5.063834,
+          "covers": 208482
+        }
+      ]
+    },
+    {
+      "liveMiB": 40,
+      "heapMiB": 88.078125,
+      "dirtyPages": 640,
+      "samples": [
+        {
+          "ms": 15.221542,
+          "covers": 822402
+        },
+        {
+          "ms": 15.444292000000004,
+          "covers": 822402
+        },
+        {
+          "ms": 15.693542000000008,
+          "covers": 822402
+        }
+      ]
+    },
+    {
+      "liveMiB": 40,
+      "heapMiB": 88.078125,
+      "dirtyPages": 2560,
+      "samples": [
+        {
+          "ms": 57.900499999999994,
+          "covers": 3278082
+        },
+        {
+          "ms": 50.574667000000005,
+          "covers": 3278082
+        },
+        {
+          "ms": 47.89604200000002,
+          "covers": 3278082
+        }
+      ]
+    }
+  ],
+  "scalingAfter": [
+    {
+      "liveMiB": 40,
+      "heapMiB": 88.078125,
+      "dirtyPages": 10,
+      "samples": [
+        {
+          "ms": 1.1238330000000047,
+          "covers": 2572
+        },
+        {
+          "ms": 1.1502499999999998,
+          "covers": 2572
+        },
+        {
+          "ms": 1.0381670000000014,
+          "covers": 2572
+        }
+      ]
+    },
+    {
+      "liveMiB": 40,
+      "heapMiB": 88.078125,
+      "dirtyPages": 160,
+      "samples": [
+        {
+          "ms": 1.5039999999999978,
+          "covers": 2722
+        },
+        {
+          "ms": 1.4820839999999933,
+          "covers": 2722
+        },
+        {
+          "ms": 1.264792,
+          "covers": 2722
+        }
+      ]
+    },
+    {
+      "liveMiB": 40,
+      "heapMiB": 88.078125,
+      "dirtyPages": 640,
+      "samples": [
+        {
+          "ms": 2.0643340000000023,
+          "covers": 3202
+        },
+        {
+          "ms": 2.343250000000012,
+          "covers": 3202
+        },
+        {
+          "ms": 2.457708000000011,
+          "covers": 3202
+        }
+      ]
+    },
+    {
+      "liveMiB": 40,
+      "heapMiB": 88.078125,
+      "dirtyPages": 2560,
+      "samples": [
+        {
+          "ms": 4.051833000000002,
+          "covers": 5121
+        },
+        {
+          "ms": 6.0743340000000074,
+          "covers": 5121
+        },
+        {
+          "ms": 4.485457999999994,
+          "covers": 5121
+        }
+      ]
+    }
+  ],
+  "battle": {
+    "date": "2026-09-12T20:01:07.566Z",
+    "browser": "152.0.7977.83",
+    "root": "/Volumes/OpenSmashBuilds/publisher/build/cheap-checkpoints-20260912-r1/remix",
+    "engineHash": "1039b3fe4f4f26fe4012aeace5d5493793982db27f06dd0df496ca3a99c813fe",
+    "beforeHash": "989eadda6ab869600c703a242300c2b51a33345c0a942f79246500c44eed6de2",
+    "afterHash": "d308ddf5221b6ef172833328c7875082da2ea7870a738cd463c0436abcfb3a4d",
+    "results": [
+      {
+        "variant": "before",
+        "stepMs": {
+          "mean": 1.2989285713150387,
+          "p95": 1.8299999982118607,
+          "max": 7.625
+        },
+        "saveMs": {
+          "mean": 1.500761904673917,
+          "p95": 1.9549999982118607,
+          "max": 3.2250000089406967
+        },
+        "covers": {
+          "mean": 11653.866666666667,
+          "p95": 15532,
+          "max": 17546
+        },
+        "compares": {
+          "mean": 80.77619047619048,
+          "p95": 92,
+          "max": 116
+        },
+        "loadMs": 3.6300000101327896,
+        "used": 144449536,
+        "mirrorCapacity": 76414976,
+        "mirrorGeneration": 1,
+        "exactReplay": true,
+        "errors": []
+      },
+      {
+        "variant": "after",
+        "stepMs": {
+          "mean": 1.2429285715733256,
+          "p95": 1.8899999856948853,
+          "max": 9.79500000178814
+        },
+        "saveMs": {
+          "mean": 1.3412380952920233,
+          "p95": 2.7450000047683716,
+          "max": 3.0799999982118607
+        },
+        "covers": {
+          "mean": 2434.0285714285715,
+          "p95": 2448,
+          "max": 2457
+        },
+        "compares": {
+          "mean": 80.75714285714285,
+          "p95": 92,
+          "max": 116
+        },
+        "loadMs": 3.1949999928474426,
+        "used": 144449536,
+        "mirrorCapacity": 76414976,
+        "mirrorGeneration": 1,
+        "exactReplay": true,
+        "errors": []
+      }
+    ]
+  },
+  "growth": {
+    "date": "2026-09-12T20:04:02.204Z",
+    "browser": "152.0.7977.83",
+    "root": "/Volumes/OpenSmashBuilds/publisher/build/cheap-checkpoints-20260912-r1/remix",
+    "engineHash": "1039b3fe4f4f26fe4012aeace5d5493793982db27f06dd0df496ca3a99c813fe",
+    "beforeHash": "989eadda6ab869600c703a242300c2b51a33345c0a942f79246500c44eed6de2",
+    "afterHash": "d308ddf5221b6ef172833328c7875082da2ea7870a738cd463c0436abcfb3a4d",
+    "results": [
+      {
+        "variant": "before",
+        "growth": {
+          "before": 144449536,
+          "after": 178003968,
+          "at": 144448808
+        },
+        "stoppedAtHeapLimit": true,
+        "used": 287989760,
+        "mirrorCapacity": 109969408,
+        "mirrorGeneration": 2,
+        "errors": []
+      },
+      {
+        "variant": "after",
+        "growth": {
+          "before": 144449536,
+          "after": 178003968,
+          "at": 144448808
+        },
+        "stepMs": {
+          "mean": 1.2041666669504982,
+          "p95": 1.5150000005960464,
+          "max": 9.5
+        },
+        "saveMs": {
+          "mean": 2.1807142855865616,
+          "p95": 2.790000006556511,
+          "max": 6.1099999994039536
+        },
+        "covers": {
+          "mean": 4189.4,
+          "p95": 4497,
+          "max": 4505
+        },
+        "compares": {
+          "mean": 81.55238095238096,
+          "p95": 93,
+          "max": 117
+        },
+        "loadMs": 3.364999994635582,
+        "used": 178003968,
+        "mirrorCapacity": 76414976,
+        "mirrorGeneration": 1,
+        "exactReplay": true,
+        "errors": []
+      }
+    ]
+  }
+}

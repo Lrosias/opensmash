@@ -21,3 +21,10 @@ test('checkpoint history remains bounded and detects mismatched handles',()=>{
  assert.equal(store.frames.size,15);assert.throws(()=>store.load({frame:0,state:[0]}),/expired/);
  assert.throws(()=>store.load({...latest,state:[8]}),/mismatched/);
 });
+
+test('released timeline reset discards old handles while retaining the diff base',()=>{
+ const memory=new Uint8Array(128),store=new NativeCheckpoints({memory:()=>memory,used:()=>128},{pageBytes:64});
+ memory[0]=7;const old=store.save(0,[0]),pages=store.pages;
+ store.reset();assert.equal(store.frames.size,0);assert.equal(store.pages,pages);assert.throws(()=>store.load(old),/expired/);
+ const next=store.save(0,[1]);assert.equal(store.pages[0],pages[0]);memory[0]=9;store.load(next);assert.equal(memory[0],7);
+});

@@ -65,6 +65,46 @@ test('optional helper failures leave the JS path available',async()=>{
  assert.equal(await loadPageComparator({memory,allocate:()=>65536}),null);
 });
 
+test('busy mirrored checkpoints validate each page only a bounded number of times',()=>{
+ const pageBytes=16384,liveBytes=4<<20,memory=new WebAssembly.Memory({initial:512});let used=liveBytes;
+ const comparator=createPageComparator({memory,allocate:n=>{const at=used;used+=n;return at;}},module);
+ let calls=0;const covers=comparator.mirror.covers;
+ comparator.mirror.covers=(...args)=>{calls++;return covers(...args);};
+ const base={memory:()=>new Uint8Array(memory.buffer),used:()=>used,exclusions:()=>[[pageBytes*80,pageBytes*83],...comparator.ranges()]};
+ const store=new NativeCheckpoints({...base,comparePage:comparator.samePage,mirror:comparator.mirror});
+ const reference=new NativeCheckpoints(base);
+ store.save(0,[0]);store.save(1,[1]);
+ const words=new Uint32Array(memory.buffer);
+ for(let frame=2;frame<6;frame++){
+  for(let at=0;at<liveBytes;at+=pageBytes)words[at/4]=frame;
+  calls=0;const handle=store.save(frame,[frame]);
+  assert.ok(calls<=(liveBytes/pageBytes)*3+10,`mirror eligibility must scale linearly, got ${calls} checks`);
+  reference.save(frame,[frame]);assert.deepEqual(store.pages,reference.pages);
+  words[0]=99;store.load(handle);assert.equal(words[0],frame);
+ }
+});
+
+test('game allocation beyond mirror headroom cannot inflate the high-water heap on later saves',()=>{
+ const memory=new WebAssembly.Memory({initial:1024});let used=4<<20,allocations=0;
+ // Like sbrk-backed malloc, freeing a block does not lower the high-water mark.
+ const allocate=n=>{allocations++;const at=used;used+=n;return at;};
+ const comparator=createPageComparator({memory,allocate,free(){}},module);
+ comparator.mirror.ensure(used);const capacity=comparator.mirror.capacity;
+ const game=allocate(16<<20),heapAfterGame=used,allocated=allocations;
+ const driver={memory:()=>new Uint8Array(memory.buffer),used:()=>used,exclusions:()=>comparator.ranges()};
+ const store=new NativeCheckpoints({...driver,comparePage:comparator.samePage,mirror:comparator.mirror});
+ const reference=new NativeCheckpoints(driver);
+ for(let frame=0;frame<8;frame++){
+  new Uint8Array(memory.buffer)[game+(16<<20)-1]=frame+1;
+  const handle=store.save(frame,[frame]);
+  assert.equal(used,heapAfterGame,'saving cannot allocate more heap after the mirror exists');
+  assert.equal(allocations,allocated);assert.equal(comparator.mirror.capacity,capacity);
+  reference.save(frame,[frame]);assert.deepEqual(store.pages,reference.pages,'fallback pages stay exact');
+  new Uint8Array(memory.buffer)[game+(16<<20)-1]=99;store.load(handle);
+  assert.equal(new Uint8Array(memory.buffer)[game+(16<<20)-1],frame+1);
+ }
+});
+
 test('the in-memory mirror compares live pages with no copy and matches the JS reference through growth, exclusions and rewind',()=>{
  const memory=new WebAssembly.Memory({initial:8,maximum:1024});
  // A bump allocator over the top of the "heap": the engine's malloc stands in here.
@@ -77,9 +117,9 @@ test('the in-memory mirror compares live pages with no copy and matches the JS r
  const reference=new NativeCheckpoints(driver,{window:64});
  let seed=7;const handles=[];
  for(let frame=0;frame<60;frame++){
-  if(frame===12){used=20<<20;}                 // the heap fills past the mirror's capacity: it must regrow (and copy itself)
+  if(frame===12){used=20<<20;while(used>memory.buffer.byteLength)memory.grow(4);}
   if(frame===20)excluded=[];
-  if(frame===40){memory.grow(2);used=45<<20;}   // wasm memory itself grows and the heap fills again: a second regrow
+  if(frame===40){used=45<<20;while(used>memory.buffer.byteLength)memory.grow(4);}
   // Sizing the mirror moves the heap top; both stores must see the same top for this frame.
   compare.mirror.ensure(driver.used());
   const bytes=new Uint8Array(memory.buffer);
@@ -89,15 +129,15 @@ test('the in-memory mirror compares live pages with no copy and matches the JS r
   const state=[frame,seed];handles.push(mirrored.save(frame,state));reference.save(frame,state);
   assert.deepEqual(mirrored.pages,reference.pages,'frame '+frame);
  }
- assert.ok(compare.mirror.generation>=2&&freed.length===compare.mirror.generation-1,`the mirror was replaced as the heap outgrew it, freeing each old block: ${compare.mirror.generation} blocks, ${freed.length} freed`);
- // Pages above the mirror block (allocated after it) have slots too: the steady-state check below counts the uncovered ones.
+ assert.equal(compare.mirror.generation,1,'game growth never reallocates the mirror');assert.equal(freed.length,0);
+ // Pages above the fixed mirror use its remaining slots, then the scratch comparator.
  const capacityAfter=compare.mirror.capacity;compare.mirror.ensure(driver.used());assert.equal(compare.mirror.capacity,capacityAfter,'a heap that only grew by the mirror itself never regrows it');
  // After a few frames every live page is compared against the mirror: the scratch path is idle.
  let scratchCompares=0;const spy={...driver,comparePage:(...a)=>{scratchCompares++;return compare.samePage(...a);},mirror:compare.mirror};
  const steady=new NativeCheckpoints(spy,{window:8});steady.save(0,[0]);scratchCompares=0;steady.save(1,[1]);
  // Only pages the mirror cannot hold (above its capacity, or partial) still take the copy-and-compare path.
  const uncovered=steady.pages.filter((p,i)=>p&&!(p.length===4096&&compare.mirror.covers(i*4096,p.length))).length;
- assert.ok(uncovered<=2&&scratchCompares===uncovered,`copy-and-compare only for the ${uncovered} page(s) the mirror cannot hold: ${scratchCompares}`);
+ assert.ok(uncovered>2&&scratchCompares===uncovered,`copy-and-compare for all ${uncovered} page(s) beyond the fixed mirror: ${scratchCompares}`);
  for(const frame of [50,30,20,10,0]){
   // The reference restores into clobbered memory first (the clobber reaches the mirror too, as a
   // stray write would); the mirrored store then restores over that and must land on the same bytes.
