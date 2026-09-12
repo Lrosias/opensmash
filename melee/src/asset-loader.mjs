@@ -106,12 +106,21 @@ export class AssetLoader {
     this.module._melee_asset_match_ready(ticket);this.status();
   }
   enterMenu() {this.menu=true;this.plan=[...(this.catalog.plan||[])];this.event('menu');this.pump();}
+  async pauseBackground() {
+    this.backgroundPaused=true;
+    const pending=[];
+    for(const job of this.jobs.values())if(job.priority>1&&job.state==='loading'){
+      job.aborted=true;job.controller.abort();pending.push(job.task);
+    }
+    await Promise.allSettled(pending);
+  }
+  resumeBackground() {this.backgroundPaused=false;this.pump();}
   retry() {
     for(const job of this.jobs.values())if(job.state==='failed'){job.state='queued';job.error=null;}
     this.pausedUntil=0;this.status();this.pump();
   }
   planned() {
-    return this.menu&&this.background&&performance.now()>=this.pausedUntil&&![...this.jobs.values()].some(j=>j.state==='failed');
+    return this.menu&&this.background&&!this.backgroundPaused&&performance.now()>=this.pausedUntil&&![...this.jobs.values()].some(j=>j.state==='failed');
   }
   pump() {
     const jobs=[...this.jobs.values()];
@@ -134,7 +143,7 @@ export class AssetLoader {
   }
   start(job) {
     job.state='loading';job.aborted=false;this.active++;
-    this.run(job).finally(()=>{this.active--;this.status();this.pump();});
+    job.task=this.run(job).finally(()=>{this.active--;this.status();this.pump();});
   }
   feedPlan() {
     let pending=0;
@@ -154,7 +163,7 @@ export class AssetLoader {
   }
   async commit(job,encoded) {
     const b=this.manifest.blocks[job.index];
-    await this.commitBlock(job.index,b,encoded);
+    await this.commitBlock(job.index,b,encoded,()=>{if(job.aborted)throw new DOMException('aborted','AbortError');});
     this.ready.add(job.index);this.stats.decodedBytes+=b.decodedSize;this.stats.blocks++;
     // Every decoded block stays in Wasm memory, so all of them count against the budget.
     this.decodedPrefetch+=b.decodedSize;this.stats.decodedPrefetchBytes=this.decodedPrefetch;
@@ -185,6 +194,7 @@ export class AssetLoader {
     try {
       let encoded=this.encoded.get(job.index);
       if(!encoded)encoded=await this.fetchBlock(b,this.stats,job.controller.signal,loaded=>{this.stats.inflight[job.index]=loaded;this.tick();});
+      if(job.aborted)throw new DOMException('aborted','AbortError');
       delete this.stats.inflight[job.index];
       this.saved.add(job.index);
       if(job.decode&&!this.ready.has(job.index)) {
@@ -234,8 +244,10 @@ export async function createAssetLoader(module,memory,onStatus,options={}) {
       }
       return encoded;
     },
-    async commitBlock(index,block,encoded){
+    async commitBlock(index,block,encoded,checkCancelled=()=>{}){
+      checkCancelled();
       const decoded=await new Response(new Blob([encoded]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer();
+      checkCancelled();
       if(decoded.byteLength!==block.decodedSize)throw Error('Game data decompression failed.');
       const pointer=loader.module._melee_asset_pointer(index,decoded.byteLength);if(!pointer)throw Error('Could not reserve game asset memory.');
       new Uint8Array(loader.memory.buffer).set(new Uint8Array(decoded),pointer);

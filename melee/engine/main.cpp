@@ -19,6 +19,7 @@
 #include "Common/Logging/LogManager.h"
 #include <memory>
 #include "Core/State.h"
+#include "Core/Core.h"
 #include "MeleeRollback.h"
 #include "VideoCommon/PerformanceMetrics.h"
 #include "VideoCommon/GXPipelineTypes.h"
@@ -82,6 +83,21 @@ extern "C" EMSCRIPTEN_KEEPALIVE void melee_input(int seat, int buttons, float x,
 extern "C" EMSCRIPTEN_KEEPALIVE int melee_stats() { return web_present_count.load(); }
 extern "C" EMSCRIPTEN_KEEPALIVE WebAudioRing* melee_audio_ring() { return &web_audio; }
 extern "C" EMSCRIPTEN_KEEPALIVE void melee_frame_ack() { web_frames_in_flight.fetch_sub(1); }
+// SetState waits for CPU idleness and pauses adjacent systems. Run it on the
+// host worker, never the browser UI thread (asset callbacks must keep flowing).
+extern "C" EMSCRIPTEN_KEEPALIVE int melee_local_pause(int sequence, int paused) {
+  if (sequence <= 0 || melee_rb_mode.load()) return 0;
+  Core::QueueHostJob([sequence, paused](Core::System& system) {
+    bool ok = !melee_rb_mode.load() && Core::IsRunning(system);
+    if (ok) {
+      const auto target = paused ? Core::State::Paused : Core::State::Running;
+      Core::SetState(system, target);
+      ok = Core::GetState(system) == target;
+    }
+    EM_ASM({ postMessage({cmd:9,handler:'onMeleeLocalPause',args:[$0,$1]}); }, sequence, ok ? 1 : 0);
+  });
+  return 1;
+}
 extern "C" EMSCRIPTEN_KEEPALIVE double melee_speed() { return Core::System::GetInstance().GetPerfMetrics().GetSpeed(); }
 extern "C" EMSCRIPTEN_KEEPALIVE double melee_vps() { return Core::System::GetInstance().GetPerfMetrics().GetVPS(); }
 extern "C" float melee_efb_scale() { return web_lite_resolution ? 0.5f : 1.f; }

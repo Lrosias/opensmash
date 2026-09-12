@@ -8,6 +8,7 @@ import {MeleeNativeRoomSession,NATIVE_MENU_PROTOCOL} from './native-room-session
 import {mountAdapterControls} from '../../controllers/gc-adapter-ui.mjs';
 import {meleePad} from '../../controllers/gc-adapter.mjs';
 import {createTouch} from './touch.mjs';
+import {createLocalEnginePause} from './local-engine-pause.mjs';
 // The page boots straight into Melee. Modes are picked in the native menu the
 // engine draws over the character select (LOCAL VERSUS / ONLINE: FRIENDS, CASUAL,
 // RANKED); online games run a second engine in an iframe on Melee's own menus.
@@ -17,6 +18,36 @@ const adapter=mountAdapterControls();
 document.querySelector('button[aria-label="GameCube adapter controls"]')?.classList.add('melee-adapter-entry');
 const state = window.melee = {phase:'idle', errors:[], samples:[], module:null, displayedFrames:0, menu:{phase:0,text:'',revision:0}, queueKind:0, room:null, session:null, build:null};
 let input, audio, node, assetLoader, lastFrame=0, generation=0, busy=false;
+let resolveLocalReady,rejectLocalReady,pauseSequence=0;
+const localReady=new Promise((resolve,reject)=>{resolveLocalReady=resolve;rejectLocalReady=reject;});
+localReady.catch(()=>{});
+const pauseRequests=new Map();
+const localPause=state.localPause=createLocalEnginePause({ready:localReady,
+  loader:()=>assetLoader,audio:()=>audio,resetFrames:()=>{lastFrame=0;},
+  setPaused:paused=>new Promise((resolve,reject)=>{
+    const sequence=++pauseSequence;
+    const timer=setTimeout(()=>{pauseRequests.delete(sequence);reject(Error('The local Melee pause request timed out. Reload the game.'));},30000);
+    pauseRequests.set(sequence,{resolve:()=>{clearTimeout(timer);resolve();},reject:error=>{clearTimeout(timer);reject(error);}});
+    if(paused)for(let seat=0;seat<4;seat++)state.module._melee_input(seat,0,0,0,0,0,0,0);
+    if(!state.module._melee_local_pause?.(sequence,Number(paused))){
+      clearTimeout(timer);pauseRequests.delete(sequence);reject(Error('This Melee engine does not support pausing local play for online. Reload the updated build.'));
+    }
+  }),onError:error=>{console.warn(error);state.errors.push(error.message);$('status').textContent=error.message;$('status').classList.remove('sr-only');}
+});
+async function createOnlineEngine(launch,onStatus,signal) {
+  const release=await localPause.acquire(signal);
+  try {
+    const engine=await createNativeSession(launch,onStatus,signal);
+    const destroy=engine.destroy;
+    return {...engine,get frame(){return engine.frame;},get active(){return engine.active;},
+      get closed(){return engine.closed;},get pending(){return engine.pending;},
+      destroy(){try{destroy();}finally{release();}}};
+  } catch(error){release();throw error;}
+}
+function wakeAudio(){
+  if(!localPause.blocked)audio?.resume().catch(()=>{});
+  state.session?.engine?.resumeAudio?.().catch(()=>{});
+}
 state.assetBlocked=false;
 state.frameGaps=[];
 const params=new URLSearchParams(location.search);
@@ -38,6 +69,7 @@ function renderBoot(progress) {
 }
 function onAssetStatus(progress) {
   state.assetStats=progress.stats;state.assetBlocked=progress.blocked;
+  if(localPause.blocked)return;
   if(progress.name==='menus'&&(progress.kind==='selected'||state.phase!=='running'))state.menuProgress={completed:progress.completed,total:progress.total};
   if(state.phase!=='running'){
     if(progress.error)pill('error','Download paused',`${progress.error} Check your connection and retry.`,0);
@@ -95,7 +127,7 @@ function bind(room,token) {
   if(state.room===room||token!==generation)return;
   state.room=room;
   room.on('close',()=>{if(token===generation&&state.room===room)cleanup('CONNECTION CLOSED',6);});
-  state.session=new MeleeNativeRoomSession({room,build:state.build,createEngine:createNativeSession,
+  state.session=new MeleeNativeRoomSession({room,build:state.build,createEngine:createOnlineEngine,
     readPorts:()=>{const snapshot=adapter.snapshot();return Array.from({length:4},(_,i)=>readSeat(i,snapshot));},
     onStatus:sessionStatus,onError:message=>{if(token===generation)cleanup(message,6);}});
 }
@@ -130,16 +162,19 @@ function menuAction(action,value) {
   },0);
 }
 state.menuAction=menuAction;
-const touch=createTouch({wakeAudio:()=>{audio?.resume().catch(()=>{});state.session?.engine?.resumeAudio?.().catch(()=>{});},
+const touch=createTouch({wakeAudio,
   leave:()=>{if(state.session)cleanup('YOU LEFT THE MATCH',6);},controller:()=>!!adapter?.owned});
 adapter.subscribe(()=>touch.sync());
 state.touch=touch;
 $('canvas').addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')touch.touched();},true);
-for(const kind of ['pointerdown','keydown'])window.addEventListener(kind,()=>{audio?.resume().catch(()=>{});state.session?.engine?.resumeAudio?.().catch(()=>{});},true);
+for(const kind of ['pointerdown','keydown'])window.addEventListener(kind,wakeAudio,true);
 window.addEventListener('keydown',e=>{if(e.code==='Escape'&&(state.session||busy))setTimeout(()=>cleanup(state.session?'YOU LEFT THE MATCH':'',state.session?6:0),0);},true);
 window.addEventListener('pagehide',disconnect);
 function fail(error) {
   const message = error?.message || String(error);
+  rejectLocalReady(error);
+  for(const request of pauseRequests.values())request.reject(error);
+  pauseRequests.clear();
   state.errors.push(message); state.phase='error';
   $('status').textContent=`${message} Reload the page to try again.`; $('status').classList.remove('sr-only'); $('status').classList.add('error');
   $('download-status').hidden=true;
@@ -164,7 +199,7 @@ function sampleInput() {
   // An online session owns the pads through readPorts: the local engine and its native
   // menu see neutral until the session ends, so B in a match can never leave the room.
   const online=!!state.session;touch.context(online);
-  if (state.module && input && !state.rollback?.active) for (let seat=0; seat<4; seat++) {
+  if (state.module && input && !state.rollback?.active && !localPause.blocked) for (let seat=0; seat<4; seat++) {
     const s=input.player(seat)?.state;
     if (!s) continue;
     // A blocked engine still drains touch taps, so none fires late when the download ends.
@@ -200,7 +235,14 @@ async function boot() {
       onMeleeAssetMatch:(...args)=>assetLoader.match(...args).catch(fail),
       onMeleeRollback:(...args)=>state.rollback?.receive(...args),
       onMeleeMenu:menuAction,
+      onMeleeLocalPause:(sequence,ok)=>{
+        const request=pauseRequests.get(sequence);if(!request)return;
+        pauseRequests.delete(sequence);
+        if(ok)request.resolve();else request.reject(Error('The local Melee engine could not change pause state.'));
+      },
       onMeleeFrame(bitmap) {
+        resolveLocalReady();
+        if(localPause.blocked){bitmap.close();state.module._melee_frame_ack();return;}
         const now=performance.now();
         if(lastFrame){state.frameGaps.push({time:now,ms:now-lastFrame});if(state.frameGaps.length>6000)state.frameGaps.shift();}
         lastFrame=now;
@@ -220,7 +262,7 @@ async function boot() {
       onAbort:reason=>fail('Melee stopped: '+reason)});
     state.shaderCache=createShaderCache(state.module,state.engineSha256);
     await state.shaderCache.restore();
-    setInterval(()=>state.shaderCache.save(),30000);
+    setInterval(()=>{if(!localPause.blocked)void state.shaderCache.save();},30000);
     state.rollback=new NativeRollbackEngine(state.module);
     state.phase='preparing';
     try{assetLoader=await loaderReady;}catch{loaderReady=makeLoader();assetLoader=await loaderReady;}
@@ -240,6 +282,7 @@ async function boot() {
     let previous=performance.now(), count=0;
     setInterval(()=>{
       const now=performance.now(), presents=state.module._melee_stats();
+      if(localPause.blocked){previous=now;count=presents;return;}
       const sample={time:now,presents,fps:(presents-count)*1000/(now-previous),heapBytes:memory.buffer.byteLength,
         displayedFrames:state.displayedFrames,speed:state.module._melee_speed(),vps:state.module._melee_vps(),
         renderSize:state.renderSize,assetMisses:state.module._melee_asset_misses(),shaderCount:state.module._melee_shader_count(),shaderMillis:state.module._melee_shader_millis(),shaderMaxMs:state.module._melee_shader_max(),downloadedBytes:state.module._melee_downloaded_bytes()};

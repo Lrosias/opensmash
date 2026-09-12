@@ -28,6 +28,28 @@ test('the plan starts in menus: match essentials first, up to three at once, dec
  assert.deepEqual(inFlight(),[],'no planned work outside menus');
  assert.equal(pending.length,0);
 });
+
+test('online suspension aborts speculative jobs, preserves foreground reads, and resumes the plan',async()=>{
+ const {loader,commits,inFlight,finish}=fixture();
+ loader.enterMenu();const foreground=loader.request(2,0);
+ await loader.pauseBackground();
+ assert.deepEqual(inFlight(),[2]);assert.deepEqual(commits,[]);assert.equal(loader.planned(),false);
+ await finish(2);await foreground;assert.deepEqual(inFlight(),[]);
+ loader.resumeBackground();assert.equal(loader.planned(),true);assert.deepEqual(inFlight(),[1,3,6]);
+ await loader.pauseBackground();
+});
+
+test('suspension drains a decode already in flight before returning',async()=>{
+ const {loader,inFlight}=fixture();let finishDecode,started;
+ const decoding=new Promise(resolve=>{started=resolve;});
+ loader.fetchBlock=async()=>new ArrayBuffer(0);
+ loader.commitBlock=async(index,block,bytes,check)=>{started();await new Promise(resolve=>{finishDecode=resolve;});check();};
+ // One job is enough to exercise cancellation after fetch, during decompression.
+ loader.catalog.plan=['match'];loader.enterMenu();await decoding;
+ let paused=false;const stop=loader.pauseBackground().then(()=>{paused=true;});
+ await tick();assert.equal(paused,false);finishDecode();await stop;
+ assert.equal(loader.ready.size,0);assert.equal(loader.active,0);assert.deepEqual(inFlight(),[]);
+});
 test('a picked fighter goes ahead of the plan and shares in-flight work; stages move up next',async()=>{
  const {loader,commits,finish,inFlight}=fixture();
  loader.enterMenu();assert.deepEqual(inFlight(),[1,2,3]);
