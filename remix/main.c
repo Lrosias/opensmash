@@ -305,7 +305,6 @@ static void grab_puck(int p,int q){holder[q]=p;confirmed&=~(1<<q);puck_follow(q)
 static void place_puck(int p,int q){
  chosen[q]=remix_menu_layout[hover[q]];holder[q]=-1;confirmed|=1<<q;puck_home(q);grab_cool[p]=30;
  func_800269C0_275C0(nSYAudioFGMMenuSelect);announce_fighter(chosen[q]);
- if(port_yougame_menu_context&&q==0){phase=2;wait_ticks=15;}
 }
 static const int puck_sprites[]={llMNPlayersCommon1PPuckSprite,llMNPlayersCommon2PPuckSprite,llMNPlayersCommon3PPuckSprite,llMNPlayersCommon4PPuckSprite};
 static const int label_sprites[]={llMNPlayersCommon1PTextGradientSprite,llMNPlayersCommon2PTextGradientSprite,llMNPlayersCommon3PTextGradientSprite,llMNPlayersCommon4PTextGradientSprite};
