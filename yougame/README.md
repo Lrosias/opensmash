@@ -221,6 +221,22 @@ file inventory and authored loader/source text for the YouGame MCP `check_build`
 Run that tool after the final build. Then ZIP the contents of `dist/`, with `index.html`
 at the archive root.
 
+## Release: both editions, always
+
+OpenSmash64 and Smash Remix are one engine and one wrapper; only the profile, roster, media and
+the app `BUILD` differ. A change never ships to one edition alone. Package both from the same
+source (`package-edition.mjs` / `package-touch-update.mjs` into `<dir>/original` and
+`<dir>/remix`), then publish them together:
+
+```sh
+YOUGAME_API_KEY=$YOUGAME_API_KEY_OPENSMASH node yougame/publish-editions.mjs <dir> --notes "what changed"
+```
+
+The script refuses when any shared file (engine, netplay, controls, styles) differs between the
+two editions, uploads original then remix, publishes original, and publishes remix with
+`upstream` set to the original's upload so the remix listing's base follows. `--dry-run` only
+runs the comparison.
+
 ## Test
 
 ```sh
