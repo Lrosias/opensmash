@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Native mode menu: LOCAL VERSUS / ONLINE (FRIENDS, CASUAL, RANKED), drawn over
-// the versus character select with Melee's own SIS text renderer. Every screen
-// element is the game's; the browser only supplies the online status line.
+// Melee Mode Select integration: LOCAL / ONLINE -> FRIENDS / CASUAL.
+// The original scene owns its panels, cursor, input and animations; SIS supplies
+// the new option names and online status.
 //
-// The menu runs on the CPU thread from the HSD_PadRenewMasterStatus hook and
+// The menu runs on the CPU thread from mnMain's original scene callbacks and
 // calls recompiled game functions through the module dispatcher, the same way
 // a guest `bl` would, with the caller's registers saved around each call.
 #include "MeleeRollback.h"
@@ -30,18 +30,16 @@ constexpr u32 FN_SFX = 0x80024030u;           // lbAudioAx: common menu sound
 constexpr int MAX_TEXTS = 24;
 
 // Browser-owned state (main thread writes, CPU thread reads).
-std::atomic<int> menu_active{0};              // overlay owns the pads
-std::atomic<int> menu_hold{0};                // per-seat mask: neutral until that seat releases every button
+std::atomic<int> menu_active{0};
 std::atomic<int> js_phase{0}, js_revision{0};
 std::mutex js_mutex; char js_text[64] = "CONNECTING";
-std::atomic<int> pad_buttons[4]; std::atomic<float> pad_x[4], pad_y[4];
 
 // CPU-thread state.
-bool pending = false, drawn = false, dirty = false, broken = false, in_call = false, canvas_valid = false;
-int level = 0, cursor = 0, wait = 0, frames = 0, phase = 0, revision = 0, previous = 0, canvas = -1;
+bool drawn = false, dirty = false, broken = false, canvas_valid = false;
+int level = 0, cursor = 0, frames = 0, phase = 0, revision = 0, canvas = -1;
 u32 texts[MAX_TEXTS]; int text_count = 0; char status_text[64] = "CONNECTING";
 // Layout (screen pixels of the 640x480 frame); tunable from the page while developing.
-struct Layout { float scale = 1.0f, x = 46, y = 272, step = 28, boxW = 400, boxH = 40; int flags = 0; };
+struct Layout { float scale = 1.0f, x = 112, y = 195, step = 72, boxW = 400, boxH = 40; int flags = 0; };
 Layout layout, layout_shared; std::mutex layout_mutex; std::atomic<int> layout_revision{0}; int layout_seen = 0;
 
 void event(int action, int value) {
@@ -104,8 +102,7 @@ void destroy_texts(CPUState* c) {
   for (int i = 0; i < text_count && !broken; ++i) call(c, FN_DESTROY, {texts[i]});
   text_count = 0; drawn = false;
 }
-// One text box per line, drawn twice: a black copy two pixels down and right,
-// then the coloured text, so it reads over the roster. Positions are pixels of
+// Native SIS headings and help use a small shadow. Positions are pixels of
 // the 640x480 frame from the top-left; scale 0.6 is about 20 px tall.
 void text_box(CPUState* c, const char* s, float x, float y, float scale, u32 rgba) {
   if (broken || text_count >= MAX_TEXTS || !s || !*s) return;
@@ -125,114 +122,177 @@ void line(CPUState* c, const char* s, float x, float y, float scale, u32 rgb) {
   if (!(layout.flags & 1)) text_box(c, s, x + 2, y + 2, scale, 0x000000D0u);
   text_box(c, s, x, y, scale, (rgb << 8) | 0xFFu);
 }
+
+constexpr u32 FLOW = 0x804A04F0u;
 void draw(CPUState* c) {
   destroy_texts(c);
   if (!canvas_valid) { canvas = (int)call(c, FN_CANVAS, {0u, 0u, 9u, 13u, 0u, 14u, 0u, 19u}); canvas_valid = !broken; }
   if (broken) return;
-  const u32 white = 0xFFFFFF, gold = 0xFFD84A, dim = 0xB8C4D6;
-  const char* items[3]; int count;
-  const char* title;
-  if (phase == 0 && level == 0) { title = "OPENSMASH MELEE"; items[0] = "LOCAL VERSUS"; items[1] = "ONLINE"; count = 2; }
-  else if (phase == 0) { title = "ONLINE"; items[0] = "FRIENDS"; items[1] = "CASUAL"; items[2] = "RANKED"; count = 3; }
-  else { title = "ONLINE"; items[0] = phase == 6 ? "TRY AGAIN" : "WAITING"; items[1] = "BACK"; count = 2; }
-  const float x = layout.x, top = layout.y, step = layout.step;
-  line(c, title, x, top, 0.8f, white);
-  float y = top + step + 8;
-  if (phase != 0) { line(c, status_text, x, y, 0.5f, dim); y += step; }
-  for (int i = 0; i < count; ++i, y += step) {
-    const bool on = i == cursor, inert = phase != 0 && phase != 6 && i == 0;
-    line(c, items[i], x + 22, y, on ? 0.64f : 0.6f, inert ? dim : on ? gold : white);
-  }
-  line(c, phase == 0 && level == 0 ? "A  SELECT" : "A  SELECT     B  BACK", x, y + 4, 0.42f, dim);
+  const char* a = level == 0 ? "LOCAL" : "FRIENDS";
+  const char* b = level == 0 ? "ONLINE" : "CASUAL";
+  if (phase) { a = phase == 6 ? "TRY AGAIN" : "WAITING"; b = "BACK"; }
+  text_box(c, a, layout.x, layout.y, .68f, cursor == 0 ? 0x202030FFu : 0xFFFFFFFFu);
+  text_box(c, b, layout.x, layout.y + layout.step, .68f, cursor == 1 ? 0x202030FFu : 0xFFFFFFFFu);
+  if (level) line(c, "ONLINE", 116, 49, .7f, 0xFFFFFF);
+  const char* help = phase ? status_text : level ? (cursor ? "FIND A CASUAL MATCH" : "PLAY WITH FRIENDS") : (cursor ? "FRIENDS AND CASUAL" : "LOCAL VERSUS  1 TO 4 PLAYERS");
+  line(c, help, 156, 414, .42f, 0xFFFFFF);
   drawn = true; dirty = false;
 }
 void sfx(CPUState* c, u32 id) { if (!broken) call(c, FN_SFX, {id}); }
-void close(CPUState* c) {
+void change(CPUState* c, int next) {
   destroy_texts(c);
-  menu_active = 0; menu_hold = 0xF; pending = false;
+  mem_write8(c, FLOW + 0x11, next != 0);
+  level = next; cursor = 0; dirty = true;
+  call(c, 0x80229894u, {(u32)next, 0u, next ? 1u : 3u});
 }
 }
 
-// Called from the HSD_SisLib pool hook: the character select allots 0x2400 bytes for
-// its name tags; the menu's dozen text boxes need a little more in that scene alone.
+extern "C" int melee_menu_boot_mode(int requested) {
+  if (melee_rb_mode.load() || melee_session_mask.load()) return 2;
+  return requested == 2 ? 2 : 1;
+}
 extern "C" unsigned melee_menu_sis_pool(unsigned size) {
-  if (melee_rb_mode.load() || melee_session_mask.load()) return size;
   return size < 0x4800u ? 0x4800u : size;
 }
-// Called from the runGameMode hook at every major scene transition.
 extern "C" void melee_menu_major() {
-  if (melee_rb_mode.load() || melee_session_mask.load()) return;
-  // The scene heap is about to be reset: forget every text handle before anything redraws.
+  // Scene heap reset invalidates every SIS handle.
   text_count = 0; canvas_valid = false; drawn = false; menu_active = 0;
-  pending = true;
 }
-// Called from gmVsMelee_EnterCss: the character select is about to initialize.
-extern "C" void melee_menu_css() {
-  if (!pending || melee_rb_mode.load() || melee_session_mask.load()) return;
-  pending = false; drawn = false; dirty = true; canvas_valid = false; text_count = 0; frames = 0; wait = 0; previous = -1;
-  if (phase == 0) { level = 0; cursor = 0; }
-  menu_active = 1;
-}
-extern "C" void melee_menu_tick(void* state) {
-  if (!menu_active.load() || broken || in_call) return;
-  struct Guard { Guard() { in_call = true; } ~Guard() { in_call = false; } } guard;
+extern "C" void melee_menu_css() { menu_active = 0; }
+extern "C" void melee_menu_tick(void*) {}
+extern "C" void melee_menu_enter(void* state) {
   CPUState* c = static_cast<CPUState*>(state);
-  ++frames;
-  if (layout_revision.load() != layout_seen) { layout_seen = layout_revision.load(); std::lock_guard lock(layout_mutex); layout = layout_shared; dirty = true; }
+  const u32 data = c->gpr[3];
+  const u8 requested = mem_read8(c, data);
+  // VS rules, items, stage switches and name entry keep their native flows.
+  // Online session engines also keep all their synchronized native subscenes.
+  if (melee_rb_mode.load() || melee_session_mask.load() || (requested >= 12 && requested <= 18)) {
+    menu_active = 0;
+    return;
+  }
+  // The native Mode Select and former 1P submenu become Local/Online and
+  // Friends/Casual. Keep the original panel, cursor, transitions and sound.
+  for (u32 kind = 0; kind < 2; ++kind) {
+    mem_write8(c, 0x803EB6B0u + kind * 20u + 12u, 2);
+  }
+  level = phase ? 1 : 0; cursor = 0;
+  mem_write8(c, data, level); mem_write8(c, data + 1, 0);
+  text_count = 0; canvas_valid = false; drawn = false; dirty = true;
+  frames = 0; menu_active = 1;
+}
+extern "C" void melee_menu_think(void* state) {
+  CPUState* c = static_cast<CPUState*>(state);
   const int rev = js_revision.load();
   if (rev != revision) {
     const int was = phase;
-    revision = rev; phase = js_phase.load(); cursor = 0; dirty = true;
-    std::lock_guard lock(js_mutex); std::strncpy(status_text, js_text, sizeof status_text - 1);
-    if (phase == 0 && was != 0) level = 1; // back from online: land on the online list
+    revision = rev; phase = js_phase.load(); dirty = true;
+    { std::lock_guard lock(js_mutex); std::strncpy(status_text, js_text, sizeof status_text - 1); }
+    if (phase == 0 && was != 0) {
+      if (level != 1) { change(c, 1); return; }
+      cursor = 0; mem_write16(c, FLOW + 2, 0);
+    }
   }
-  // Let the scene load its SIS font and settle before the first draw.
-  if (frames < 24) return;
-  if (!drawn || dirty) { draw(c); if (broken) { menu_active = 0; return; } }
-  int buttons = 0; float y = 0;
-  for (int i = 0; i < 4; ++i) { buttons |= pad_buttons[i].load(); const float v = pad_y[i].load(); if (std::abs(v) > std::abs(y)) y = v; }
-  // A button already held when the menu opens is not a press.
-  if (previous < 0) { previous = buttons; return; }
-  const int taps = buttons & ~previous; previous = buttons;
-  if (wait > 0) { --wait; return; }
-  const int count = phase == 0 ? (level == 0 ? 2 : 3) : 2;
-  if (taps & 2) { // B
-    if (phase == 0 && level == 1) { level = 0; cursor = 0; sfx(c, 0); dirty = true; wait = 12; }
-    else if (phase != 0) { event(2, 0); wait = 15; }
-    return;
+  if (layout_revision.load() != layout_seen) { layout_seen = layout_revision.load(); std::lock_guard lock(layout_mutex); layout = layout_shared; dirty = true; }
+  ++frames;
+  const u32 buttons = call(c, 0x80229624u, {4u}); // game's repeat, cooldown and all four ports
+  if (buttons & 0x20u) {
+    if (phase) event(2, 0);
+    else if (level) { sfx(c, 0); change(c, 0); return; }
+  } else if (buttons & 0x10u) {
+    if (phase) {
+      if (cursor == 1) event(2, 0);
+      else if (phase == 6) { sfx(c, 1); event(4, 0); }
+    } else if (level) { sfx(c, 1); event(6, cursor == 0 ? 2 : 0); }
+    else if (cursor == 1) { sfx(c, 1); change(c, 1); return; }
+    else {
+      sfx(c, 1); destroy_texts(c); menu_active = 0;
+      call(c, 0x80229860u, {2u}); // native scene exit to VS
+      return;
+    }
+  } else if (buttons & 3u) {
+    cursor ^= 1; mem_write16(c, FLOW + 2, cursor); sfx(c, 2); dirty = true;
   }
-  const int dir = y > 0.5f || (taps & 64) ? -1 : y < -0.5f || (taps & 128) ? 1 : 0; // stick or D-pad up/down
-  if (dir) {
-    cursor = (cursor + dir + count) % count; sfx(c, 2); dirty = true; wait = 10;
-    if (std::abs(y) > 0.5f) wait = 12;
-    return;
-  }
-  if (taps & (1 | 32)) { // A or Start
-    wait = 15;
-    if (phase == 0 && level == 0) {
-      if (cursor == 0) { sfx(c, 1); close(c); }
-      else { level = 1; cursor = 0; sfx(c, 1); dirty = true; }
-    } else if (phase == 0) { sfx(c, 1); event(6, cursor == 0 ? 2 : cursor == 1 ? 0 : 1); } // friends, casual, ranked
-    else if (cursor == 1) event(2, 0);
-    else if (phase == 6) { sfx(c, 1); event(4, 0); }
-  }
+  if (frames > 24 && (!drawn || dirty)) draw(c);
 }
 
-// Main thread: the browser's online status, mirrored into the native screen.
+
+// JObj IDs are preorder indices, as in lb_80011E24. Traverse on the host so
+// label lookup never borrows the interrupted game's stack as scratch memory.
+namespace {
+bool joint_pointer(u32 p) { return p >= 0x80000000u && p < 0x81800000u && !(p & 3); }
+u32 joint_at(CPUState* c, u32 root, int& index, int depth = 0) {
+  if (!joint_pointer(root) || depth > 64) return 0;
+  if (index-- == 0) return root;
+  u32 child = mem_read32(c, root + 0x10u);
+  for (int guard = 0; joint_pointer(child) && guard < 128; ++guard) {
+    u32 found = joint_at(c, child, index, depth + 1);
+    if (found) return found;
+    child = mem_read32(c, child + 8u);
+  }
+  return 0;
+}
+void hide_joint(CPUState* c, u32 joint) {
+  if (joint_pointer(joint)) mem_write32(c, joint + 0x14u, mem_read32(c, joint + 0x14u) | 0x10u);
+}
+
+}
+extern "C" void melee_menu_labels(void* state) {
+  CPUState* c = static_cast<CPUState*>(state);
+  const u32 data = mem_read32(c, c->gpr[3] + 0x2Cu);
+  if (mem_read8(c, data) > 1) return;
+  for (u32 i = 0; i < 2; ++i) {
+    const u32 parent = mem_read32(c, data + 4u + (4u + i) * 4u);
+    if (!joint_pointer(parent)) continue;
+    int index = 3;
+    hide_joint(c, joint_at(c, mem_read32(c, parent + 0x10u), index));
+  }
+}
+extern "C" int melee_menu_preview(void* state) {
+  CPUState* c = static_cast<CPUState*>(state);
+  const u32 data = mem_read32(c, c->gpr[3] + 0x2Cu);
+  if (mem_read8(c, data) > 1) return 0;
+  hide_joint(c, mem_read32(c, data + 4u + 14u * 4u));
+  return 1;
+}
+
+extern "C" int melee_menu_update(void* state) {
+  static bool updating = false;
+  if (updating) return 0;
+  CPUState* c = static_cast<CPUState*>(state);
+  const u32 gobj = c->gpr[3];
+  updating = true;
+  call(c, 0x8022AFECu, {gobj});
+  updating = false;
+  const u32 data = mem_read32(c, gobj + 0x2Cu);
+  if (mem_read8(c, data) <= 1) {
+    const u32 text = mem_read32(c, data + 0xACu);
+    if (text) mem_write8(c, text + 0x4Du, 1);
+  }
+  return 1;
+}
+extern "C" int melee_menu_panel(void* state) {
+  static bool updating = false;
+  if (updating) return 0;
+  CPUState* c = static_cast<CPUState*>(state);
+  const u32 gobj = c->gpr[3];
+  updating = true;
+  call(c, 0x80229BF4u, {gobj});
+  updating = false;
+  // MenMainPanel_Top joint 84 is the baked-in 1-P Mode heading. Keep the
+  // frame (joint 43), help box and all native panel animation intact.
+  if (level) {
+    int index = 84;
+    hide_joint(c, joint_at(c, mem_read32(c, gobj + 0x28u), index));
+  }
+  return 1;
+}
 extern "C" EMSCRIPTEN_KEEPALIVE void melee_menu_status(int phase, const char* text) {
   { std::lock_guard lock(js_mutex); std::strncpy(js_text, text && *text ? text : "CONNECTING", sizeof js_text - 1); }
   js_phase = phase; js_revision.fetch_add(1);
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int melee_menu_active() { return broken ? -1 : menu_active.load(); }
-// Main thread, development only: reposition and rescale the native menu without a rebuild.
 extern "C" EMSCRIPTEN_KEEPALIVE void melee_menu_layout(float scale, float x, float y, float step, float boxW, float boxH, int flags) {
   std::lock_guard lock(layout_mutex); layout_shared = {scale, x, y, step, boxW, boxH, flags}; layout_revision.fetch_add(1);
 }
-// Main thread, from melee_input: while the overlay owns the pads the game sees neutral.
-extern "C" int melee_menu_capture(int seat, int buttons, float x, float y) {
-  const int bit = 1 << seat;
-  if (menu_hold.load() & bit) { if (buttons == 0) menu_hold.fetch_and(~bit); else return 1; }
-  if (!menu_active.load()) return 0;
-  pad_buttons[seat] = buttons; pad_x[seat] = x; pad_y[seat] = y;
-  return 1;
-}
+// Input belongs to Melee's actual menu scene, including its native repeat logic.
+extern "C" int melee_menu_capture(int, int, float, float) { return 0; }

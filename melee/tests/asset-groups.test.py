@@ -4,6 +4,12 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from asset_groups import ROOT,STAGES,FIGHTERS,build
 class CatalogTests(unittest.TestCase):
+ def test_unlocked_stage_prefetch(self):
+  catalog=build({'files':[]})
+  self.assertEqual(set(catalog['competitive']),{'stage:'+str(i) for i in [2,3,8,28,31,32]})
+  stages=[key for key in catalog['plan'] if key.startswith('stage:')]
+  self.assertEqual(len(stages),len(set(stages)))
+  self.assertEqual(set(stages),{'stage:'+str(i) for i,_,_,_ in STAGES if i!=26})
  def test_all_stage_music_variants(self):
   manifest=json.loads((ROOT/'build/melee-web/dist/assets-manifest.json').read_text());catalog=build(manifest)
   source=(ROOT/'build/melee4mac/src/melee/lb/lbaudio_ax.static.h').read_text().split('static const char* hps_files[] = {')[1].split('};')[0]

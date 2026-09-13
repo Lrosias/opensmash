@@ -1,6 +1,5 @@
 :root{color-scheme:dark;font-family:Arial,Helvetica,sans-serif;background:#060913;color:#f5f5ee}
 .native-match{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:1;pointer-events:none}
-body:has(.native-match) .melee-adapter-entry,body.touch.playing .melee-adapter-entry{display:none}
 *{box-sizing:border-box}body{margin:0;height:100dvh;overflow:hidden;touch-action:none}canvas{position:absolute;width:100%;height:100%;object-fit:contain;background:#000}
 button{min-height:44px;padding:10px 16px;border:1px solid #ffffff30;border-radius:6px;background:#101521;color:inherit;font:inherit;cursor:pointer}button:hover{background:#253249}button:focus-visible{outline:3px solid #ffef73;outline-offset:4px}button:disabled{cursor:wait}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}

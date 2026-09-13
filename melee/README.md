@@ -4,9 +4,9 @@ A lightweight versus-only browser build of Melee USA v1.02, built from the user'
 verified disc and the static recompilation used by `t3dotgg/melee4mac`. It is
 separate from OpenSmash 64 in `yougame/`.
 
-The Lite edition opens directly at versus character select, with every fighter
-unlocked. Back returns to versus instead of exposing the removed single-player
-menus. Cinematics are omitted. Rendering uses a 320 × 240 output and 320 × 264
+The Lite edition opens directly at Melee's original Mode Select screen with
+Local and Online. Every VS fighter and stage is unlocked. Back from VS returns
+to Mode Select. Cinematics are omitted. Rendering uses a 320 × 240 output and 320 × 264
 GameCube framebuffer, with no antialiasing or resolution enhancement. Original
 match rules, timing, music and effects remain.
 
@@ -31,9 +31,9 @@ are recorded in [PORT-COMPARISON.md](PORT-COMPARISON.md).
 
 ## Play
 
-The page boots straight into Melee. A native mode menu, drawn with the game's
-own SIS text renderer over the versus character select, offers **LOCAL VERSUS**
-and **ONLINE** (**FRIENDS**, **CASUAL**, **RANKED**); the stick or D-pad moves,
+The page boots straight into Melee's original Mode Select scene, with its native
+panels, cursors, animations and sound. It offers **LOCAL** and **ONLINE**
+(**FRIENDS**, **CASUAL**); ranked is disabled. The stick or D-pad moves,
 A selects, B goes back, and B on an empty roster returns to the menu. Online
 games boot a second engine in an iframe on Melee's own character select, stage
 select and results, through `MeleeNativeRoomSession`; the platform's lobby owns
@@ -42,10 +42,13 @@ membership and invitations. The native screen shows the platform's status line
 screen, no HTML mode picker and no HTML lobby or set screens any more; Escape or
 the touch "Hold to leave" leaves an online session.
 
-`melee/engine/Menu.cpp` runs the menu on the CPU thread from the
-`HSD_PadRenewMasterStatus` hook (lite.py) and calls the recompiled SIS text
-functions through the module dispatcher; while it is open the game sees neutral
-pads. `?log` on the page routes the game's own OSReport lines to the console.
+`melee/engine/Menu.cpp` integrates with the original `mnMain` scene callbacks
+through version-checked hooks in `lite.py`. Melee owns controller input and
+repeat timing; SIS renders the new labels and connection status. Native text
+objects retain their original lifetime. Online uses the same direct SDK lobby
+flow as 64, without another Local/Online prompt. Adapter pairing and calibration
+live in YouGame Controls; the game has no separate adapter dialog.
+`?log` routes the game's own OSReport lines to the console.
 
 Use current desktop Chrome: the engine needs WebAssembly promise integration,
 shared memory and WebGL 2. `yougame.json` enables the supported embedded isolation

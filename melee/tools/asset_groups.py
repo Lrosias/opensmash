@@ -27,12 +27,8 @@ STAGES=[
 # 13th community tier list (March 2021), used only as a cache warming hint.
 # https://www.ssbwiki.com/List_of_SSBM_tier_lists_(NTSC)
 TIER=[2,9,15,20,19,0,12,14,13,17,16,7,22,25,8,1,21,6,3,10,23,24,11,18,4,5]
-# Stage prefetch order for local play: the selectable tournament stages first,
-# the rest of the stage select, and last the five stages the local select keeps
-# locked (Dream Land, Battlefield, Final Destination, Yoshi's Island 64, Kongo
-# Jungle 64); online sessions load their stage directly and skip the plan.
-COMPETITIVE=[8,2,3]
-LOCKED=[28,31,32,29,30]
+# All VS stages are unlocked. Warm all six tournament stages first.
+COMPETITIVE=[8,2,3,28,31,32]
 def unused_twin(path,paths):
     """GALE01 reads the .usd twin of a .dat file (lbFileGetFullName) and the audio/us/
     twin of a voice bank (lbaudio_ax str_audio_us); the other twin is never opened."""
@@ -60,7 +56,7 @@ def build(manifest):
     # fighters most players pick, the stages most matches land on, then the rest.
     tier=['fighter:'+str(i) for i in TIER]
     competitive=['stage:'+str(i) for i in COMPETITIVE]
-    other_stages=['stage:'+str(s[0]) for s in STAGES if s[0] not in COMPETITIVE+LOCKED+[26]]+['stage:'+str(i) for i in LOCKED]
+    other_stages=['stage:'+str(s[0]) for s in STAGES if s[0] not in COMPETITIVE+[26]]
     plan=['match']+tier[:8]+competitive+tier[8:]+other_stages
     return {'version':2,'groups':groups,'plan':plan,'competitive':competitive,'prioritySource':'https://www.ssbwiki.com/List_of_SSBM_tier_lists_(NTSC)'}
 def main():

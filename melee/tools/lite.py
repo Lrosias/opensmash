@@ -16,13 +16,14 @@ def main():
     if text.count(anchor) != 1 or '// 801A43A0: mflr    r0' not in text:
         raise SystemExit('Unexpected runGameMode code; refusing to patch.')
     hook = '''    /* OPENSMASH_LITE_BEGIN */
-    // runGameMode: initialization has completed. Enter VS directly, including
-    // when Back attempts to return to the removed main/single-player menus.
-    ctx->gpr[3] = 2;
-    mem_write8(ctx, 0x80479D30u, 2);
+    // Boot at native Mode Select. Online session engines still enter VS directly.
+    extern int melee_menu_boot_mode(int);
+    ctx->gpr[3] = melee_menu_boot_mode(ctx->gpr[3]);
+    mem_write8(ctx, 0x80479D30u, ctx->gpr[3]);
     {
         u32 save = mem_read32(ctx, ctx->gpr[13] - 30656u);
         mem_write16(ctx, save + 0x1868u, 0xFFFFu);
+        mem_write16(ctx, save + 0x186Au, 0xFFFFu);
     }
     { extern void melee_menu_major(void); melee_menu_major(); }
     /* OPENSMASH_LITE_END */
@@ -32,6 +33,20 @@ def main():
         path.write_text(updated)
     # Version-checked hooks at original function entry, before register clobbers.
     hooks = [
+        ('chunk_1103_text1_8022A940.c', '8022AFEC',
+         'extern int melee_menu_update(void*); if (melee_menu_update(ctx)) { ctx->pc = ctx->lr; return; }'),
+        ('chunk_1103_text1_8022A940.c', '8022ADD8',
+         'extern int melee_menu_preview(void*); if (melee_menu_preview(ctx)) { ctx->pc = ctx->lr; return; }'),
+        ('chunk_1101_text1_80229940.c', '80229BF4',
+         'extern int melee_menu_panel(void*); if (melee_menu_panel(ctx)) { ctx->pc = ctx->lr; return; }'),
+        ('chunk_1102_text1_8022A140.c', '8022A5D0',
+         'extern void melee_menu_labels(void*); melee_menu_labels(ctx);'),
+        ('chunk_1109_text1_8022D940.c', '8022DDA8',
+         'extern void melee_menu_enter(void*); melee_menu_enter(ctx);'),
+        ('chunk_1109_text1_8022D940.c', '8022DB10',
+         'extern void melee_menu_think(void*); melee_menu_think(ctx); ctx->pc = ctx->lr; return;'),
+        ('chunk_1108_text1_8022D140.c', '8022D7F4',
+         'extern void melee_menu_think(void*); melee_menu_think(ctx); ctx->pc = ctx->lr; return;'),
         ('chunk_0042_text1_80018140.c', '80018254',
          '''extern int melee_match_option(int);
         if (melee_match_option(7) == 1) {
@@ -179,7 +194,7 @@ def main():
                 '    } }\n    /* '+marker+'_END */\n')
         text = text.replace(anchor, anchor+hook)
     if text != original: path.write_text(text)
-    print('Applied VS-only boot, full roster, asset gates and Lite water reflections.')
+    print('Applied native Mode Select, full VS roster/stages, asset gates and Lite water reflections.')
 
 
 if __name__ == '__main__':

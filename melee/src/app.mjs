@@ -5,17 +5,19 @@ import {keyboardOptions,gameCubeInput,withTouch} from './keyboard.mjs';
 import {NativeRollbackEngine} from './rollback-engine.mjs';
 import {createNativeSession} from './native-match.mjs';
 import {MeleeNativeRoomSession,NATIVE_MENU_PROTOCOL} from './native-room-session.mjs';
-import {mountAdapterControls} from '../../controllers/gc-adapter-ui.mjs';
-import {meleePad} from '../../controllers/gc-adapter.mjs';
+import {createOpenSmashAdapter} from '../../controllers/platform-adapter.mjs';
+import {GameCubeAdapter,meleePad} from '../../controllers/gc-adapter.mjs';
 import {createTouch} from './touch.mjs';
 import {createLocalEnginePause} from './local-engine-pause.mjs';
 // The page boots straight into Melee. Modes are picked in the native menu the
-// engine draws over the character select (LOCAL VERSUS / ONLINE: FRIENDS, CASUAL,
-// RANKED); online games run a second engine in an iframe on Melee's own menus.
+// original Mode Select scene (LOCAL / ONLINE: FRIENDS, CASUAL);
+// online games run a second engine in an iframe on Melee's own menus.
 // The browser only relays the platform's status line into that native screen.
 const $ = id => document.getElementById(id);
-const adapter=mountAdapterControls();
-document.querySelector('button[aria-label="GameCube adapter controls"]')?.classList.add('melee-adapter-entry');
+// Adapter pairing and calibration belong to YouGame Controls.
+const adapter=createOpenSmashAdapter(GameCubeAdapter);
+document.addEventListener('visibilitychange',()=>adapter.suspend(document.hidden));
+window.addEventListener('pagehide',()=>{void adapter.destroy();},{once:true});
 const state = window.melee = {phase:'idle', errors:[], samples:[], module:null, displayedFrames:0, menu:{phase:0,text:'',revision:0}, queueKind:0, room:null, session:null, build:null};
 let input, audio, node, assetLoader, lastFrame=0, generation=0, busy=false;
 let resolveLocalReady,rejectLocalReady,pauseSequence=0;
@@ -132,12 +134,13 @@ function bind(room,token) {
     onStatus:sessionStatus,onError:message=>{if(token===generation)cleanup(message,6);}});
 }
 async function online(kind) {
+  if(![0,2,3].includes(kind))return;
   if(busy)return;
   if(!window.YouGame?.multiplayer?.joinLobby){menuStatus('ONLINE UNAVAILABLE',6);return;}
   if(!state.build){menuStatus('MELEE IS STILL LOADING',6);return;}
   busy=true;state.queueKind=kind;touch.clear();
-  const token=++generation,queue=kind===1?'ranked':kind>=2?'friends':'casual';
-  menuStatus(kind===2?'CREATING FRIEND LOBBY':kind===3?'JOINING FRIEND ROOM':kind===1?'SEARCHING RANKED':'SEARCHING CASUAL',1);
+  const token=++generation,queue=kind>=2?'friends':'casual';
+  menuStatus(kind===2?'CREATING FRIEND LOBBY':kind===3?'JOINING FRIEND ROOM':'SEARCHING CASUAL',1);
   try {
     const room=await YouGame.multiplayer.joinLobby({players:queue==='friends'?4:2,minPlayers:2,maxLocalPlayers:queue==='friends'?4:1,mode:NATIVE_MENU_PROTOCOL,compatibility:state.build,queue,
       onStatus:s=>{if(token!==generation){s.room?.leave();return;}if(s.room)bind(s.room,token);}});
@@ -149,8 +152,8 @@ async function online(kind) {
     cleanup(error.message==='Cancelled'?'':'COULD NOT CONNECT',error.message==='Cancelled'?0:6);
   }
 }
-// Actions from the native menu: 6 pick a queue (0 casual, 1 ranked, 2 friends),
-// 2 back, 4 try again, 7 local play chosen.
+// Actions from the native menu: 6 pick a queue (0 casual, 2 friends),
+// 2 back, 4 try again. There is no platform Local/Online picker.
 function menuAction(action,value) {
   const token=generation;
   // Never tear an engine down from inside its own callback.
@@ -196,9 +199,9 @@ function readSeat(seat,snapshot=adapter.snapshot(),peek=false) {
 }
 function sampleInput() {
   const snapshot=adapter.snapshot();
-  // An online session owns the pads through readPorts: the local engine and its native
-  // menu see neutral until the session ends, so B in a match can never leave the room.
-  const online=!!state.session;touch.context(online);
+  // Once an online engine owns input, B belongs to that game's native scene.
+  // Before then the waiting menu must still receive B so the player can cancel.
+  const online=!!state.session?.engine;touch.context(!!state.session||busy);
   if (state.module && input && !state.rollback?.active && !localPause.blocked) for (let seat=0; seat<4; seat++) {
     const s=input.player(seat)?.state;
     if (!s) continue;
