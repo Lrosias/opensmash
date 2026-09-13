@@ -62,7 +62,7 @@ test('explicit calibration leaves raw bytes untouched; disconnect/type change re
 });
 test('N64 mapping has correct Y, C-stick, shield, grab, d-pad, Start filtering and independent axes',()=>{
   const b=packet();b[2]=GC.A|GC.X|GC.UP;b[3]=(GC.Z|GC.START)>>8;b.set([208,188,180,75,42,0],4);
-  let p=n64Pad(decodeReport(b)[0],undefined,false);assert.deepEqual(p,[0x8000|8|0x800|0x10|1|4,80,60]);
+  let p=n64Pad(decodeReport(b)[0],undefined,false);assert.deepEqual(p,[0x8000|8|0x800|0x10|0x44,80,60]);
   b[8]=43;p=n64Pad(decodeReport(b)[0]);assert(p[0]&0x2000);assert(p[0]&0x1000);
 });
 test('Smash64 and Remix input keep port holes and single online player reads without consuming samples',()=>{

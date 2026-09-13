@@ -65,7 +65,12 @@ Use arrows to move the character-select hand, X to place the token, then Enter
 to queue. Start pauses local games; online games cannot pause.
 Escape leaves an online match.
 A standard browser gamepad is supported: left stick/D-pad move, A attacks, B specials,
-X/Y jump, shoulders/triggers shield, right stick C buttons, Start in local games.
+X/Y jump, shoulders/triggers shield, right stick smash attacks / aerials, Start in local games.
+Flick the right stick and return it to center for the next attack. The dominant
+axis selects the direction; holding the stick never repeats an attack or changes
+movement/air drift. X/Y still jump, including while the right stick is held.
+GameCube adapters use the same C-stick controls on all four ports. Native menu
+costume selection is preserved. Keyboard I/J/K/L retain native N64 C-button behavior.
 
 The original site's server-side AI fighter generation and hosted 1,000-character service
 are not part of this static edition. They remain in `web-prototype/` and `pipeline/`.

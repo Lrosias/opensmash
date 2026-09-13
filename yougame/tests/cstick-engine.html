@@ -1,0 +1,40 @@
+<!doctype html><meta charset="utf-8"><title>C-stick engine verification</title>
+<style>body{background:#151821;color:white;font:15px monospace}iframe{width:640px;height:480px;border:0}button{padding:16px}pre{white-space:pre-wrap}</style>
+<button id="run" disabled>Test C-stick attacks and rollback</button><pre id="report">Loading engine…</pre><iframe id="game"></iframe>
+<script type="module">
+// Copy beside a packaged edition's app.mjs; serve with the standard COOP/COEP test server.
+import {NativeCheckpoints} from './checkpoints.mjs';
+import {readGamepad} from './input.mjs';
+let driver,state,pads=[[0,0,0],[0,0,0]];
+const run=document.querySelector('#run'),report=document.querySelector('#report'),game=document.querySelector('#game');
+window.openSmashAttachEngine=()=>({menuState:()=>({phase:0}),menuAction(){},ready(e){driver=e;run.disabled=false;report.textContent='Ready';},beforeTick:()=>true,afterTick(...s){state=s;},error(e){report.textContent+='\nENGINE ERROR: '+e;},readPorts(ptr,H){for(let i=0;i<4;i++){const p=pads[i],b=(ptr>>2)+i*4;H[b]=p?2:1;H[b+1]=p?.[0]||0;H[b+2]=p?.[1]||0;H[b+3]=p?.[2]||0;}}});
+const q=new URLSearchParams({SSB64_YOUGAME:'1',SSB64_YOUGAME_SESSION:'1',SSB64_YOUGAME_ROLLBACK:'1',SSB64_YOUGAME_MUTE:'1',SSB64_BOOT_BATTLE:'0,8,6,0',SSB64_BOOT_HUMANS:'2',SSB64_BOOT_SLOTS:'hhoo',SSB64_STOCKS:'3',SSB64_VS_INTRO:'0'});
+if(new URLSearchParams(location.search).has('remix'))q.set('SSB64_REMIX_MAIN','1');
+game.src='./engine/index.html?'+q;
+const probe=()=>{const w=game.contentWindow,p=w.Module._port_remix_multiplayer_probe()>>2;return Array.from(w.HEAP32.slice(p,p+26));};
+const step=(pad=[0,0,0],n=1)=>{pads=[pad,[0,0,0]];for(let i=0;i<n;i++)driver.step();return probe();};
+const sample=(x,y,mainX=0,mainY=0)=>readGamepad({connected:true,axes:[mainX,-mainY,x,-y],buttons:[]});
+const check=(value,message)=>{if(!value)throw Error(message);};
+run.onclick=async()=>{
+ run.disabled=true;const log=[],say=s=>{log.push(s);report.textContent=log.join('\n');};
+ try{
+  check(game.contentWindow.Module._port_yougame_cstick_version()===1,'Missing C-stick engine');
+  for(let i=0;i<1800&&!(state?.[4]>=30);i++)step();say('Warmup '+JSON.stringify([state,probe()]));check(state?.[4]>=30,'Battle did not start');
+  const store=new NativeCheckpoints(driver,{window:100});
+  const ground=store.save(0,state),reset=s=>{state=store.load(s);pads=[[0,0,0],[0,0,0]];};
+  const dirs=[[1,0,'right'],[-1,0,'left'],[0,1,'up'],[0,-1,'down']];
+  const groundStatus=[],airStatus=[];
+  for(const [x,y,name] of dirs){reset(ground);const p=step(sample(x,y));groundStatus.push(p[5]);say(name+' grounded status '+p[5]);check(p[5]===({right:204,left:204,up:207,down:208})[name],name+' did not smash');}
+  reset(ground);const jump=step([8,0,0],10);say('Jump status '+jump[5]);
+  const air=store.save(1,state);
+  for(const [x,y,name] of dirs){reset(air);const p=step(sample(x,y));airStatus.push(p[5]);say(name+' aerial status '+p[5]);check(p[5]>=209&&p[5]<=213,name+' did not aerial');}
+  check(new Set(airStatus).size===4,'C-stick aerial directions are not distinct');
+  reset(ground);step(sample(1,0));const held=step(sample(1,0),100);check(held[5]===10,'Held C-stick repeated an attack');
+  reset(ground);const expected=[];
+  for(let i=0;i<60;i++){const p=i%12===0?sample(...dirs[(i/12)%4|0].slice(0,2)):i===8?[8,0,0]:[0,0,0];step(p);expected.push(JSON.stringify([state,probe()]));}
+  reset(ground);
+  for(let i=0;i<60;i++){const p=i%12===0?sample(...dirs[(i/12)%4|0].slice(0,2)):i===8?[8,0,0]:[0,0,0];step(p);check(JSON.stringify([state,probe()])===expected[i],'Rollback differs at frame '+i);}
+  say('PASS: four ground directions, four aerial directions, independent jump, no hold-repeat, 60-frame exact rollback replay');
+ }catch(e){say('FAIL: '+e.stack);}finally{run.disabled=false;}
+};
+</script>

@@ -8,6 +8,7 @@
 #include <sys/utils.h>
 #include <mn/menu.h>
 #include <stdlib.h>
+#include "cstick.inc.h"
 /* The decomp supplies its own N64 stdlib.h without the host environment API. */
 extern char *getenv(const char *);
 

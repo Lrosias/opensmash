@@ -147,6 +147,14 @@ export function n64Pad(port,origin=[128,128,128,128,0,0],allowStart=true) {
     ((b&GC.Z)?0x10:0)|((b&(GC.L|GC.R))||port.triggers.some((v,i)=>v-origin[i+4]>=43)?0x2000:0)|
     (allowStart&&(b&GC.START)?0x1000:0)|((b&GC.UP)?0x800:0)|((b&GC.DOWN)?0x400:0)|
     ((b&GC.LEFT)?0x200:0)|((b&GC.RIGHT)?0x100:0);
-  if(axis[2]>40)mask|=1;if(axis[2]<-40)mask|=2;if(axis[3]<-40)mask|=4;if(axis[3]>40)mask|=8;
+  mask|=n64CStick(axis[2],axis[3],40);
   return [mask,clamp(axis[0],-80,80),clamp(axis[1],-80,80)];
+}
+
+// Unused N64 bit 0x40 distinguishes the attack stick from C-up (jump).
+// Direction lives in bits 0..2; up is the marker alone. The dominant axis
+// wins diagonals, with vertical winning ties, on browser pads and raw adapters.
+export function n64CStick(x,y,deadzone=.5) {
+  if(Math.max(Math.abs(x),Math.abs(y))<=deadzone)return 0;
+  return 0x40|(Math.abs(y)>=Math.abs(x)?(y>0?0:4):(x>0?1:2));
 }

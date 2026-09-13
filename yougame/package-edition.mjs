@@ -8,6 +8,8 @@ const [edition,baseArg,outArg]=process.argv.slice(2),profile=PROFILES[edition];
 if(!profile||!baseArg||!outArg)throw new Error('Expected original|remix, base build, and new output folder');
 const base=path.resolve(baseArg),out=path.resolve(outArg);
 if(out===base||out.startsWith(base+path.sep))throw new Error('Output must be separate from the source');
+if(!(await readFile(path.join(base,'engine/BattleShip.js'),'utf8')).includes('_port_yougame_cstick_version'))
+ throw new Error('This input requires the C-stick engine. Rebuild and overlay BattleShip.js and BattleShip.wasm before packaging.');
 const manifest=JSON.parse(await readFile(path.join(base,'engine/manifest.json'),'utf8'));
 if(!!manifest.remix!==profile.remix)throw new Error('Native asset edition does not match selected profile');
 for(const name of ['BattleShip.wasm','BattleShip.js'])await stat(path.join(base,'engine',name));

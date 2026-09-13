@@ -1,5 +1,5 @@
 import {KeyboardState} from './keyboard.mjs';
-import {n64Pad} from '../../controllers/gc-adapter.mjs';
+import {n64Pad,n64CStick} from '../../controllers/gc-adapter.mjs';
 export function createInput({allowStart=false,readTouch=()=>[0,0,0],adapter=null,enabled=()=>true}={}) {
   const keyboard=new KeyboardState(),cleanups=[];
   function attach(win) {
@@ -59,8 +59,7 @@ export function readGamepad(pad,allowStart=false){
       if (Math.abs(pad.axes[1] || 0) > .18) y = Math.round(-pad.axes[1] * 80);
       if (pad.buttons[12]?.pressed) y = 80; if (pad.buttons[13]?.pressed) y = -80;
       if (pad.buttons[14]?.pressed) x = -80; if (pad.buttons[15]?.pressed) x = 80;
-      if (pad.axes[2] > .5) b |= 1; if (pad.axes[2] < -.5) b |= 2;
-      if (pad.axes[3] > .5) b |= 4; if (pad.axes[3] < -.5) b |= 8;
+      b |= n64CStick(pad.axes[2]||0,-(pad.axes[3]||0));
     }
   return [allowStart?b:b&~0x1000,Math.max(-80,Math.min(80,x)),Math.max(-80,Math.min(80,y))];
 }

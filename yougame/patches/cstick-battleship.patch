@@ -1,0 +1,19 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -932,6 +932,16 @@
+         -sINITIAL_MEMORY=192MB
+         # SESSION mode uses a frame-derived clock; existing modes forward it.
+         -Wl,--wrap=osGetTime,--wrap=osGetCount,--wrap=scVSBattleStartScene
++        # Browser C-stick uses the existing legal attack interrupt checks.
++        -Wl,--wrap=ftCommonAttackS4CheckInterruptCommon
++        -Wl,--wrap=ftCommonAttackS4CheckInterruptDash
++        -Wl,--wrap=ftCommonAttackS4CheckInterruptTurn
++        -Wl,--wrap=ftCommonAttackHi4CheckInterruptCommon
++        -Wl,--wrap=ftCommonAttackHi4CheckInterruptKneeBend
++        -Wl,--wrap=ftCommonAttackLw4CheckInterruptCommon
++        -Wl,--wrap=ftCommonAttackLw4CheckInterruptSquat
++        -Wl,--wrap=ftCommonAttackDashCheckInterruptCommon
++        -Wl,--wrap=ftCommonAttackAirCheckInterruptCommon
+         -sSTACK_SIZE=8388608
+         -sFORCE_FILESYSTEM=1
+         -sEXPORTED_RUNTIME_METHODS=FS,callMain
