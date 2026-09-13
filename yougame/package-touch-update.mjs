@@ -7,6 +7,8 @@ import path from 'node:path';
 if(process.argv.length!==4)throw new Error('Expected base-build and new-output-folder');
 const base=path.resolve(process.argv[2]),out=path.resolve(process.argv[3]);
 if(out===base||out.startsWith(base+path.sep))throw new Error('Output must be separate from the base build');
+if(!(await readFile(path.join(base,'engine/BattleShip.js'),'utf8')).includes('_port_yougame_cstick_version'))
+ throw new Error('This input requires the C-stick engine. Rebuild and overlay BattleShip.js and BattleShip.wasm before packaging.');
 const source=await readFile(path.join(base,'app.mjs'),'utf8');
 const previous=source.match(/const BUILD = '([a-f0-9]+)';/)?.[1];
 if(!previous)throw new Error('Unrecognized build identifier');
@@ -19,6 +21,10 @@ for(const file of ['touch.mjs','touch-state.mjs','touch-stick.mjs','input.mjs','
  // Modules import the shared controllers from the repo root; a package keeps them beside the wrapper.
  const bytes=Buffer.from((await readFile(new URL('./src/'+file,import.meta.url),'utf8')).replaceAll('../../controllers/','./controllers/'));
  await writeFile(path.join(out,file),bytes);hash.update(file).update(bytes);changed.push(file);
+}
+for(const file of (await readdir(new URL('../controllers/',import.meta.url))).filter(f=>f.endsWith('.mjs'))){
+ const bytes=await readFile(new URL('../controllers/'+file,import.meta.url));
+ await writeFile(path.join(out,'controllers',file),bytes);hash.update('controllers/'+file).update(bytes);changed.push('controllers/'+file);
 }
 // app.mjs comes from src too (it wires the touch module), with the path rewrite package-edition.mjs applies.
 const app=(await readFile(new URL('./src/app.mjs',import.meta.url),'utf8')).replaceAll('../../controllers/','./controllers/');

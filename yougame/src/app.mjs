@@ -173,7 +173,7 @@ async function online(){
  if(platformLobby)window.focus();
  status(queueKind===2?'CREATING FRIEND LOBBY':queueKind===3?'JOINING FRIEND ROOM':queueKind===1?'SEARCHING RANKED':'SEARCHING CASUAL',1);const token=++generation;
  try{
-  const options={players:queueKind>=2?4:2,minPlayers:2,maxLocalPlayers:queueKind>=2?4:1,compatibility:BUILD+(queueKind===1?':slots-v1':':native-menu-v1'),mode:COMPETITIVE_MODE,queue:queueKind===1?'ranked':queueKind>=2?'friends':'casual',onStatus:s=>{
+  const options={players:queueKind>=2?4:2,minPlayers:2,maxLocalPlayers:queueKind>=2?4:1,compatibility:BUILD+(queueKind===1?':slots-v1':':native-menu-v1'),mode:COMPETITIVE_MODE,queue:queueKind===1?'ranked':queueKind>=2?'friends':'casual',direct:true,onStatus:s=>{
    if(token!==generation){s.room?.leave();return;}
    if(s.room)bind(s.room);
   }};

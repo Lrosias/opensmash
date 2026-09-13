@@ -1,0 +1,30 @@
+--- a/src/sys/controller.c
++++ b/src/sys/controller.c
+@@ -6,6 +6,7 @@
+ #endif
+ #ifdef __EMSCRIPTEN__
+ #include <emscripten.h>
++extern void port_yougame_cstick_read(int, SYController *, int);
+ #endif
+ 
+ #include <sys/main.h>
+@@ -196,6 +197,9 @@
+     sSYControllerDescs[i].unk0E = sSYControllerDescs[i].unk0F = 0;
+     sSYControllerDescs[i].unk18 = sSYControllerDescs[i].unk10;
+     gSYControllerDevices[i] = (SYController){0};
++#ifdef __EMSCRIPTEN__
++    port_yougame_cstick_read(i, &gSYControllerDevices[i], 0);
++#endif
+ }
+ #endif
+ 
+@@ -331,6 +335,9 @@
+                                 || scene == nSCKind1PGame
+                                 || scene == nSCKind1PBonusStage
+                                 || scene == nSCKind1PTrainingMode);
++#ifdef __EMSCRIPTEN__
++            port_yougame_cstick_read(i, &gSYControllerDevices[i], in_gameplay);
++#endif
+             if (i < GMCOMMON_PLAYERS_MAX && in_gameplay) {
+                 port_enhancement_c_stick_smash(i,
+                     &gSYControllerDevices[i].button_hold,
