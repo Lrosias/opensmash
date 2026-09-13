@@ -6,7 +6,7 @@
  #include <emscripten.h>
 +extern void port_yougame_cstick_read(int, SYController *, int);
  #endif
- 
+
  #include <sys/main.h>
 @@ -196,6 +197,9 @@
      sSYControllerDescs[i].unk0E = sSYControllerDescs[i].unk0F = 0;
@@ -17,7 +17,7 @@
 +#endif
  }
  #endif
- 
+
 @@ -331,6 +335,9 @@
                                  || scene == nSCKind1PGame
                                  || scene == nSCKind1PBonusStage
