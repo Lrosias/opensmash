@@ -43,7 +43,7 @@ def main():
         run([EMSDK / 'emcmake', 'cmake', '-S', BUILD / 'runtime', '-B', BUILD / 'wasm', '-G', 'Ninja',
              '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_TESTING=OFF', '-DENABLE_GENERIC=ON',
              '-DENABLE_VULKAN=OFF', '-DENABLE_X11=OFF', '-DENABLE_EGL=OFF', '-DENABLE_WAYLAND=OFF',
-             '-DUSE_SYSTEM_LIBS=OFF', '-DCMAKE_C_FLAGS=-pthread', '-DCMAKE_CXX_FLAGS=-pthread',
+             '-DUSE_SYSTEM_LIBS=OFF', f'-DCMAKE_C_FLAGS=-pthread -ffile-prefix-map={Path.home().as_posix()}=/build -ffile-prefix-map={ROOT.as_posix()}=/src', f'-DCMAKE_CXX_FLAGS=-pthread -ffile-prefix-map={Path.home().as_posix()}=/build -ffile-prefix-map={ROOT.as_posix()}=/src',
              '-DMODERNGEKKO_ENABLE_DYNAMIC_MODULES=OFF',
              f'-DGENERATED={BUILD / "game-small/generated"}',
              f'-DOPENSMASH_WEB_FRONTEND={ROOT / "melee/engine"}'], env=env)
@@ -108,6 +108,7 @@ def main():
         'Original Melee game data: Nintendo / HAL Laboratory, Inc. '
         'Game-derived build inputs were supplied by the user.\n')
     shutil.copy2(native / 'runtime/LICENSE', dist / 'GPL-3.0.txt')
+    run([sys.executable, ROOT / 'yougame/privacy/build_privacy.py', 'scan', dist])
     print(f'Engine transfer: {manifest["transferBytes"]:,} bytes as one HTTP-compressed Wasm resource')
     print(f'Staged {dist}; browser gameplay verification is still required.')
 

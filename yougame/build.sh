@@ -14,7 +14,9 @@ python3 remix/verify_main.py
 python3 remix/prepare_main.py
 emcmake cmake -S BattleShip -B "BattleShip/$engine_build" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release -DSSB64_VERSION=us \
-  -DPython3_EXECUTABLE="$python_env/bin/python3" -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+  -DPython3_EXECUTABLE="$python_env/bin/python3" -DFETCHCONTENT_FULLY_DISCONNECTED=ON \
+  "-DCMAKE_C_FLAGS=-ffile-prefix-map=$HOME=/build -ffile-prefix-map=$PWD=/src" \
+  "-DCMAKE_CXX_FLAGS=-ffile-prefix-map=$HOME=/build -ffile-prefix-map=$PWD=/src"
 cmake --build "BattleShip/$engine_build" --target BattleShip.js -j 6
 PACKAGE_O2R=1 BattleShip/scripts/package_web.sh "$engine_build" web-dist
 python3 remix/package_main.py
