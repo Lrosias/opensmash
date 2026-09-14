@@ -3,32 +3,19 @@
 <title>OpenSmash64 arena</title><style>
 html,body{margin:0;background:#000;height:100%;overflow:hidden}body{display:grid;place-items:center}
 canvas{width:min(100vw,calc(100vh * 4 / 3));height:min(100vh,calc(100vw * 3 / 4));outline:none;touch-action:none}
-#status{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;box-sizing:border-box;color:#f6f3e8;font:700 14px system-ui;background:radial-gradient(ellipse at 50% 20%,#263548,#0b101b 70%);text-align:center}
-#status[hidden]{display:none}.loading-brand{letter-spacing:.24em;font-size:12px;color:#dfbd6c}.loading-title{font-size:clamp(24px,7vw,54px);font-weight:950;letter-spacing:-.04em;margin:0;text-transform:uppercase}.loading-match{display:flex;align-items:center;width:min(760px,94%);gap:12px}.loading-match[hidden]{display:none}.loading-fighter{flex:1;min-width:0;position:relative;overflow:hidden;padding:24px 12px;background:linear-gradient(120deg,#742b35,#2c1726);border-bottom:3px solid #f26d75;animation:card-arrive .45s ease-out both}.loading-fighter:last-child{background:linear-gradient(240deg,#254c86,#152437);border-color:#78b8ff;animation-delay:.1s}.loading-fighter:after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 20%,#ffffff09 50%,transparent 80%);animation:card-shimmer 2.4s ease-in-out infinite}.loading-fighter small{display:block;color:#f7b2b7;letter-spacing:.16em;margin-bottom:8px}.loading-fighter:last-child small{color:#a9d0ff}.loading-fighter strong{display:block;font-size:clamp(17px,4.5vw,34px);line-height:1.05;text-transform:uppercase;overflow-wrap:break-word}.loading-vs{font-size:24px;font-style:italic;color:#edca70}.loading-meta{color:#b8c4d5;font-size:13px;letter-spacing:.05em}.loading-progress{width:min(420px,80%);height:4px;border:0;accent-color:#e4c46f}.loading-progress::-webkit-progress-bar{background:#ffffff18}.loading-progress::-webkit-progress-value{background:#e4c46f;transition:width .15s}.loading-caption{font-size:11px;letter-spacing:.16em;color:#c4cfdd;text-transform:uppercase}
-.loading-fighter[data-port="2"]{background:linear-gradient(120deg,#68561e,#292416);border-color:#e7c661}.loading-fighter[data-port="3"]{background:linear-gradient(120deg,#246443,#152a24);border-color:#6cc493}.loading-fighter[data-port="2"] small,.loading-fighter[data-port="3"] small{color:#f2ead4}.loading-match:has(.loading-fighter:nth-child(3)) strong{font-size:clamp(14px,3vw,25px)}
-@keyframes card-arrive{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes card-shimmer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
-@media(max-height:400px){#status{gap:12px;padding:12px}.loading-fighter{padding:16px 8px}.loading-title{font-size:26px}}
-@media(prefers-reduced-motion:reduce){.loading-fighter,.loading-fighter:after{animation:none}.loading-progress::-webkit-progress-value{transition:none}}
+#status{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#ddd;background:#000;font:14px Arial,sans-serif;text-align:center}
+#status[hidden]{display:none}.loading-progress{width:160px;height:3px;border:0;accent-color:#ddd}.loading-progress::-webkit-progress-bar{background:#333}.loading-progress::-webkit-progress-value{background:#ddd}
 </style></head><body><canvas id="canvas" tabindex="0"></canvas><section id="status" role="status" aria-live="polite">
-<div class="loading-brand">OPENSMASH64 REMIX</div><h1 class="loading-title">Ready for the next battle</h1>
-<div class="loading-match" hidden><div class="loading-fighter"><small>PLAYER 1</small><strong id="loading-p1"></strong></div><span class="loading-vs">VS</span><div class="loading-fighter"><small>PLAYER 2</small><strong id="loading-p2"></strong></div></div>
-<div class="loading-meta" id="loading-meta">Choose your fighter. Make it count.</div>
-<progress class="loading-progress" id="loading-progress" max="1" value="0" aria-label="Loading game assets"></progress><div class="loading-caption" id="loading-caption">Loading arena</div>
+<div id="loading-caption">Loading…</div>
+<progress class="loading-progress" id="loading-progress" max="1" value="0" aria-label="Loading game assets"></progress>
 </section>
 <script type="module">
 import {loadPageComparator} from '../page-compare.mjs';
 import {startOfflineClock} from '../frame-clock.mjs';
 import {createAudioOutput,muteEngineOutput} from '../audio-output.mjs';
-import {loadingMatch} from '../presentation.mjs';
 const status = document.querySelector('#status');
 const caption=document.querySelector('#loading-caption'),progress=document.querySelector('#loading-progress');
 const params = new URLSearchParams(location.search);
-const match=loadingMatch(params);
-if(match){
- const cards=document.querySelector('.loading-match');cards.hidden=false;cards.replaceChildren();
- match.fighters.forEach((name,i)=>{const card=document.createElement('div');card.className='loading-fighter';card.dataset.port=match.ports[i];const label=document.createElement('small');label.textContent=`PLAYER ${match.ports[i]+1}`;const title=document.createElement('strong');title.textContent=name;card.append(label,title);cards.append(card);});
- document.querySelector('#loading-meta').textContent=`${match.stage} · ${match.stocks} stocks`;
-}else document.querySelector('.loading-title').textContent='Choose your fighter';
 const bridge = parent.openSmashAttachEngine(window);
 const rollback=params.has('SSB64_YOUGAME_ROLLBACK');
 const muted=params.get('SSB64_YOUGAME_MUTE')==='1';
@@ -45,7 +32,7 @@ window.Module = {
   print:() => {}, printErr:t => console.warn(t),
   onAbort:e => bridge.error(String(e)),
   async onRuntimeInitialized() {
-    caption.textContent='Preparing fighters';
+    caption.textContent='Loading…';
     try {
         Module.callMain([]);
         if(Asyncify.currData)await Asyncify.whenDone();

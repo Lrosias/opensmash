@@ -295,3 +295,7 @@ replace(p,'sizeof(Gfx) * 2500,         // Display List Buffer 0 Size','sizeof(Gf
 # Four detailed fighter previews plus costume labels exceed the original CSS budget.
 p=ENGINE/'decomp/src/mn/mnplayers/mnplayersvs.c'
 replace(p,'sizeof(Gfx) * 2750,         // Display List Buffer 0 Size','sizeof(Gfx) * 8192,         // Display List Buffer 0 Size')
+
+# Original Remix-style victory scene and expanded ROM art tables.
+from prepare_results import install_results
+install_results()

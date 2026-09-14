@@ -12,6 +12,8 @@ def extract_menu(rom,out):
  assert set(layout)==set(IDS) and len(set(layout))==34
  offsets=struct.unpack_from('>76I',rom.data,table_at)
  for fid in (0xa05,0xa06,0x11,0x12,0x15,0xa04,0x1e):rom.file(fid)
+ from extract_results import extract_results
+ extract_results(rom,out)
  stage_table_at=0x2c56c9c
  stage_offsets=[struct.unpack_from('>I',rom.data,stage_table_at+4*r)[0] for _,_,_,r in STAGES]
  for offset in stage_offsets:

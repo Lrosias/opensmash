@@ -1,7 +1,7 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE),fs=require('fs'),assert=require('node:assert/strict');
 const rows=JSON.parse(fs.readFileSync('build/remix/main/assets/costume-extraction.json')).fighters;
 (async()=>{const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--enable-unsafe-swiftshader']});try{const p=await browser.newPage({viewport:{width:960,height:720}}),errors=[];p.on('pageerror',e=>errors.push(String(e)));p.on('console',m=>{if(/OVERFLOW/i.test(m.text()))errors.push(m.text())});
-await p.goto('http://127.0.0.1:4201/presentation-check.html');await p.waitForFunction(()=>window.driver,null,{timeout:60000});
+await p.goto((process.env.POLISH_URL||'http://127.0.0.1:4201')+'/presentation-check.html');await p.waitForFunction(()=>window.driver,null,{timeout:60000});
 const report=await p.evaluate(rows=>{
  const tick=(n,port=0,pad=[0,0,0])=>{pads=Array.from({length:4},()=>[0,0,0]);pads[port]=pad;for(let i=0;i<n;i++)driver.step();};
 const layout=[63,32,4,0,2,5,3,7,30,59,64,31,11,6,8,1,9,10,29,62,65,72,33,73,52,55,56,57,58,68,34,38,74,75];
@@ -18,7 +18,7 @@ const layout=[63,32,4,0,2,5,3,7,30,59,64,31,11,6,8,1,9,10,29,62,65,72,33,73,52,5
  for(let port=2;port<4;port++){tick(1,port,[4096,0,0]);tick(20);choose(port,68);}
  const duplicates=probe();tick(1,2,[1,0,0]);tick(3);const selected=probe();
  tick(1,0,[4096,0,0]);tick(60);tick(1,0,[32768,0,0]);tick(800);const battle=probe();
- let frames=0;while(game.contentWindow.Module.nativeScene!==24&&frames++<6000){if(frames%240===0)for(let port=0;port<3;port++)game.contentWindow.Module._port_remix_test_position(port,4900,100);tick(1);}tick(80);
+ let frames=0;while(game.contentWindow.Module.nativeScene!==24&&frames++<6000){if(frames%240===0)for(let port=0;port<3;port++)game.contentWindow.Module._port_remix_test_position(port,4900,100);tick(1);}tick(410);
  const result={...game.contentWindow.Module.remixResults};tick(1,3,[4096,0,0]);tick(800);const rematch=probe();
  return {checks,simultaneous,duplicates,selected,battle,result,rematch};
 },rows);
@@ -26,5 +26,5 @@ for(const c of report.checks){assert.deepEqual(c.colors,Array.from({length:c.cou
 assert.notEqual(report.simultaneous[2],report.simultaneous[5]);
 assert.equal(new Set([2,5,8,11].map(i=>report.duplicates[i])).size,4);assert.equal(report.result.winner,3);
 for(const i of [2,5,8,11]){assert.equal(report.selected[i],report.battle[i]);assert.equal(report.battle[i],report.rematch[i]);}
-assert.deepEqual(errors,[]);await p.screenshot({path:'/tmp/remix-costumes-rematch.png'});fs.writeFileSync('/tmp/remix-costumes-results.json',JSON.stringify({report,errors},null,2));console.log(JSON.stringify({fighters:report.checks.length,colors:report.checks.reduce((a,c)=>a+c.count,0),duplicates:report.duplicates,selected:report.selected,battle:report.battle,rematch:report.rematch,errors}));
+assert.deepEqual(errors,[]);await p.screenshot({path:(process.env.POLISH_EVIDENCE||'/tmp')+'/remix-costumes-rematch.png'});fs.writeFileSync((process.env.POLISH_EVIDENCE||'/tmp')+'/remix-costumes-results.json',JSON.stringify({report,errors},null,2));console.log(JSON.stringify({fighters:report.checks.length,colors:report.checks.reduce((a,c)=>a+c.count,0),duplicates:report.duplicates,selected:report.selected,battle:report.battle,rematch:report.rematch,errors}));
 }finally{await browser.close()}})().catch(e=>{console.error(e);process.exitCode=1});

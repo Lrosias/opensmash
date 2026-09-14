@@ -530,56 +530,19 @@ void port_remix_css_start(void){
  c->vec.eye=(Vec3f){-1500,1800,7000};c->vec.at=(Vec3f){0,200,0};c->vec.up=(Vec3f){0,1,0};
  gcMakeGObjSPAfter(nGCCommonKindPlayerSelect,menu_run,15,GOBJ_PRIORITY_DEFAULT);draw_menu();
 }
-/* The original results scene indexes twelve-character tables and writes its
- * twelve-character record book. Imported IDs must never enter that code. */
-static int results_wait,results_online,results_override=-3,results_cycle,results_pose,results_details,results_count,results_winner,results_age;
-static GObj *results_stats;
+/* Keep result authority and multiplayer navigation outside the original scene.
+ * Rendering, staging, typography and timing belong to mnVSResults. */
+static int results_wait,results_online,results_override=-3,results_cycle,results_pose,results_details;
 static void reset_results_online(void){results_online=0;results_override=-3;}
-static GObj *results_fighters[4];
-static void results_rect(int x,int y,int right,int bottom,int color){
- gDPSetPrimColor(gSYTaskmanDLHeads[0]++,0,0,color>>16,(color>>8)&255,color&255,255);
- gDPFillRectangle(gSYTaskmanDLHeads[0]++,x,y,right,bottom);
-}
-static void results_backdrop(GObj *g){
- SCBattleState *bs=&gSCManagerTransferBattleState;int j=0;
- const int colors[]={0xDC6268,0x6BA8EB,0xE7C661,0x6CC493};
- gDPPipeSync(gSYTaskmanDLHeads[0]++);gDPSetCycleType(gSYTaskmanDLHeads[0]++,G_CYC_1CYCLE);
- gDPSetCombineLERP(gSYTaskmanDLHeads[0]++,0,0,0,PRIMITIVE,0,0,0,PRIMITIVE,0,0,0,PRIMITIVE,0,0,0,PRIMITIVE);
- gDPSetRenderMode(gSYTaskmanDLHeads[0]++,G_RM_AA_XLU_SURF,G_RM_AA_XLU_SURF2);
- results_rect(18,37,300,78,results_winner>=0?0x2C2630:0x17263C);
- results_rect(18,37,18+(results_age<24?results_age:24)*282/24,38,0xE9C86E);
- for(int i=0;i<4;i++)if(bs->players[i].pkind!=nFTPlayerKindNot){
-  int x=18+j++*280/results_count,right=x+280/results_count-5;
-  results_rect(x,87,right,194,i==results_winner?0x292735:0x142133);
-  results_rect(x,87,right,89,colors[i]);
-  results_rect(x,165,right,194,i==results_winner?0x37303B:0x1B2B40);
- }
- results_rect(18,200,300,216,0x203149);
- gDPPipeSync(gSYTaskmanDLHeads[0]++);gDPSetRenderMode(gSYTaskmanDLHeads[0]++,G_RM_AA_ZB_OPA_SURF,G_RM_AA_ZB_OPA_SURF2);
- lbCommonClearExternSpriteParams();
-}
-static void draw_results_stats(void){
- SCBattleState *bs=&gSCManagerTransferBattleState;char line[96];int j=0;
- if(results_stats)gcEjectGObj(results_stats);
- results_stats=gcMakeGObjSPAfter(0,NULL,28,GOBJ_PRIORITY_DEFAULT);gcAddGObjDisplay(results_stats,lbCommonDrawSObjAttr,27,GOBJ_PRIORITY_DEFAULT,~0);
- for(int i=0;i<4;i++)if(bs->players[i].pkind!=nFTPlayerKindNot){
-  SCPlayerData *p=&bs->players[i];float x=20+j++*280.0F/results_count,scale=results_count>2?0.38F:0.55F;int kos=0;
-  for(int k=0;k<4;k++)kos+=p->total_kos_players[k];
-  if(results_online)snprintf(line,sizeof(line),"P%d   STOCKS %d",i+1,p->stock_count+1);
-  else if(results_details)snprintf(line,sizeof(line),"DEALT %d   TAKEN %d",p->total_damage_given,p->total_damage_all);
-  else snprintf(line,sizeof(line),"%s%d   KO %d   FALLS %d",p->pkind==nFTPlayerKindCom?"CPU ":"P",i+1,kos,p->falls);
-  port_yougame_menu_text(results_stats,line,x,184,scale,0xBDCDE1);
- }
- EM_ASM({if(Module.remixResults)Module.remixResults.details=!!$0;},results_details);
-}
-static void results_run(GObj *gobj){
+extern void port_remix_results_stats(int);
+void port_remix_results_controls(void){
  int controller=0;
  if(port_yougame_session_enabled())while(controller<3&&!local_human[controller])controller++;
  int taps=gSYControllerDevices[controller].button_tap;
- if(results_age<24)results_age++;
+
  if(!results_online)for(int i=1;i<4;i++)if(gSCManagerTransferBattleState.players[i].pkind==nFTPlayerKindMan)taps|=gSYControllerDevices[i].button_tap;
  if(results_wait){results_wait--;return;}
- if((taps&Z_TRIG)&&!results_online){results_details=!results_details;draw_results_stats();func_800269C0_275C0(nSYAudioFGMMenuScroll2);return;}
+ if((taps&(Z_TRIG|R_TRIG))&&!results_online){results_details=!results_details;port_remix_results_stats(results_details);EM_ASM({if(Module.remixResults)Module.remixResults.details=!!$0;},results_details);func_800269C0_275C0(nSYAudioFGMMenuScroll2);return;}
  if(taps&(A_BUTTON|START_BUTTON)){func_800269C0_275C0(nSYAudioFGMMenuSelect);
   if(results_online){EM_ASM({if(Module.onYouGameMenu)Module.onYouGameMenu(3,0);});results_wait=30;}
   else if((taps&START_BUTTON)&&local_setup_saved&&!port_yougame_session_enabled()){stage_cursor=local_saved_stage;memcpy(chosen,local_saved_chosen,sizeof(chosen));memcpy(local_human,local_saved_human,sizeof(local_human));memcpy(local_active,local_saved_active,sizeof(local_active));memcpy(color_choice,local_saved_colors,sizeof(color_choice));for(int p=0;p<4;p++)color_kind[p]=chosen[p];start_local_match();}
@@ -604,6 +567,8 @@ static int remix_win_music(int id){
  default:return nSYAudioBGMWinDefault;
  }
 }
+void port_remix_results_announce(int id){announce_fighter(id);}
+int port_remix_results_music(int id){return remix_win_music(id);}
 /* SESSION receipt capture initialized these native rankings after all battle
  * and sudden-death processing. Presentation must use the same placements. */
 static unsigned int results_native_winners(SCBattleState *bs,int places[4]){
@@ -635,40 +600,12 @@ int port_remix_results_start(void){
   }
   if(winners!=1||bs->is_team_battle)winner=-1;
  }
- port_yougame_menu_font();results_wait=60;results_count=count;results_details=0;results_stats=NULL;results_winner=winner;results_age=0;
+ results_wait=0;results_details=0;
  results_pose=winner_mask?nFTDemoStatusWin1+(results_cycle++%3):nFTDemoStatusLose;
- syAudioStopBGMAll();syAudioPlayBGM(0,winner>=0?remix_win_music(bs->players[winner].fkind):nSYAudioBGMResults);
- if(winner>=0||(winning_team>=0&&winning_team<3)){extern void mnVSResultsMakeAudioThread(void);mnVSResultsMakeAudioThread();}
- efParticleInitAll();efManagerInitEffects();ftManagerAllocFighter(FTDATA_FLAG_SUBMOTION,count);
- memset(results_fighters,0,sizeof(results_fighters));
- gcMakeDefaultCameraGObj(16,GOBJ_PRIORITY_DEFAULT,100,COBJ_FLAG_ZBUFFER|COBJ_FLAG_FILLCOLOR,GPACK_RGBA8888(0x0B,0x14,0x25,0xFF));
- mnPlayersVSMakePortraitCamera();mnPlayersVSMakeFighterCamera();
- {GObj *camera=gcMakeCameraGObj(1,NULL,16,GOBJ_PRIORITY_DEFAULT,lbCommonDrawSprite,80,COBJ_MASK_DLLINK(28),~0,FALSE,nGCProcessKindFunc,NULL,1,FALSE);
- syRdpSetViewport(&CObjGetStruct(camera)->viewport,10,10,310,230);
- gcAddGObjDisplay(gcMakeGObjSPAfter(0,NULL,28,GOBJ_PRIORITY_DEFAULT),results_backdrop,28,GOBJ_PRIORITY_DEFAULT,~0);}
- g=gcMakeGObjSPAfter(0,results_run,15,GOBJ_PRIORITY_DEFAULT);gcAddGObjDisplay(g,lbCommonDrawSObjAttr,27,GOBJ_PRIORITY_DEFAULT,~0);
- port_yougame_menu_text(g,"OPENSMASH64 REMIX",20,18,0.75F,0xF4CF68);
- port_yougame_menu_text(g,gSCManagerSceneData.is_reset?"NO CONTEST":winning_team>=0?"WINNING TEAM":winner_mask&&winner<0?"WINNERS":winner<0?"MATCH COMPLETE":"WINNER",20,42,0.75F,0xFFFFFF);
- if(winning_team>=0&&winning_team<3){const char *teams[]={"RED","BLUE","GREEN"};snprintf(line,sizeof(line),"%s TEAM WINS",teams[winning_team]);port_yougame_menu_text(g,line,20,59,1.0F,0xFFD35C);}
- else if(winner>=0){snprintf(line,sizeof(line),"%s WINS",fighter_name(bs->players[winner].fkind));port_yougame_menu_text(g,line,20,59,1.0F,0xFFD35C);announce_fighter(bs->players[winner].fkind);}
- else if(winner_mask)port_yougame_menu_text(g,"SHARED FIRST PLACE",20,59,0.8F,0xFFD35C);
- for(i=0,j=0;i<4;i++)if(bs->players[i].pkind!=nFTPlayerKindNot){
-  FTDesc d=dFTManagerDefaultFighterDesc;GObj *f;float x=20+j*280.0F/count,scale;
-  ftManagerSetupFilesAllKind(bs->players[i].fkind);d.fkind=bs->players[i].fkind;d.costume=bs->players[i].costume;d.shade=bs->players[i].shade;d.player=i;d.figatree_heap=syTaskmanMalloc(gFTManagerFigatreeHeapSize,16);d.is_skip_shadow_setup=TRUE;
-  f=results_fighters[i]=ftManagerMakeFighter(&d);
-  scSubsysFighterSetStatus(f,(winner_mask&(1u<<i))?results_pose:nFTDemoStatusLose);
-  scale=port_fighter_scale(d.fkind)*(count>2?((winner_mask&(1u<<i))?0.85F:0.68F):((winner_mask&(1u<<i))?1.15F:0.92F));
-  DObjGetStruct(f)->translate.vec.f=(Vec3f){(j-(count-1)*0.5F)*(count>2?950:1500),-450,0};
-  DObjGetStruct(f)->rotate.vec.f.y=F_CST_DTOR32(-12);
-  DObjGetStruct(f)->scale.vec.f=(Vec3f){scale,scale,scale};
-  if(native_results&&!gSCManagerSceneData.is_reset&&places[i]>=0)snprintf(line,sizeof(line),"%d %s",places[i]+1,fighter_name(d.fkind));else snprintf(line,sizeof(line),"%s",fighter_name(d.fkind));port_yougame_menu_text(g,line,x,174,count>2?0.42F:0.6F,(winner_mask&(1u<<i))?0xFFD35C:0xFFFFFF);
-  snprintf(line,sizeof(line),(winner_mask&(1u<<i))?"P%d WINNER":"P%d",i+1);port_yougame_menu_text(g,line,x,94,count>2?0.45F:0.6F,(winner_mask&(1u<<i))?0xFFD35C:0xBDCDE1);j++;
- }
- port_yougame_menu_text(g,results_online?"A OR START   REMATCH":(local_setup_saved&&!port_yougame_session_enabled())?"START REMATCH   A CHOOSE FIGHTERS":"A OR START   CHOOSE FIGHTERS",20,205,0.6F,0xFFFFFF);
- port_yougame_menu_text(g,results_online?"B   LEAVE MATCH":"B VS MODE   Z MATCH STATS",20,222,0.5F,0xBDCDE1);
+ extern void port_remix_native_results(unsigned int,int*,int,int);
+ port_remix_native_results(winner_mask,places,winning_team,results_pose);
  EM_ASM({Module.remixResults=({winner:$0,winnerMask:$5,places:[$6,$7,$8,$9],winningTeam:$10,fighters:[$1,$2,$3,$4].filter(x=>x>=0&&x<76),animated:true});},winner,bs->players[0].pkind!=nFTPlayerKindNot?bs->players[0].fkind:-1,bs->players[1].pkind!=nFTPlayerKindNot?bs->players[1].fkind:-1,bs->players[2].pkind!=nFTPlayerKindNot?bs->players[2].fkind:-1,bs->players[3].pkind!=nFTPlayerKindNot?bs->players[3].fkind:-1,winner_mask,places[0],places[1],places[2],places[3],winning_team);
  EM_ASM({Object.assign(Module.remixResults,{pose:$0,online:!!$1,rematch:!!$2});},results_pose,results_online,results_online||(local_setup_saved&&!port_yougame_session_enabled()));
- draw_results_stats();
  return 1;
 }
 /* Display only after the multiplayer service confirms a result. */
@@ -677,8 +614,8 @@ EMSCRIPTEN_KEEPALIVE int port_remix_online_results(int first,int second,int winn
  for(i=0;i<34;i++){if(picks[i]==first)a=1;if(picks[i]==second)b=1;}
  if(!port_remix_enabled()||!a||!b||winner< -2||winner>1||stocks0<0||stocks0>99||stocks1<0||stocks1>99)return 0;
  results_online=1;results_override=winner<0?-1:winner;gSCManagerSceneData.is_reset=winner==-2;
- bs->pl_count=2;bs->cp_count=0;
- for(i=0;i<4;i++){memset(&bs->players[i],0,sizeof(bs->players[i]));bs->players[i].pkind=i<2?nFTPlayerKindMan:nFTPlayerKindNot;bs->players[i].fkind=i==0?first:second;bs->players[i].player=i;bs->players[i].stock_count=(i?stocks1:stocks0)-1;}
+ bs->pl_count=2;bs->cp_count=0;bs->is_team_battle=FALSE;bs->game_rules=SCBATTLE_GAMERULE_STOCK;
+ for(i=0;i<4;i++){memset(&bs->players[i],0,sizeof(bs->players[i]));bs->players[i].pkind=i<2?nFTPlayerKindMan:nFTPlayerKindNot;bs->players[i].fkind=i==0?first:second;bs->players[i].player=i;bs->players[i].color=i;bs->players[i].tag=i;bs->players[i].place=winner<0?0:i==winner?0:1;bs->players[i].stock_count=(i?stocks1:stocks0)-1;}
  scene(nSCKindVSResults);return 1;
 }
 

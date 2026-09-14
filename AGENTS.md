@@ -1,5 +1,7 @@
 # OpenSmash workflow preferences
 
+- Prefer Smash Remix’s original multiplayer UI, assets, layouts and interaction flows. Adapt the original implementation for the expanded roster rather than adding custom branded victory panels or animated loading cards.
+
 - Always build on top of the latest source from the publishing repository (`lrosias/main`, not the upstream `origin/main`). Fetch before starting release work and again before publishing; reconcile any newer changes and compare against the current live release. Preserve existing features and run regression checks before publishing. Never publish an older candidate over a newer release.
 
 - Prioritize MCP tools and direct APIs over browser automation for YouGame operations.

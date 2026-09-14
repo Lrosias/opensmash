@@ -10,7 +10,7 @@ import tempfile
 root = Path(__file__).resolve().parents[2]
 source = (root / "remix/main.c").read_text()
 helper = source[source.index("static unsigned int results_native_winners("):source.index("int port_remix_results_start(void){")]
-selection = source[source.index("int port_remix_results_start(void){"):source.index(" port_yougame_menu_font();results_wait=60;")]
+selection = source[source.index("int port_remix_results_start(void){"):source.index(" results_wait=0;results_details=0;")]
 preamble = r'''
 #include <assert.h>
 #include <stdio.h>
