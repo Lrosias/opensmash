@@ -25,6 +25,7 @@ saved = cut("static int local_setup_saved,", "static GObj *words;")
 lookup = cut("static int portrait_index(int id){", "static SObj *menu_sprite(")
 pucks = cut("static void portrait_xy(int index,float *x,float *y){", "static const int puck_sprites[]=")
 select = cut("static void select_run(void){", "static void menu_run(GObj *gobj){")
+colors = cut("static int color_count", "static void preview_run")
 menu = cut("static void menu_run(GObj *gobj){", "void port_remix_css_start(void){")
 preamble = r'''
 #include <assert.h>
@@ -39,6 +40,8 @@ preamble = r'''
 #define D_JPAD 0x400
 #define L_JPAD 0x200
 #define R_JPAD 0x100
+#define L_CBUTTONS 2
+#define R_CBUTTONS 1
 enum { nSYAudioFGMMenuSelect, nSYAudioFGMMenuDenied, nSYAudioFGMMenuScroll2, nSYAudioFGMSamusDash, nSYAudioVoicePublicCheer };
 enum { nSCKindVSMode = 1, nSCKindVSBattle, SCBATTLE_GAMERULE_STOCK };
 enum { nFTPlayerKindNot, nFTPlayerKindMan, nFTPlayerKindCom, nFTKindNull = -1 };
@@ -52,6 +55,8 @@ static int remix_menu_layout[34], port_yougame_menu_context, port_yougame_queue_
 static float HEAPF32[1];
 static int port_yougame_session_enabled(void){return session;}
 static void func_800269C0_275C0(int fgm){(void)fgm;}
+static int port_fighter_costume_count(int id){return id>=29?6:4;}
+static int ftParamGetCostumeCommonID(int id,int color){return color;}
 static void announce_fighter(int id){(void)id;}
 static void scene(int id){scene_calls++;last_scene=id;}
 static void draw_menu(void){}
@@ -98,7 +103,7 @@ compiler = os.environ.get("CC", "cc")
 with tempfile.TemporaryDirectory(prefix="remix-select-flow-") as directory:
     c_file = Path(directory) / "check.c"
     binary = Path(directory) / ("check.exe" if os.name == "nt" else "check")
-    c_file.write_text(preamble + stages + state + saved + lookup + pucks + select + menu + finish)
+    c_file.write_text(preamble + stages + state + saved + colors + lookup + pucks + select + menu + finish)
     if Path(compiler).name.lower() in ("cl", "cl.exe"):
         subprocess.run([compiler, "/nologo", f"/Fe{binary}", f"/Fo{directory}\\", str(c_file)], check=True)
     else:

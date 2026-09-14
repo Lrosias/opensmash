@@ -58,3 +58,6 @@ if __name__=='__main__':
 
   from extract_presentation import extract_presentation
   extract_presentation(sys.argv[1])
+
+  from extract_costumes import extract as extract_costumes
+  extract_costumes(sys.argv[1])

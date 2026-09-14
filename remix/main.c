@@ -12,6 +12,7 @@
 #include "fighter_registry.h"
 #include "roster_data.h"
 #include "presentation_data.h"
+#include "costume_data.h"
 #include "stage_data.h"
 #include "main_sizes.h"
 #include "menu_data.h"
@@ -26,7 +27,7 @@ extern FTData dFTFoxData;
 static FTData main_data[97];
 static void *main_files[97][9];
 static FTStatusDesc safe_statuses[64];
-static FTCostume safe_costumes;
+static FTCostume costume_rows[97];
 /* Two private status slots keep entrance callbacks separate from every moveset. */
 static FTStatusDesc presentation_statuses[97][66];
 static int remix_test_floor=-1;
@@ -153,7 +154,14 @@ void port_marth_init(void){
   d->file_main_size=remix_main_size(f->id);d->file_anim_size=remix_anim_size(f->id);
   desc=*port_fighter_descriptor(nFTKindFox);desc.ft_data=d;desc.special_descs=safe_statuses;desc.special_descs_count=64;
   desc.entry_appear_status[0]=desc.entry_appear_status[1]=283;desc.entry_make_effect=NULL;desc.scale=1;
-  desc.costume_row=&safe_costumes;desc.costume_count=1;desc.default_costumes=NULL;desc.default_costumes_count=0;
+  desc.costume_row=&costume_rows[f->id];desc.costume_count=1;desc.default_costumes=NULL;desc.default_costumes_count=0;
+  for(j=0;j<sizeof(remix_costumes)/sizeof(remix_costumes[0]);j++)if(remix_costumes[j].id==f->id){
+   const RemixCostumes *c=&remix_costumes[j];desc.costume_count=c->count;
+   memcpy(desc.costume_row,c->defaults,8);desc.default_costumes=c->defaults;desc.default_costumes_count=4;
+   /* Extra palette/model costumes need their own adapter. Do not index them
+    * as base material-animation frames from an unrelated team menu. */
+   for(int team=0;team<3;team++)if(desc.costume_row->team[team]>=c->count)desc.costume_row->team[team]=c->defaults[team];
+  }
   desc.public_call_fgm=0;desc.results_name=f->name;desc.results_announce_fgm=0;desc.results_name_lx=70;desc.results_name_scale=1;desc.results_wins_lx=200;
   for(j=0;j<PORT_FIGHTER_SPECIAL_COUNT;j++)desc.special_handler[j]=j<3?ftCommonWaitSetStatus:ftCommonFallSetStatus;
   if(f->id==8){desc=*port_fighter_descriptor(8);desc.ft_data=d;d->p_file_main=&gFTDataKirbyMain;d->p_file_mainmotion=&gFTDataKirbyMainMotion;d->p_file_model=&gFTDataKirbyModel;d->p_file_special2=&gFTDataKirbySpecial2;kirby_copy_install(&desc);}
@@ -245,7 +253,7 @@ static const int picks[]={0,1,2,3,4,5,6,7,8,9,10,11,29,30,31,32,33,52,55,56,57,5
 static const char *names[]={"MARIO","FOX","DONKEY KONG","SAMUS","LUIGI","LINK","YOSHI","CAPTAIN FALCON","KIRBY","PIKACHU","JIGGLYPUFF","NESS","FALCO","GANONDORF","YOUNG LINK","DR MARIO","WARIO","BOWSER","WOLF","CONKER","MEWTWO","MARTH","SONIC","SHEIK","MARINA","DEDEDE","GOEMON","BANJO KAZOOIE","PEACH","CRASH","DARK SAMUS","LUCAS","ROY","DR LUIGI"};
 static const int stage_ids[]={6,16,9,10,11,12,13,14};
 static const char *stage_names[]={"DREAM LAND","FINAL DESTINATION","FRAYS STAGE","FIRST DESTINATION","POKEMON STADIUM","POKEMON STADIUM 2","GOOMBA ROAD","BATTLEFIELD"};
-static int phase,wait_ticks,chosen[4],stage_cursor,confirmed,local_human[4],local_active[4],start_ticks;
+static int phase,wait_ticks,chosen[4],stage_cursor,confirmed,local_human[4],local_active[4],start_ticks,color_choice[4],color_kind[4];
 // The native VS select's rule, for every mode: each human moves a free hand with the stick,
 // carries their own puck, drops it on a portrait with A, lifts it again with A (or B) and
 // fights with Start once every puck is down. Hands and pucks are sprite top-left pixels.
@@ -258,13 +266,13 @@ unsigned int port_remix_session_hash(void){
  for(i=0;i<5;i++)hash=(hash^(unsigned int)values[i])*16777619u;
  for(i=0;i<4;i++){
   unsigned int bits[4];memcpy(&bits[0],&hand_x[i],4);memcpy(&bits[1],&hand_y[i],4);memcpy(&bits[2],&puck_x[i],4);memcpy(&bits[3],&puck_y[i],4);
-  const int slot[]={chosen[i],local_human[i],local_active[i],hand_status[i],holder[i],hold_b[i],b_latch[i],grab_cool[i],hover[i]};
+  const int slot[]={chosen[i],local_human[i],local_active[i],hand_status[i],holder[i],hold_b[i],b_latch[i],grab_cool[i],hover[i],color_choice[i],color_kind[i]};
   for(j=0;j<4;j++)hash=(hash^bits[j])*16777619u;
-  for(j=0;j<9;j++)hash=(hash^(unsigned int)slot[j])*16777619u;
+  for(j=0;j<11;j++)hash=(hash^(unsigned int)slot[j])*16777619u;
  }
  return hash;
 }
-static int local_setup_saved,local_saved_chosen[4],local_saved_human[4],local_saved_active[4],local_saved_stage;
+static int local_setup_saved,local_saved_chosen[4],local_saved_human[4],local_saved_active[4],local_saved_stage,local_saved_colors[4];
 static void reset_results_online(void);
 static GObj *words;
 static void *menu_portraits,*menu_images,*menu_common,*menu_modes,*menu_stone,*menu_stage_icons,*menu_stage_ui;
@@ -291,12 +299,30 @@ static void preview_map(int index){
 }
 static GObj *menu_previews[4];
 static void *menu_preview_heaps[4];
-static int menu_preview_kinds[4],menu_preview_selected[4];
+static int menu_preview_kinds[4],menu_preview_selected[4],menu_preview_colors[4];
+static int color_count(int id){int n=port_fighter_costume_count(id);return id>=29&&n>0?n:4;}
+static int color_value(int id,int choice){return id>=29?choice:ftParamGetCostumeCommonID(id,choice);}
+static int color_used(int p,int choice){
+ int value=color_value(chosen[p],choice);
+ for(int q=0;q<4;q++)if(q!=p&&local_active[q]&&(confirmed&(1<<q))&&chosen[q]==chosen[p]&&color_value(chosen[q],color_choice[q])==value)return 1;
+ return 0;
+}
+static void color_default(int p,int id){
+ if(color_kind[p]==id)return;
+ color_kind[p]=id;color_choice[p]=0;
+ for(int n=0;n<color_count(id);n++)if(!color_used(p,n)){color_choice[p]=n;break;}
+}
+static void color_cycle(int p,int direction){
+ int count=color_count(chosen[p]),choice=color_choice[p];
+ for(int n=0;n<count;n++){choice=(choice+count+direction)%count;if(!color_used(p,choice)){color_choice[p]=choice;return;}}
+}
 static void preview_run(GObj *g){if(!(confirmed&(1<<ftGetStruct(g)->player)))DObjGetStruct(g)->rotate.vec.f.y+=F_CST_DTOR32(1.5F);}
 static void preview_fighter(int player,int id){
  FTDesc desc=dFTManagerDefaultFighterDesc;GObj *g;float scale;
+ color_default(player,id);
  if(menu_preview_kinds[player]==id){
   int selected=!!(confirmed&(1<<player));
+  if(menu_preview_colors[player]!=color_choice[player]){ftParamInitAllParts(menu_previews[player],color_value(id,color_choice[player]),0);menu_preview_colors[player]=color_choice[player];}
   if(selected!=menu_preview_selected[player]){
    scSubsysFighterSetStatus(menu_previews[player],selected?nFTDemoStatusWin4:nFTDemoStatusNull);
    DObjGetStruct(menu_previews[player])->rotate.vec.f.y=F_CST_DTOR32(-12);menu_preview_selected[player]=selected;
@@ -304,8 +330,8 @@ static void preview_fighter(int player,int id){
   return;
  }
  if(menu_previews[player])ftManagerDestroyFighter(menu_previews[player]);
- ftManagerSetupFilesAllKind(id);desc.fkind=id;desc.costume=0;desc.shade=0;desc.player=player;desc.figatree_heap=menu_preview_heaps[player];desc.is_skip_shadow_setup=TRUE;
- g=menu_previews[player]=ftManagerMakeFighter(&desc);menu_preview_kinds[player]=id;
+ ftManagerSetupFilesAllKind(id);desc.fkind=id;desc.costume=color_value(id,color_choice[player]);desc.shade=0;desc.player=player;desc.figatree_heap=menu_preview_heaps[player];desc.is_skip_shadow_setup=TRUE;
+ g=menu_previews[player]=ftManagerMakeFighter(&desc);menu_preview_kinds[player]=id;menu_preview_colors[player]=color_choice[player];
  menu_preview_selected[player]=!!(confirmed&(1<<player));
  if(menu_preview_selected[player])scSubsysFighterSetStatus(g,nFTDemoStatusWin4);
  DObjGetStruct(g)->translate.vec.f=(Vec3f){player*840-1250,-850,0};
@@ -341,7 +367,7 @@ static int fingertip_on_puck(int p,int q){float fx=hand_x[p]+14,fy=hand_y[p]+2;r
 static int all_placed(void){int p,n=0;for(p=0;p<4;p++)if(local_active[p]){if(holder[p]>=0||!(confirmed&(1<<p)))return 0;n++;}return n>=2;}
 static void grab_puck(int p,int q){holder[q]=p;confirmed&=~(1<<q);puck_follow(q);hover[q]=puck_portrait(q);func_800269C0_275C0(nSYAudioFGMSamusDash);}
 static void place_puck(int p,int q){
- chosen[q]=remix_menu_layout[hover[q]];holder[q]=-1;confirmed|=1<<q;puck_home(q);grab_cool[p]=30;
+ chosen[q]=remix_menu_layout[hover[q]];color_default(q,chosen[q]);if(color_used(q,color_choice[q]))color_cycle(q,1);holder[q]=-1;confirmed|=1<<q;puck_home(q);grab_cool[p]=30;
  func_800269C0_275C0(nSYAudioFGMMenuSelect);announce_fighter(chosen[q]);
 }
 static const int puck_sprites[]={llMNPlayersCommon1PPuckSprite,llMNPlayersCommon2PPuckSprite,llMNPlayersCommon3PPuckSprite,llMNPlayersCommon4PPuckSprite};
@@ -397,6 +423,7 @@ static void draw_menu(void){
    if(local_active[i]){
     if(local_human[i])menu_sprite(words,menu_common,label_sprites[i],px+4,152,0.9F);else port_yougame_menu_text(words,"CPU",px+4,153,0.5F,0xFFFFFF);
     preview_fighter(i,chosen[i]);
+    {char color[16];snprintf(color,sizeof(color),"COLOR %d",color_choice[i]+1);port_yougame_menu_text(words,color,px+28,153,0.35F,0xBDCDE1);}
     port_yougame_menu_text(words,fighter_name(chosen[i]),px+3,215,0.39F,0xFFFFFF);
    }else {port_yougame_menu_text(words,"START",px+9,183,0.48F,0xA9A9A9);port_yougame_menu_text(words,"TO JOIN",px+7,196,0.40F,0xA9A9A9);}
   }
@@ -409,6 +436,7 @@ static void draw_menu(void){
  port_yougame_menu_text(words,phase==3?"READY TO FIGHT":phase==2?"A SELECT   B BACK":all_placed()?"START   READY TO FIGHT":"CHOOSE YOUR FIGHTER",22,223,0.55F,0xFFFFFF);
  for(i=0;i<4;i++)draw_hand(i);
  EM_ASM({Module.remixMenu=({phase:$0,cursor:$1,stage:$2,p1:$3,p2:$4,hover:$5,selectSlot:$6,confirmed:$7,humans:$8,active:$9,held:$10,x:$11,y:$12,hx:Array.from(HEAPF32.subarray($13>>2,($13>>2)+4)),hy:Array.from(HEAPF32.subarray($14>>2,($14>>2)+4))});},phase,hover[mc],stage_cursor,chosen[0],chosen[1],chosen[mc],mc,confirmed,local_human[0]|local_human[1]<<1|local_human[2]<<2|local_human[3]<<3,local_active[0]|local_active[1]<<1|local_active[2]<<2|local_active[3]<<3,(holder[0]>=0)|(holder[1]>=0)<<1|(holder[2]>=0)<<2|(holder[3]>=0)<<3,hand_x[mc],hand_y[mc],hand_x,hand_y);
+ EM_ASM({Module.remixMenu.colors=Array.from(HEAP32.subarray($0>>2,($0>>2)+4));},color_choice);
 }
 static void select_run(void){
  int p,mc=menu_controller(),redraw=0;
@@ -440,13 +468,15 @@ static void select_run(void){
   else func_800269C0_275C0(nSYAudioFGMMenuDenied);
   break;
  }
+ for(p=0;p<4;p++)if(local_human[p]){int tap=gSYControllerDevices[p].button_tap,q=held_by(p);if(q<0)q=p;
+  if(local_active[q]&&(tap&(L_CBUTTONS|R_CBUTTONS))){color_cycle(q,(tap&R_CBUTTONS)?1:-1);redraw=1;func_800269C0_275C0(nSYAudioFGMMenuScroll2);}}
  if(redraw)draw_menu();else{for(p=0;p<4;p++)move_hand(p);EM_ASM({if(Module.remixMenu){Module.remixMenu.x=$0;Module.remixMenu.y=$1;Module.remixMenu.hx=Array.from(HEAPF32.subarray($2>>2,($2>>2)+4));Module.remixMenu.hy=Array.from(HEAPF32.subarray($3>>2,($3>>2)+4));}},hand_x[mc],hand_y[mc],hand_x,hand_y);}
 }
 static void start_local_match(void){
  SCBattleState *bs=&gSCManagerTransferBattleState;int i;reset_results_online();
-   local_setup_saved=1;local_saved_stage=stage_cursor;memcpy(local_saved_chosen,chosen,sizeof(chosen));memcpy(local_saved_human,local_human,sizeof(local_human));memcpy(local_saved_active,local_active,sizeof(local_active));
+   local_setup_saved=1;local_saved_stage=stage_cursor;memcpy(local_saved_colors,color_choice,sizeof(color_choice));memcpy(local_saved_chosen,chosen,sizeof(chosen));memcpy(local_saved_human,local_human,sizeof(local_human));memcpy(local_saved_active,local_active,sizeof(local_active));
    bs->pl_count=bs->cp_count=0;for(i=0;i<4;i++)if(local_active[i]){if(local_human[i])bs->pl_count++;else bs->cp_count++;}bs->damage_ratio=100;bs->handicap=0;bs->gkind=stage_ids[stage_cursor];bs->game_rules=SCBATTLE_GAMERULE_STOCK;bs->stocks=3;bs->time_limit=8;bs->is_team_battle=FALSE;bs->item_toggles=0;bs->item_appearance_rate=0;
-   for(i=0;i<4;i++){bs->players[i].pkind=!local_active[i]?nFTPlayerKindNot:local_human[i]?nFTPlayerKindMan:nFTPlayerKindCom;bs->players[i].fkind=local_active[i]?chosen[i]:nFTKindNull;bs->players[i].player=i;bs->players[i].color=local_human[i]?i:4;bs->players[i].tag=local_human[i]?i:4;bs->players[i].is_single_stockicon=FALSE;bs->players[i].costume=0;bs->players[i].shade=0;bs->players[i].level=5;bs->players[i].handicap=9;}
+   for(i=0;i<4;i++){bs->players[i].pkind=!local_active[i]?nFTPlayerKindNot:local_human[i]?nFTPlayerKindMan:nFTPlayerKindCom;bs->players[i].fkind=local_active[i]?chosen[i]:nFTKindNull;bs->players[i].player=i;bs->players[i].color=local_human[i]?i:4;bs->players[i].tag=local_human[i]?i:4;bs->players[i].is_single_stockicon=FALSE;bs->players[i].costume=local_active[i]?color_value(chosen[i],color_choice[i]):0;bs->players[i].shade=0;bs->players[i].level=5;bs->players[i].handicap=9;}
    gSCManagerSceneData.is_reset=FALSE;gSCManagerSceneData.is_suddendeath=FALSE;gSCManagerSceneData.gkind=bs->gkind;scene(nSCKindVSBattle);
 }
 static void menu_run(GObj *gobj){
@@ -477,8 +507,8 @@ void port_remix_css_start(void){
  u32 ids[]={0x4a05,0x4a06,0x4011,0x4012,0x4015,0x4a04,0x401e};void *files[7];GObj *camera;CObj *c;
  lbRelocLoadFilesListed(ids,files);menu_portraits=files[0];menu_images=files[1];menu_common=files[2];menu_modes=files[3];menu_stone=files[4];
  menu_stage_icons=files[5];menu_stage_ui=files[6];preview_stage=-1;memset(stage_layers,0,sizeof(stage_layers));memset(stage_ground,0,sizeof(stage_ground));
- port_yougame_menu_font();phase=0;stage_cursor=0;wait_ticks=0;start_ticks=0;words=NULL;chosen[0]=0;chosen[1]=8;chosen[2]=1;chosen[3]=2;confirmed=0;for(int p=0;p<4;p++){local_human[p]=p==0;local_active[p]=p<2;hands[p]=NULL;}
- if(!port_yougame_menu_context&&local_setup_saved){stage_cursor=local_saved_stage;memcpy(chosen,local_saved_chosen,sizeof(chosen));memcpy(local_human,local_saved_human,sizeof(local_human));memcpy(local_active,local_saved_active,sizeof(local_active));}
+ port_yougame_menu_font();phase=0;stage_cursor=0;wait_ticks=0;start_ticks=0;words=NULL;chosen[0]=0;chosen[1]=8;chosen[2]=1;chosen[3]=2;confirmed=0;for(int p=0;p<4;p++){local_human[p]=p==0;local_active[p]=p<2;hands[p]=NULL;color_choice[p]=0;color_kind[p]=-1;}
+ if(!port_yougame_menu_context&&local_setup_saved){stage_cursor=local_saved_stage;memcpy(chosen,local_saved_chosen,sizeof(chosen));memcpy(local_human,local_saved_human,sizeof(local_human));memcpy(local_active,local_saved_active,sizeof(local_active));memcpy(color_choice,local_saved_colors,sizeof(color_choice));for(int p=0;p<4;p++)color_kind[p]=chosen[p];}
  if(port_yougame_session_enabled()){
   const char *slots=getenv("SSB64_BOOT_SLOTS");
   for(int p=0;p<4;p++)local_human[p]=local_active[p]=slots&&strlen(slots)==4&&slots[p]=='h';
@@ -552,7 +582,7 @@ static void results_run(GObj *gobj){
  if((taps&Z_TRIG)&&!results_online){results_details=!results_details;draw_results_stats();func_800269C0_275C0(nSYAudioFGMMenuScroll2);return;}
  if(taps&(A_BUTTON|START_BUTTON)){func_800269C0_275C0(nSYAudioFGMMenuSelect);
   if(results_online){EM_ASM({if(Module.onYouGameMenu)Module.onYouGameMenu(3,0);});results_wait=30;}
-  else if((taps&START_BUTTON)&&local_setup_saved&&!port_yougame_session_enabled()){stage_cursor=local_saved_stage;memcpy(chosen,local_saved_chosen,sizeof(chosen));memcpy(local_human,local_saved_human,sizeof(local_human));memcpy(local_active,local_saved_active,sizeof(local_active));start_local_match();}
+  else if((taps&START_BUTTON)&&local_setup_saved&&!port_yougame_session_enabled()){stage_cursor=local_saved_stage;memcpy(chosen,local_saved_chosen,sizeof(chosen));memcpy(local_human,local_saved_human,sizeof(local_human));memcpy(local_active,local_saved_active,sizeof(local_active));memcpy(color_choice,local_saved_colors,sizeof(color_choice));for(int p=0;p<4;p++)color_kind[p]=chosen[p];start_local_match();}
   else scene(nSCKindPlayersVS);
  }
  else if(taps&B_BUTTON){func_800269C0_275C0(nSYAudioFGMMenuDenied);if(results_online){results_online=0;EM_ASM({if(Module.onYouGameMenu)Module.onYouGameMenu(2,0);});}scene(nSCKindVSMode);}
@@ -688,6 +718,7 @@ EMSCRIPTEN_KEEPALIVE int port_remix_test_position(int player,int x,int y){
  for(GObj *g=gGCCommonLinks[nGCCommonLinkIDFighter];g;g=g->link_next){FTStruct *fp=ftGetStruct(g);if(fp->player!=player)continue;DObjGetStruct(g)->translate.vec.f=(Vec3f){x,y,0};memset(&fp->physics,0,sizeof(fp->physics));fp->coll_data.pos_prev=*fp->coll_data.p_translate;fp->coll_data.pos_diff=(Vec3f){0,0,0};fp->coll_data.mask_curr=fp->coll_data.mask_prev=fp->coll_data.mask_stat=0;fp->hitlag_tics=0;if(y){mpCommonSetFighterAir(fp);ftCommonFallSetStatus(g);}else ftCommonWaitSetStatus(g);return 1;}return 0;
 }
 EMSCRIPTEN_KEEPALIVE int *port_remix_sound_probe(void){extern unsigned portRemixSoundStatistics(int);static int out[3];for(int i=0;i<3;i++)out[i]=portRemixSoundStatistics(i);return out;}
+EMSCRIPTEN_KEEPALIVE int *port_remix_costume_probe(void){static int out[12];for(int i=0;i<4;i++){GObj *g=gSCManagerSceneData.scene_curr==nSCKindPlayersVS?menu_previews[i]:gSCManagerSceneData.scene_curr==nSCKindVSBattle?gSCManagerBattleState->players[i].fighter_gobj:NULL;out[i*3]=g?ftGetStruct(g)->fkind:-1;out[i*3+1]=color_choice[i];out[i*3+2]=g?ftGetStruct(g)->costume:-1;}return out;}
 EMSCRIPTEN_KEEPALIVE int *port_remix_multiplayer_probe(void){static int out[26];memset(out,0,sizeof(out));SCBattleState *b=gSCManagerBattleState;out[0]=b->pl_count;out[1]=b->cp_count;for(int i=0;i<4;i++){out[2+i*6]=b->players[i].pkind;out[3+i*6]=b->players[i].fkind;GObj *g=b->players[i].fighter_gobj;if(sonic_live(g,nGCCommonLinkIDFighter)){FTStruct *fp=ftGetStruct(g);out[4+i*6]=DObjGetStruct(g)->translate.vec.f.x;out[5+i*6]=fp->status_id;out[6+i*6]=fp->input.pl.button_hold;out[7+i*6]=fp->percent_damage;}}return out;}
 EMSCRIPTEN_KEEPALIVE int *port_remix_visual_probe(void){
  static int out[24];memset(out,0,sizeof(out));
