@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include "fighter_registry.h"
 #include "roster_data.h"
+#include "presentation_data.h"
 #include "stage_data.h"
 #include "main_sizes.h"
 #include "menu_data.h"
@@ -26,6 +27,8 @@ static FTData main_data[97];
 static void *main_files[97][9];
 static FTStatusDesc safe_statuses[64];
 static FTCostume safe_costumes;
+/* Two private status slots keep entrance callbacks separate from every moveset. */
+static FTStatusDesc presentation_statuses[97][66];
 static int remix_test_floor=-1;
 int port_remix_enabled(void){return getenv("SSB64_REMIX_MAIN")!=NULL;}
 void port_remix_sheik_tick(GObj*);
@@ -107,6 +110,31 @@ static void remix_entry_update(GObj *gobj){
  fp->coll_data.floor_line_id=fp->status_vars.common.entry.floor_line_id;fp->camera_mode=nFTCameraModeDefault;
  ftCommonWaitSetStatus(gobj);
 }
+static void remix_appear_update(GObj *gobj){
+ FTStruct *fp=ftGetStruct(gobj);
+ ftCommonAppearUpdateEffects(gobj);
+ /* A finite backstop also handles custom ROM routines that chain animations.
+  * Entry ends at the saved spawn, never at an animation's root displacement. */
+ if(gobj->anim_frame>0&&--fp->status_vars.common.entry.entry_wait>0)return;
+ fp->status_vars.common.entry.entry_wait=0;
+ fp->is_invisible=FALSE;fp->is_shadow_hide=FALSE;fp->is_playertag_hide=FALSE;
+ remix_entry_update(gobj);
+}
+static void remix_appear_effect(FTStruct *fp){
+ /* A shared left/right animation faces the other side by mirroring its root. */
+ fp->status_vars.common.entry.is_rotate=fp->status_vars.common.entry.lr<0&&remix_entry_motion(fp->fkind,0)==remix_entry_motion(fp->fkind,1);
+}
+static void remix_presentation_install(FighterDescriptor *desc,int id){
+ FTStatusDesc *rows=presentation_statuses[id];
+ memcpy(rows,desc->special_descs,desc->special_descs_count*sizeof(*rows));
+ for(int side=0;side<2;side++){
+  FTStatusDesc *s=&rows[64+side];
+  s->mflags.motion_id=remix_entry_motion(id,side);
+  s->proc_update=remix_appear_update;s->proc_physics=ftCommonAppearProcPhysics;
+  desc->entry_appear_status[side]=nFTCommonStatusSpecialStart+64+side;
+ }
+ desc->special_descs=rows;desc->special_descs_count=66;desc->entry_make_effect=remix_appear_effect;
+}
 void port_marth_init(void){
  int i,j;if(!port_remix_enabled())return;
  for(i=0;i<64;i++){safe_statuses[i].mflags.motion_id=nFTCommonMotionWait;safe_statuses[i].proc_update=ftCommonWaitSetStatus;}
@@ -114,7 +142,7 @@ void port_marth_init(void){
  for(i=0;i<sizeof(remix_fighters)/sizeof(remix_fighters[0]);i++){
   RemixFighter *f=&remix_fighters[i];FTData *d=&main_data[f->id];void **files=main_files[f->id];FighterDescriptor desc;
   if(f->id<12&&f->id!=8)continue;
-  f->bind();if(f->id!=8){f->main[0].anim_file_id=0;f->main[0].offset=0x80000000;}
+  f->bind();remix_presentation_bind(f);if(f->id!=8){f->main[0].anim_file_id=0;f->main[0].offset=0x80000000;}
   *d=f->id==8?*port_fighter_descriptor(8)->ft_data:dFTFoxData;
   d->file_main_id=f->files[0];d->file_mainmotion_id=f->files[1];d->file_submotion_id=f->files[2];d->file_model_id=f->files[3];d->file_shieldpose_id=f->files[4];
   d->file_special1_id=f->files[5];d->file_special2_id=f->files[6];d->file_special3_id=f->files[7];d->file_special4_id=f->files[8];
@@ -151,6 +179,7 @@ void port_marth_init(void){
   if(f->id==64){dedede_install(&desc);dedede_down_install(&desc);}
   if(f->id==68)banjo_install(&desc);
   remix_normals_install(&desc,f->id);if(f->id==64)dedede_jumps_install(&desc);
+  if(f->id>=29)remix_presentation_install(&desc,f->id);
   port_fighter_register(f->id,&desc);
  }
  kirby_copies_finish();
@@ -262,14 +291,23 @@ static void preview_map(int index){
 }
 static GObj *menu_previews[4];
 static void *menu_preview_heaps[4];
-static int menu_preview_kinds[4];
-static void preview_run(GObj *g){DObjGetStruct(g)->rotate.vec.f.y+=F_CST_DTOR32(1.5F);}
+static int menu_preview_kinds[4],menu_preview_selected[4];
+static void preview_run(GObj *g){if(!(confirmed&(1<<ftGetStruct(g)->player)))DObjGetStruct(g)->rotate.vec.f.y+=F_CST_DTOR32(1.5F);}
 static void preview_fighter(int player,int id){
  FTDesc desc=dFTManagerDefaultFighterDesc;GObj *g;float scale;
- if(menu_preview_kinds[player]==id)return;
+ if(menu_preview_kinds[player]==id){
+  int selected=!!(confirmed&(1<<player));
+  if(selected!=menu_preview_selected[player]){
+   scSubsysFighterSetStatus(menu_previews[player],selected?nFTDemoStatusWin4:nFTDemoStatusNull);
+   DObjGetStruct(menu_previews[player])->rotate.vec.f.y=F_CST_DTOR32(-12);menu_preview_selected[player]=selected;
+  }
+  return;
+ }
  if(menu_previews[player])ftManagerDestroyFighter(menu_previews[player]);
  ftManagerSetupFilesAllKind(id);desc.fkind=id;desc.costume=0;desc.shade=0;desc.player=player;desc.figatree_heap=menu_preview_heaps[player];desc.is_skip_shadow_setup=TRUE;
  g=menu_previews[player]=ftManagerMakeFighter(&desc);menu_preview_kinds[player]=id;
+ menu_preview_selected[player]=!!(confirmed&(1<<player));
+ if(menu_preview_selected[player])scSubsysFighterSetStatus(g,nFTDemoStatusWin4);
  DObjGetStruct(g)->translate.vec.f=(Vec3f){player*840-1250,-850,0};
  scale=port_fighter_scale(id);DObjGetStruct(g)->scale.vec.f=(Vec3f){scale,scale,scale};
  gcAddGObjProcess(g,preview_run,nGCProcessKindFunc,1);
@@ -404,6 +442,13 @@ static void select_run(void){
  }
  if(redraw)draw_menu();else{for(p=0;p<4;p++)move_hand(p);EM_ASM({if(Module.remixMenu){Module.remixMenu.x=$0;Module.remixMenu.y=$1;Module.remixMenu.hx=Array.from(HEAPF32.subarray($2>>2,($2>>2)+4));Module.remixMenu.hy=Array.from(HEAPF32.subarray($3>>2,($3>>2)+4));}},hand_x[mc],hand_y[mc],hand_x,hand_y);}
 }
+static void start_local_match(void){
+ SCBattleState *bs=&gSCManagerTransferBattleState;int i;reset_results_online();
+   local_setup_saved=1;local_saved_stage=stage_cursor;memcpy(local_saved_chosen,chosen,sizeof(chosen));memcpy(local_saved_human,local_human,sizeof(local_human));memcpy(local_saved_active,local_active,sizeof(local_active));
+   bs->pl_count=bs->cp_count=0;for(i=0;i<4;i++)if(local_active[i]){if(local_human[i])bs->pl_count++;else bs->cp_count++;}bs->damage_ratio=100;bs->handicap=0;bs->gkind=stage_ids[stage_cursor];bs->game_rules=SCBATTLE_GAMERULE_STOCK;bs->stocks=3;bs->time_limit=8;bs->is_team_battle=FALSE;bs->item_toggles=0;bs->item_appearance_rate=0;
+   for(i=0;i<4;i++){bs->players[i].pkind=!local_active[i]?nFTPlayerKindNot:local_human[i]?nFTPlayerKindMan:nFTPlayerKindCom;bs->players[i].fkind=local_active[i]?chosen[i]:nFTKindNull;bs->players[i].player=i;bs->players[i].color=local_human[i]?i:4;bs->players[i].tag=local_human[i]?i:4;bs->players[i].is_single_stockicon=FALSE;bs->players[i].costume=0;bs->players[i].shade=0;bs->players[i].level=5;bs->players[i].handicap=9;}
+   gSCManagerSceneData.is_reset=FALSE;gSCManagerSceneData.is_suddendeath=FALSE;gSCManagerSceneData.gkind=bs->gkind;scene(nSCKindVSBattle);
+}
 static void menu_run(GObj *gobj){
  int mc=menu_controller();
  int taps=gSYControllerDevices[mc].button_tap,x=gSYControllerDevices[mc].stick_range.x,y=gSYControllerDevices[mc].stick_range.y;
@@ -423,11 +468,7 @@ static void menu_run(GObj *gobj){
   if(port_yougame_menu_context){
    EM_ASM({if(Module.onYouGameMenu)Module.onYouGameMenu(5,($0<<16)|($1<<8)|$2);},stage_ids[stage_cursor],port_yougame_queue_kind,chosen[0]);scene(nSCKindVSMode);
   }else{
-   SCBattleState *bs=&gSCManagerTransferBattleState;int i;reset_results_online();
-   local_setup_saved=1;local_saved_stage=stage_cursor;memcpy(local_saved_chosen,chosen,sizeof(chosen));memcpy(local_saved_human,local_human,sizeof(local_human));memcpy(local_saved_active,local_active,sizeof(local_active));
-   bs->pl_count=bs->cp_count=0;for(i=0;i<4;i++)if(local_active[i]){if(local_human[i])bs->pl_count++;else bs->cp_count++;}bs->damage_ratio=100;bs->handicap=0;bs->gkind=stage_ids[stage_cursor];bs->game_rules=SCBATTLE_GAMERULE_STOCK;bs->stocks=2;bs->time_limit=8;bs->is_team_battle=FALSE;bs->item_toggles=0;bs->item_appearance_rate=0;
-   for(i=0;i<4;i++){bs->players[i].pkind=!local_active[i]?nFTPlayerKindNot:local_human[i]?nFTPlayerKindMan:nFTPlayerKindCom;bs->players[i].fkind=local_active[i]?chosen[i]:nFTKindNull;bs->players[i].player=i;bs->players[i].color=local_human[i]?i:4;bs->players[i].tag=local_human[i]?i:4;bs->players[i].is_single_stockicon=FALSE;bs->players[i].costume=0;bs->players[i].shade=0;bs->players[i].level=5;bs->players[i].handicap=9;}
-   gSCManagerSceneData.gkind=bs->gkind;scene(nSCKindVSBattle);
+   start_local_match();
   }
  }
 }
@@ -461,16 +502,57 @@ void port_remix_css_start(void){
 }
 /* The original results scene indexes twelve-character tables and writes its
  * twelve-character record book. Imported IDs must never enter that code. */
-static int results_wait,results_online,results_override=-3;
+static int results_wait,results_online,results_override=-3,results_cycle,results_pose,results_details,results_count,results_winner,results_age;
+static GObj *results_stats;
 static void reset_results_online(void){results_online=0;results_override=-3;}
 static GObj *results_fighters[4];
+static void results_rect(int x,int y,int right,int bottom,int color){
+ gDPSetPrimColor(gSYTaskmanDLHeads[0]++,0,0,color>>16,(color>>8)&255,color&255,255);
+ gDPFillRectangle(gSYTaskmanDLHeads[0]++,x,y,right,bottom);
+}
+static void results_backdrop(GObj *g){
+ SCBattleState *bs=&gSCManagerTransferBattleState;int j=0;
+ const int colors[]={0xDC6268,0x6BA8EB,0xE7C661,0x6CC493};
+ gDPPipeSync(gSYTaskmanDLHeads[0]++);gDPSetCycleType(gSYTaskmanDLHeads[0]++,G_CYC_1CYCLE);
+ gDPSetCombineLERP(gSYTaskmanDLHeads[0]++,0,0,0,PRIMITIVE,0,0,0,PRIMITIVE,0,0,0,PRIMITIVE,0,0,0,PRIMITIVE);
+ gDPSetRenderMode(gSYTaskmanDLHeads[0]++,G_RM_AA_XLU_SURF,G_RM_AA_XLU_SURF2);
+ results_rect(18,37,300,78,results_winner>=0?0x2C2630:0x17263C);
+ results_rect(18,37,18+(results_age<24?results_age:24)*282/24,38,0xE9C86E);
+ for(int i=0;i<4;i++)if(bs->players[i].pkind!=nFTPlayerKindNot){
+  int x=18+j++*280/results_count,right=x+280/results_count-5;
+  results_rect(x,87,right,194,i==results_winner?0x292735:0x142133);
+  results_rect(x,87,right,89,colors[i]);
+  results_rect(x,165,right,194,i==results_winner?0x37303B:0x1B2B40);
+ }
+ results_rect(18,200,300,216,0x203149);
+ gDPPipeSync(gSYTaskmanDLHeads[0]++);gDPSetRenderMode(gSYTaskmanDLHeads[0]++,G_RM_AA_ZB_OPA_SURF,G_RM_AA_ZB_OPA_SURF2);
+ lbCommonClearExternSpriteParams();
+}
+static void draw_results_stats(void){
+ SCBattleState *bs=&gSCManagerTransferBattleState;char line[96];int j=0;
+ if(results_stats)gcEjectGObj(results_stats);
+ results_stats=gcMakeGObjSPAfter(0,NULL,28,GOBJ_PRIORITY_DEFAULT);gcAddGObjDisplay(results_stats,lbCommonDrawSObjAttr,27,GOBJ_PRIORITY_DEFAULT,~0);
+ for(int i=0;i<4;i++)if(bs->players[i].pkind!=nFTPlayerKindNot){
+  SCPlayerData *p=&bs->players[i];float x=20+j++*280.0F/results_count,scale=results_count>2?0.38F:0.55F;int kos=0;
+  for(int k=0;k<4;k++)kos+=p->total_kos_players[k];
+  if(results_online)snprintf(line,sizeof(line),"P%d   STOCKS %d",i+1,p->stock_count+1);
+  else if(results_details)snprintf(line,sizeof(line),"DEALT %d   TAKEN %d",p->total_damage_given,p->total_damage_all);
+  else snprintf(line,sizeof(line),"%s%d   KO %d   FALLS %d",p->pkind==nFTPlayerKindCom?"CPU ":"P",i+1,kos,p->falls);
+  port_yougame_menu_text(results_stats,line,x,184,scale,0xBDCDE1);
+ }
+ EM_ASM({if(Module.remixResults)Module.remixResults.details=!!$0;},results_details);
+}
 static void results_run(GObj *gobj){
  int controller=0;
  if(port_yougame_session_enabled())while(controller<3&&!local_human[controller])controller++;
  int taps=gSYControllerDevices[controller].button_tap;
+ if(results_age<24)results_age++;
+ if(!results_online)for(int i=1;i<4;i++)if(gSCManagerTransferBattleState.players[i].pkind==nFTPlayerKindMan)taps|=gSYControllerDevices[i].button_tap;
  if(results_wait){results_wait--;return;}
+ if((taps&Z_TRIG)&&!results_online){results_details=!results_details;draw_results_stats();func_800269C0_275C0(nSYAudioFGMMenuScroll2);return;}
  if(taps&(A_BUTTON|START_BUTTON)){func_800269C0_275C0(nSYAudioFGMMenuSelect);
   if(results_online){EM_ASM({if(Module.onYouGameMenu)Module.onYouGameMenu(3,0);});results_wait=30;}
+  else if((taps&START_BUTTON)&&local_setup_saved&&!port_yougame_session_enabled()){stage_cursor=local_saved_stage;memcpy(chosen,local_saved_chosen,sizeof(chosen));memcpy(local_human,local_saved_human,sizeof(local_human));memcpy(local_active,local_saved_active,sizeof(local_active));start_local_match();}
   else scene(nSCKindPlayersVS);
  }
  else if(taps&B_BUTTON){func_800269C0_275C0(nSYAudioFGMMenuDenied);if(results_online){results_online=0;EM_ASM({if(Module.onYouGameMenu)Module.onYouGameMenu(2,0);});}scene(nSCKindVSMode);}
@@ -523,13 +605,17 @@ int port_remix_results_start(void){
   }
   if(winners!=1||bs->is_team_battle)winner=-1;
  }
- port_yougame_menu_font();results_wait=60;
+ port_yougame_menu_font();results_wait=60;results_count=count;results_details=0;results_stats=NULL;results_winner=winner;results_age=0;
+ results_pose=winner_mask?nFTDemoStatusWin1+(results_cycle++%3):nFTDemoStatusLose;
  syAudioStopBGMAll();syAudioPlayBGM(0,winner>=0?remix_win_music(bs->players[winner].fkind):nSYAudioBGMResults);
  if(winner>=0||(winning_team>=0&&winning_team<3)){extern void mnVSResultsMakeAudioThread(void);mnVSResultsMakeAudioThread();}
  efParticleInitAll();efManagerInitEffects();ftManagerAllocFighter(FTDATA_FLAG_SUBMOTION,count);
  memset(results_fighters,0,sizeof(results_fighters));
  gcMakeDefaultCameraGObj(16,GOBJ_PRIORITY_DEFAULT,100,COBJ_FLAG_ZBUFFER|COBJ_FLAG_FILLCOLOR,GPACK_RGBA8888(0x0B,0x14,0x25,0xFF));
  mnPlayersVSMakePortraitCamera();mnPlayersVSMakeFighterCamera();
+ {GObj *camera=gcMakeCameraGObj(1,NULL,16,GOBJ_PRIORITY_DEFAULT,lbCommonDrawSprite,80,COBJ_MASK_DLLINK(28),~0,FALSE,nGCProcessKindFunc,NULL,1,FALSE);
+ syRdpSetViewport(&CObjGetStruct(camera)->viewport,10,10,310,230);
+ gcAddGObjDisplay(gcMakeGObjSPAfter(0,NULL,28,GOBJ_PRIORITY_DEFAULT),results_backdrop,28,GOBJ_PRIORITY_DEFAULT,~0);}
  g=gcMakeGObjSPAfter(0,results_run,15,GOBJ_PRIORITY_DEFAULT);gcAddGObjDisplay(g,lbCommonDrawSObjAttr,27,GOBJ_PRIORITY_DEFAULT,~0);
  port_yougame_menu_text(g,"OPENSMASH64 REMIX",20,18,0.75F,0xF4CF68);
  port_yougame_menu_text(g,gSCManagerSceneData.is_reset?"NO CONTEST":winning_team>=0?"WINNING TEAM":winner_mask&&winner<0?"WINNERS":winner<0?"MATCH COMPLETE":"WINNER",20,42,0.75F,0xFFFFFF);
@@ -538,27 +624,28 @@ int port_remix_results_start(void){
  else if(winner_mask)port_yougame_menu_text(g,"SHARED FIRST PLACE",20,59,0.8F,0xFFD35C);
  for(i=0,j=0;i<4;i++)if(bs->players[i].pkind!=nFTPlayerKindNot){
   FTDesc d=dFTManagerDefaultFighterDesc;GObj *f;float x=20+j*280.0F/count,scale;
-  int kos=0,k;for(k=0;k<4;k++)kos+=bs->players[i].total_kos_players[k];
   ftManagerSetupFilesAllKind(bs->players[i].fkind);d.fkind=bs->players[i].fkind;d.costume=bs->players[i].costume;d.shade=bs->players[i].shade;d.player=i;d.figatree_heap=syTaskmanMalloc(gFTManagerFigatreeHeapSize,16);d.is_skip_shadow_setup=TRUE;
   f=results_fighters[i]=ftManagerMakeFighter(&d);
-  scSubsysFighterSetStatus(f,(winner_mask&(1u<<i))?nFTDemoStatusWin1:nFTDemoStatusLose);
-  scale=port_fighter_scale(d.fkind)*(count>2?0.7F:1.0F);
+  scSubsysFighterSetStatus(f,(winner_mask&(1u<<i))?results_pose:nFTDemoStatusLose);
+  scale=port_fighter_scale(d.fkind)*(count>2?((winner_mask&(1u<<i))?0.85F:0.68F):((winner_mask&(1u<<i))?1.15F:0.92F));
   DObjGetStruct(f)->translate.vec.f=(Vec3f){(j-(count-1)*0.5F)*(count>2?950:1500),-450,0};
   DObjGetStruct(f)->rotate.vec.f.y=F_CST_DTOR32(-12);
   DObjGetStruct(f)->scale.vec.f=(Vec3f){scale,scale,scale};
   if(native_results&&!gSCManagerSceneData.is_reset&&places[i]>=0)snprintf(line,sizeof(line),"%d %s",places[i]+1,fighter_name(d.fkind));else snprintf(line,sizeof(line),"%s",fighter_name(d.fkind));port_yougame_menu_text(g,line,x,174,count>2?0.42F:0.6F,(winner_mask&(1u<<i))?0xFFD35C:0xFFFFFF);
-  snprintf(line,sizeof(line),"%s%d  KO %d  FALLS %d",bs->players[i].pkind==nFTPlayerKindCom?"CPU ":"P",i+1,kos,bs->players[i].falls);port_yougame_menu_text(g,line,x,188,count>2?0.36F:0.45F,0xBDCDE1);j++;
+  snprintf(line,sizeof(line),(winner_mask&(1u<<i))?"P%d WINNER":"P%d",i+1);port_yougame_menu_text(g,line,x,94,count>2?0.45F:0.6F,(winner_mask&(1u<<i))?0xFFD35C:0xBDCDE1);j++;
  }
- port_yougame_menu_text(g,results_online?"A OR START   REMATCH":"A OR START   CHOOSE FIGHTERS",20,209,0.65F,0xFFFFFF);
- port_yougame_menu_text(g,"B   BACK TO VS MODE",20,225,0.5F,0xBDCDE1);
+ port_yougame_menu_text(g,results_online?"A OR START   REMATCH":(local_setup_saved&&!port_yougame_session_enabled())?"START REMATCH   A CHOOSE FIGHTERS":"A OR START   CHOOSE FIGHTERS",20,205,0.6F,0xFFFFFF);
+ port_yougame_menu_text(g,results_online?"B   LEAVE MATCH":"B VS MODE   Z MATCH STATS",20,222,0.5F,0xBDCDE1);
  EM_ASM({Module.remixResults=({winner:$0,winnerMask:$5,places:[$6,$7,$8,$9],winningTeam:$10,fighters:[$1,$2,$3,$4].filter(x=>x>=0&&x<76),animated:true});},winner,bs->players[0].pkind!=nFTPlayerKindNot?bs->players[0].fkind:-1,bs->players[1].pkind!=nFTPlayerKindNot?bs->players[1].fkind:-1,bs->players[2].pkind!=nFTPlayerKindNot?bs->players[2].fkind:-1,bs->players[3].pkind!=nFTPlayerKindNot?bs->players[3].fkind:-1,winner_mask,places[0],places[1],places[2],places[3],winning_team);
+ EM_ASM({Object.assign(Module.remixResults,{pose:$0,online:!!$1,rematch:!!$2});},results_pose,results_online,results_online||(local_setup_saved&&!port_yougame_session_enabled()));
+ draw_results_stats();
  return 1;
 }
 /* Display only after the multiplayer service confirms a result. */
 EMSCRIPTEN_KEEPALIVE int port_remix_online_results(int first,int second,int winner,int stocks0,int stocks1){
  SCBattleState *bs=&gSCManagerTransferBattleState;int i,a=0,b=0;
  for(i=0;i<34;i++){if(picks[i]==first)a=1;if(picks[i]==second)b=1;}
- if(!port_remix_enabled()||!a||!b||winner< -2||winner>1)return 0;
+ if(!port_remix_enabled()||!a||!b||winner< -2||winner>1||stocks0<0||stocks0>99||stocks1<0||stocks1>99)return 0;
  results_online=1;results_override=winner<0?-1:winner;gSCManagerSceneData.is_reset=winner==-2;
  bs->pl_count=2;bs->cp_count=0;
  for(i=0;i<4;i++){memset(&bs->players[i],0,sizeof(bs->players[i]));bs->players[i].pkind=i<2?nFTPlayerKindMan:nFTPlayerKindNot;bs->players[i].fkind=i==0?first:second;bs->players[i].player=i;bs->players[i].stock_count=(i?stocks1:stocks0)-1;}

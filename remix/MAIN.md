@@ -126,3 +126,6 @@ Results render each active fighter in its victory or defeat animation, show the
 winner and KO/fall counts, and return to the graphical fighter menu. Local matches
 restore the selected roster and controller setup; online results expose rematch
 and leave actions to the multiplayer session. The baked-in personal-name footer is hidden on the start screen.
+
+The September 14 presentation and four-stock update is described in
+[the release record](../docs/remix-polish-release-2026-09-14.md).

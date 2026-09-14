@@ -2,7 +2,7 @@
 // puck, Start fights once both are down, B backs out of the stage select, holding B leaves the screen.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE),assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--enable-unsafe-swiftshader']});try{const p=await b.newPage({viewport:{width:960,height:720}}),errors=[];p.on('pageerror',e=>errors.push(String(e)));
-await p.goto('http://127.0.0.1:4199/session-check.html');await p.waitForFunction(()=>window.driver,{},{timeout:60000});
+await p.goto((process.env.POLISH_URL||'http://127.0.0.1:4199')+'/session-check.html');await p.waitForFunction(()=>window.driver,{},{timeout:60000});
 const r=await p.evaluate(()=>{const W=game.contentWindow,M=()=>W.Module.remixMenu,scene=()=>W.Module.nativeScene;const step=(n,port=0,pad=[0,0,0])=>{pads=Array.from({length:4},()=>[0,0,0]);pads[port]=pad;for(let i=0;i<n;i++)driver.step();};
 const cell=i=>[39+(i%10)*24,44+Math.floor(i/10)*24];const stick=v=>{let s=Math.max(-80,Math.min(80,Math.round(v*20)));if(s&&Math.abs(s)<=8)s=Math.sign(s)*9;return s;};
 const place=(port,i)=>{const [cx,cy]=cell(i),tx=cx-1,ty=cy+13;let x=44+69*port,y=168;for(let n=0;n<400&&(Math.abs(tx-x)>=1||Math.abs(ty-y)>=1);n++){const sx=stick(tx-x),sy=stick(y-ty);step(1,port,[0,sx,sy]);if(Math.abs(sx)>8)x+=Math.fround(sx/20);if(Math.abs(sy)>8)y-=Math.fround(sy/20);}step(1,port,[32768,0,0]);step(20);};

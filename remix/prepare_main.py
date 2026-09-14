@@ -2,7 +2,7 @@ from pathlib import Path
 import shutil
 from prepare import replace,ROOT,ENGINE,install_hooks
 install_hooks()
-for name in ['roster_data.h','stage_data.h','main_sizes.h','menu_data.h','normal_data.h','kirby_data.h','trail_data.h']:
+for name in ['roster_data.h','stage_data.h','main_sizes.h','menu_data.h','normal_data.h','kirby_data.h','trail_data.h','presentation_data.h']:
  shutil.copyfile(ROOT/'build/remix/main/assets'/name,ENGINE/'port/stubs'/name)
 shutil.copyfile(ROOT/'remix/main.c',ENGINE/'port/stubs/remix_marth.c')
 for name in ['special_marth.c','special_falco.c','special_roy.c','special_doctor.c','special_ganon.c','special_younglink.c','special_lucas.c','special_darksamus.c','special_wolf.c','special_wario.c','special_bowser.c','special_peach.c','special_conker.c','special_mewtwo.c','special_sonic.c','special_sheik.c','special_marina.c','special_clanpot.c','special_crash.c','special_goemon.c','special_dedede.c','special_minions.c','special_banjo.c','normal_moves.c','marina_cargo.c','kirby_copy.c','special_trails.c']:
@@ -288,3 +288,6 @@ if 'extern int port_remix_trail_mode' not in p.read_text():
  replace(p,'#include <ft/fighter.h>','#include <ft/fighter.h>\n#ifdef __EMSCRIPTEN__\nextern int port_remix_trail_mode(FTStruct*);\nextern void port_remix_trail_style(FTStruct*,float*,float*,SYColorRGBA**,SYColorRGBA**);\n#define REMIX_TRAIL_MODE(fp) port_remix_trail_mode(fp)\n#else\n#define REMIX_TRAIL_MODE(fp) ((fp)->afterimage.is_itemswing)\n#endif')
 s=p.read_text().replace('switch (fp->afterimage.is_itemswing)','switch (REMIX_TRAIL_MODE(fp))');p.write_text(s)
 replace(p,'    base_p_vtx = p_vtx = (Vtx*)gSYTaskmanGraphicsHeap.ptr;','    #ifdef __EMSCRIPTEN__\n    port_remix_trail_style(fp,&var_f20,&var_f22,&color1,&color2);\n    #endif\n    base_p_vtx = p_vtx = (Vtx*)gSYTaskmanGraphicsHeap.ptr;')
+
+p=ENGINE/'decomp/src/mn/mnvsmode/mnvsresults.c'
+replace(p,'sizeof(Gfx) * 2500,         // Display List Buffer 0 Size','sizeof(Gfx) * 8192,         // Display List Buffer 0 Size')

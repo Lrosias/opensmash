@@ -46,7 +46,7 @@ typedef void GObj;
 typedef struct { int pkind,fkind,player,color,tag,is_single_stockicon,costume,shade,level,handicap; } SCPlayer;
 typedef struct { int pl_count,cp_count,damage_ratio,handicap,gkind,game_rules,stocks,time_limit,is_team_battle,item_toggles,item_appearance_rate; SCPlayer players[4]; } SCBattleState;
 static SCBattleState gSCManagerTransferBattleState;
-static struct { int gkind; } gSCManagerSceneData;
+static struct { int gkind,is_reset,is_suddendeath; } gSCManagerSceneData;
 static struct { int button_tap, button_hold; struct { int x, y; } stick_range; } gSYControllerDevices[4];
 static int remix_menu_layout[34], port_yougame_menu_context, port_yougame_queue_kind, session, scene_calls, last_scene;
 static float HEAPF32[1];
@@ -88,6 +88,9 @@ static void check(int context){
 int main(void){
  check(1); // menu context: native Online entry and friends invites
  check(0); // local VS
+ assert(gSCManagerTransferBattleState.stocks==3); // zero-based: four stocks
+ gSCManagerSceneData.is_reset=gSCManagerSceneData.is_suddendeath=1;
+ start_local_match();assert(gSCManagerTransferBattleState.stocks==3&&!gSCManagerSceneData.is_reset&&!gSCManagerSceneData.is_suddendeath);
  puts("PASS: a dropped puck stays on the fighter screen; Start with every puck down opens the stage grid (menu context and local)");
 }
 '''

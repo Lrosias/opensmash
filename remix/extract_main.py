@@ -55,3 +55,6 @@ if __name__=='__main__':
 
   from extract_trails import extract_trails
   extract_trails(sys.argv[1])
+
+  from extract_presentation import extract_presentation
+  extract_presentation(sys.argv[1])

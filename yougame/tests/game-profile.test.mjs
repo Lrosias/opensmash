@@ -4,6 +4,7 @@ import {CompetitiveSet,stageFor} from '../src/competitive-set.mjs';
 import {RollbackDuelSession} from '../src/rollback-session.mjs';
 test('original and Remix use separate native flags, rosters, stage pools and wire identities',()=>{
  const a=PROFILES.original,b=PROFILES.remix;
+ assert.equal(b.stocks,4);
  assert.notEqual(a.mode,b.mode);assert.notEqual(a.protocol,b.protocol);
  assert.equal(a.fighters.length,12);assert.equal(b.fighters.length,34);
  for(const p of [a,b]){const params=engineParams({profile:p,battle:{fighters:[0,8],stage:6},seed:123});assert.equal(params.has('SSB64_REMIX_MAIN'),p.remix);assert.equal(params.get('SSB64_STOCKS'),String(p.stocks));assert.equal(params.get('SSB64_YOUGAME_SEED'),'123');assert.equal(engineParams({profile:p}).has('SSB64_REMIX_MAIN'),p.remix);}
