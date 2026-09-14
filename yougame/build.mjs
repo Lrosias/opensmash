@@ -1,3 +1,4 @@
+import { checkBuildPrivacy } from "./privacy/check-build.mjs";
 import {cp,mkdir,readFile,writeFile,readdir,stat,rm} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
@@ -48,5 +49,7 @@ async function collect(dir,prefix=''){for(const e of await readdir(dir,{withFile
  if((relative==='yougame.json'||/\.(html|css|m?js)$/.test(relative))&&!['engine/BattleShip.js','engine/torch/torch.js'].includes(relative))row.text=await readFile(f,'utf8');files.push(row);
  }}}
 await collect(out);
+checkBuildPrivacy(out);
+
 await writeFile(path.join(root,'yougame/build-check.json'),JSON.stringify({files}));
 console.log(`YouGame build ${build}: ${files.length} files in ${out}`);

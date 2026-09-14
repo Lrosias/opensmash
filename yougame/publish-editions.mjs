@@ -1,3 +1,4 @@
+import { checkBuildPrivacy } from "./privacy/check-build.mjs";
 // Publish OpenSmash64 and Smash Remix together, from one package directory, so a change to the
 // shared game never reaches one edition without the other. The two editions are the same engine
 // and the same wrapper (only the roster, media and app BUILD differ), so every file they share
@@ -30,6 +31,8 @@ if (!notes) throw new Error("Pass --notes: what changed, in a sentence players c
 if (!key && !dry) throw new Error("YOUGAME_API_KEY is not set (the opensmash creator key)");
 const editions = { original: { slug: "opensmash64", dir: path.join(dir, "original") }, remix: { slug: "opensmash64-remix", dir: path.join(dir, "remix") } };
 for (const e of Object.values(editions)) await stat(path.join(e.dir, "app.mjs")).catch(() => { throw new Error(`${e.dir} is not a packaged edition (no app.mjs)`); });
+
+for (const e of Object.values(editions)) checkBuildPrivacy(e.dir);
 
 // Every file the editions share must match: these carry the netplay, the engine and the controls.
 // (game-profile.mjs, the roster and the media are edition-specific by design and are not compared.)

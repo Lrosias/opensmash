@@ -12,3 +12,9 @@
 - Large build trees are stored at `/Volumes/OpenSmashBuilds` on OSCOO MD200, with compatibility symlinks at their old paths. Consult `docs/external-build-storage.md` and the migration results before writing to them.
 - Run `python3 tools/mount-external-builds.py` before using external builds after a restart/reconnect. Do not replace a missing external build path or compatibility symlink with a new internal build directory.
 - Preserve historical evidence manifests. Relocation changes canonical paths and filesystem identities; review new execution requests against their actual external paths. Check APFS workspace free space, backing ExFAT drive free space, and internal scratch/swap headroom.
+
+## Release privacy
+
+- Configure `BUILD_PRIVATE_TERMS` locally with the private names/account identifiers to reject. Never embed the value in source or packages.
+- Scan each final browser/native package with `python3 yougame/privacy/build_privacy.py scan <package>` after packaging/signing and before uploading. Resolve every finding; missing configuration or an unsupported format is not a passing scan.
+- Compile with source-prefix maps, omit development files, and do not expose home directories or worktree paths. Always apply changes to the newest publishing source and verify the latest remote assets before any repair; never replay older binaries over newer releases.

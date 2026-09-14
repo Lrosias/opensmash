@@ -1,3 +1,4 @@
+import { checkBuildPrivacy } from "./privacy/check-build.mjs";
 // Repackage a verified native edition with the current shared online frontend.
 // node yougame/package-edition.mjs original|remix /path/to/previous/build /path/to/new/build
 import {cp,mkdir,readFile,readdir,stat,writeFile} from 'node:fs/promises';
@@ -40,6 +41,8 @@ for(const name of ['app.mjs','engine/index.html'])await writeFile(path.join(out,
 await writeFile(path.join(out,'index.html'),(await readFile(path.join(out,'index.html'),'utf8')).replace('<title>OpenSmash64 · YouGame</title>',`<title>${profile.title} · uGames</title>`));
 const files=[];
 async function collect(dir,prefix=''){for(const entry of await readdir(dir,{withFileTypes:true})){const relative=prefix+entry.name,file=path.join(dir,entry.name);if(entry.isDirectory()){await collect(file,relative+'/');continue;}if(/\.(z64|n64|v64|zip|sh|py)$/i.test(relative))throw new Error('Unexpected build file: '+relative);const row={path:relative,size:(await stat(file)).size};if((relative==='yougame.json'||/\.(html|css|m?js)$/.test(relative))&&relative!=='engine/BattleShip.js')row.text=await readFile(file,'utf8');files.push(row);}}
-await collect(out);await writeFile(out+'-check.json',JSON.stringify({files}));
+await collect(out);
+checkBuildPrivacy(out);
+await writeFile(out+'-check.json',JSON.stringify({files}));
 await writeFile(out+'-release.json',JSON.stringify({edition,build,base,out,mode:profile.mode,fighters:profile.fighters,stages:profile.stages,stocks:profile.stocks,files:files.length},null,2)+'\n');
 console.log(JSON.stringify({edition,build,out,files:files.length}));
