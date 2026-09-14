@@ -2,7 +2,7 @@ import {REMIX_FIGHTERS,REMIX_STAGES} from './remix-roster.mjs';
 // The package selects an edition, never a URL parameter or peer message.
 export const PROFILES=Object.freeze({
  original:Object.freeze({id:'original',title:'OpenSmash64',mode:'opensmash64-competitive-v1',protocol:'opensmash64-rollback-v4',fighters:Object.freeze([...Array(12).keys()]),stages:Object.freeze([...Array(9).keys()]),stocks:4,minutes:8,remix:false}),
- remix:Object.freeze({id:'remix',title:'OpenSmash64 Remix',mode:'opensmash64-remix-competitive-v1',protocol:'opensmash64-remix-rollback-v4',fighters:REMIX_FIGHTERS,stages:REMIX_STAGES,stocks:3,minutes:8,remix:true})
+ remix:Object.freeze({id:'remix',title:'OpenSmash64 Remix',mode:'opensmash64-remix-competitive-v1',protocol:'opensmash64-remix-rollback-v4',fighters:REMIX_FIGHTERS,stages:REMIX_STAGES,stocks:4,minutes:8,remix:true})
 });
 export const ACTIVE_PROFILE=PROFILES['YOUGAME_EDITION']||PROFILES.remix;
 export const validFighter=(id,profile=ACTIVE_PROFILE)=>Number.isInteger(id)&&profile.fighters.includes(id);

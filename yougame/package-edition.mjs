@@ -21,7 +21,17 @@ for(const file of await readdir(src)){
  if(file==='engine.html')continue;
  if(file.endsWith('.mjs'))await writeFile(path.join(out,file),(await readFile(new URL(file,src),'utf8')).replaceAll('../../controllers/','./controllers/'));else await cp(new URL(file,src),path.join(out,file));
 }
-await cp(new URL('engine.html',src),path.join(out,'engine/index.html'));
+let shell=await readFile(new URL('engine.html',src),'utf8');
+// Direct-play editions retain the deployed shell's bundled-archive behavior.
+// Optional player-ROM extraction is packaged separately with its Torch runtime.
+if(manifest.files.some(f=>f.path==='/BattleShip.o2r')){
+ const first=shell.indexOf("  if(!manifest.files.some(f=>f.path === '/BattleShip.o2r')){");
+ const last=shell.indexOf("  const script=document.createElement('script');",first);
+ if(first<0||last<0)throw Error('Direct-play shell anchor changed');
+ shell=shell.slice(0,first)+shell.slice(last);
+ shell=shell.replace("      if(archive){const {writeArchive}=await import('./rom-extract.mjs');writeArchive(FS,archive.bytes,archive.extras);}","").replace('let manifest,archive=null;','let manifest;');
+}
+await writeFile(path.join(out,'engine/index.html'),shell);
 await writeFile(path.join(out,'game-profile.mjs'),(await readFile(new URL('game-profile.mjs',src),'utf8')).replace("PROFILES['YOUGAME_EDITION']","PROFILES['"+edition+"']"));
 const hash=createHash('sha256');
 async function digest(dir){for(const entry of (await readdir(dir,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){const file=path.join(dir,entry.name);hash.update(path.relative(out,file));if(entry.isDirectory())await digest(file);else hash.update(await readFile(file));}}
