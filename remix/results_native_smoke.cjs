@@ -58,7 +58,7 @@ const roster=[...Array(12).keys(),29,30,31,32,33,52,55,56,57,58,59,62,63,64,65,6
   actions=await p.evaluate(()=>{
    pads=[[32768,0,0]];driver.step();pads=[[0,0,0]];for(let n=0;n<35;n++)driver.step();pads=[[16384,0,0]];driver.step();return events;
   });
-  assert.deepEqual(actions,[[3,0],[2,0]]);
+  assert.deepEqual(actions,[[3,0],[3,0]]);
   exceptional=await p.evaluate(()=>{
    const m=game.contentWindow.Module,rows=[];pads=[[0,0,0]];for(let n=0;n<40;n++)driver.step();
    for(const winner of [-1,-2,1]){m._port_remix_online_results(58,74,winner,0,2);for(let n=0;n<410;n++)driver.step();rows.push({...m.remixResults});}
@@ -67,7 +67,7 @@ const roster=[...Array(12).keys(),29,30,31,32,33,52,55,56,57,58,59,62,63,64,65,6
   assert.deepEqual(exceptional.rows.map(r=>r.winner),[-1,-1,1]);assert.deepEqual(exceptional.rejected,[0,0,0,0]);
   }
   // A fresh native menu drives a complete four-controller match, a rematch
-  // initiated by P4, then a return to the original saved controller roster.
+  // initiated by P4, then return to character select using Start, A and B.
   await p.goto(`${base}/presentation-check.html`);await p.waitForFunction(()=>window.driver,null,{timeout:60000});
   await p.evaluate(()=>{
    window.tick=(n,port=0,pad=[0,0,0])=>{pads=Array.from({length:4},()=>[0,0,0]);pads[port]=pad;for(let i=0;i<n;i++)driver.step();};
@@ -84,7 +84,7 @@ const roster=[...Array(12).keys(),29,30,31,32,33,52,55,56,57,58,59,62,63,64,65,6
   const setup=await p.evaluate(()=>({...game.contentWindow.Module.remixMenu}));assert.equal(setup.confirmed,15);
   const rounds=[];
   await p.evaluate(()=>{tick(1,0,[4096,0,0]);tick(60);tick(1,0,[32768,0,0]);tick(800);});
-  for(let round=0;round<2;round++){
+  for(let round=0;round<3;round++){
    const result=await p.evaluate(()=>{
     const m=game.contentWindow.Module;let frames=0;
     while(m.nativeScene!==24&&frames<6000){if(frames%240===0)for(let port=0;port<3;port++)m._port_remix_test_position(port,4900,100);tick(1);frames++;}
@@ -94,14 +94,17 @@ const roster=[...Array(12).keys(),29,30,31,32,33,52,55,56,57,58,59,62,63,64,65,6
    await p.evaluate(()=>{tick(1,3,[8192,0,0]);tick(2);});
    assert.equal(await p.evaluate(()=>game.contentWindow.Module.remixResults.details),true);
    await p.screenshot({path:`${out}/four-stats-${round}.png`});
-   if(!round){
-    const state=await p.evaluate(()=>{tick(1,3,[4096,0,0]);tick(800);const m=game.contentWindow.Module,at=m._port_remix_multiplayer_probe()>>2;return {scene:m.nativeScene,players:[...game.contentWindow.HEAP32.slice(at,at+26)]};});
+   if(round<2){
+    const selection=await p.evaluate(round=>{tick(1,3,[round===0?4096:32768,0,0]);tick(100);return {scene:game.contentWindow.Module.nativeScene,...game.contentWindow.Module.remixMenu};},round);
+    assert.equal(selection.scene,16,'Victory must return to character select');
+    assert.equal(selection.humans,15);assert.equal(selection.active,15);assert.equal(selection.p1,setup.p1);assert.equal(selection.p2,setup.p2);
+    const state=await p.evaluate(()=>{tick(1,0,[4096,0,0]);tick(60);tick(1,0,[32768,0,0]);tick(800);const m=game.contentWindow.Module,at=m._port_remix_multiplayer_probe()>>2;return {scene:m.nativeScene,players:[...game.contentWindow.HEAP32.slice(at,at+26)]};});
     assert.equal(state.scene,22);assert.equal(state.players[0],4);assert.equal(state.players[1],0);
     for(let port=0;port<4;port++)assert.equal(state.players[7+port*6],0,'Rematch damage did not reset');
    }
   }
-  const returned=await p.evaluate(()=>{tick(1,3,[32768,0,0]);tick(100);return {...game.contentWindow.Module.remixMenu};});
-  assert.equal(returned.humans,15);assert.equal(returned.active,15);assert.equal(returned.p1,setup.p1);assert.equal(returned.p2,setup.p2);assert.deepEqual(errors,[]);
+  const returned=await p.evaluate(()=>{tick(1,3,[16384,0,0]);tick(100);return {scene:game.contentWindow.Module.nativeScene,...game.contentWindow.Module.remixMenu};});
+  assert.equal(returned.scene,16,'B must also return to character select');assert.equal(returned.humans,15);assert.equal(returned.active,15);assert.equal(returned.p1,setup.p1);assert.equal(returned.p2,setup.p2);assert.deepEqual(errors,[]);
   assert.deepEqual(overflows,[],'Native render buffer overflow');
   await fs.writeFile(`${out}/results.json`,JSON.stringify({selections,fighters:report,actions,exceptional,rounds,returned,errors,overflows},null,2));
   console.log(JSON.stringify({actions,rounds,returned,errors}));

@@ -543,12 +543,11 @@ void port_remix_results_controls(void){
  if(!results_online)for(int i=1;i<4;i++)if(gSCManagerTransferBattleState.players[i].pkind==nFTPlayerKindMan)taps|=gSYControllerDevices[i].button_tap;
  if(results_wait){results_wait--;return;}
  if((taps&(Z_TRIG|R_TRIG))&&!results_online){results_details=!results_details;port_remix_results_stats(results_details);EM_ASM({if(Module.remixResults)Module.remixResults.details=!!$0;},results_details);func_800269C0_275C0(nSYAudioFGMMenuScroll2);return;}
- if(taps&(A_BUTTON|START_BUTTON)){func_800269C0_275C0(nSYAudioFGMMenuSelect);
+ if(taps&(A_BUTTON|START_BUTTON|B_BUTTON)){
+  func_800269C0_275C0(nSYAudioFGMMenuSelect);
   if(results_online){EM_ASM({if(Module.onYouGameMenu)Module.onYouGameMenu(3,0);});results_wait=30;}
-  else if((taps&START_BUTTON)&&local_setup_saved&&!port_yougame_session_enabled()){stage_cursor=local_saved_stage;memcpy(chosen,local_saved_chosen,sizeof(chosen));memcpy(local_human,local_saved_human,sizeof(local_human));memcpy(local_active,local_saved_active,sizeof(local_active));memcpy(color_choice,local_saved_colors,sizeof(color_choice));for(int p=0;p<4;p++)color_kind[p]=chosen[p];start_local_match();}
   else scene(nSCKindPlayersVS);
  }
- else if(taps&B_BUTTON){func_800269C0_275C0(nSYAudioFGMMenuDenied);if(results_online){results_online=0;EM_ASM({if(Module.onYouGameMenu)Module.onYouGameMenu(2,0);});}scene(nSCKindVSMode);}
 }
 /* Existing fanfares cover the original franchises; the native general fanfare
  * covers new franchises until their Remix sequence bank is translated. */
@@ -605,7 +604,7 @@ int port_remix_results_start(void){
  extern void port_remix_native_results(unsigned int,int*,int,int);
  port_remix_native_results(winner_mask,places,winning_team,results_pose);
  EM_ASM({Module.remixResults=({winner:$0,winnerMask:$5,places:[$6,$7,$8,$9],winningTeam:$10,fighters:[$1,$2,$3,$4].filter(x=>x>=0&&x<76),animated:true});},winner,bs->players[0].pkind!=nFTPlayerKindNot?bs->players[0].fkind:-1,bs->players[1].pkind!=nFTPlayerKindNot?bs->players[1].fkind:-1,bs->players[2].pkind!=nFTPlayerKindNot?bs->players[2].fkind:-1,bs->players[3].pkind!=nFTPlayerKindNot?bs->players[3].fkind:-1,winner_mask,places[0],places[1],places[2],places[3],winning_team);
- EM_ASM({Object.assign(Module.remixResults,{pose:$0,online:!!$1,rematch:!!$2});},results_pose,results_online,results_online||(local_setup_saved&&!port_yougame_session_enabled()));
+ EM_ASM({Object.assign(Module.remixResults,{pose:$0,online:!!$1,rematch:false});},results_pose,results_online);
  return 1;
 }
 /* Display only after the multiplayer service confirms a result. */

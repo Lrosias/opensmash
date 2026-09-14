@@ -19,7 +19,7 @@ const layout=[63,32,4,0,2,5,3,7,30,59,64,31,11,6,8,1,9,10,29,62,65,72,33,73,52,5
  const duplicates=probe();tick(1,2,[1,0,0]);tick(3);const selected=probe();
  tick(1,0,[4096,0,0]);tick(60);tick(1,0,[32768,0,0]);tick(800);const battle=probe();
  let frames=0;while(game.contentWindow.Module.nativeScene!==24&&frames++<6000){if(frames%240===0)for(let port=0;port<3;port++)game.contentWindow.Module._port_remix_test_position(port,4900,100);tick(1);}tick(410);
- const result={...game.contentWindow.Module.remixResults};tick(1,3,[4096,0,0]);tick(800);const rematch=probe();
+ const result={...game.contentWindow.Module.remixResults};tick(1,3,[4096,0,0]);tick(100);if(game.contentWindow.Module.nativeScene!==16)throw Error('Results did not return to character select');tick(1,0,[4096,0,0]);tick(60);tick(1,0,[32768,0,0]);tick(800);const rematch=probe();
  return {checks,simultaneous,duplicates,selected,battle,result,rematch};
 },rows);
 for(const c of report.checks){assert.deepEqual(c.colors,Array.from({length:c.count},(_,i)=>i),String(c.id));assert.equal(c.wrapped,0);}
