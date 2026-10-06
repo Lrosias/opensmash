@@ -187,7 +187,14 @@ extern void *func_800269C0_275C0(u16);
 int port_yougame_menu_context = 0;
 int port_yougame_queue_kind = 0;
 static void *menu_font, *menu_digits;
-static GObj *online_buttons[3], *online_words;
+/* The Online screen always shows two buttons: CASUAL and FRIENDS when idle (each sends
+ * its queue kind to the wrapper: 0 casual, 2 friends), the session action and BACK
+ * otherwise. Ranked (kind 1) stays off this screen until it is a full ranked mode. */
+#define ONLINE_ENTRIES 2
+_Static_assert(ONLINE_ENTRIES == 2, "the session phase draws its action and BACK in these two buttons");
+static const char *const online_labels[ONLINE_ENTRIES] = {"CASUAL", "FRIENDS"};
+static const int online_kinds[ONLINE_ENTRIES] = {0, 2};
+static GObj *online_buttons[ONLINE_ENTRIES], *online_words;
 static int online_cursor, online_wait, online_phase, online_revision;
 
 void port_yougame_menu_font(void) {
@@ -244,9 +251,9 @@ static void online_scene(int scene) {
 static void online_draw(void) {
     int i;
     char message[100];
-    const char *labels[3] = {"CASUAL", "RANKED", "FRIENDS"};
+    const char *labels[ONLINE_ENTRIES] = {online_labels[0], online_labels[1]};
     if (online_words) gcEjectGObj(online_words);
-    for (i=0;i<3;i++) if (online_buttons[i]) {gcEjectGObj(online_buttons[i]); online_buttons[i]=NULL;}
+    for (i=0;i<ONLINE_ENTRIES;i++) if (online_buttons[i]) {gcEjectGObj(online_buttons[i]); online_buttons[i]=NULL;}
     online_words = gcMakeGObjSPAfter(0,NULL,5,GOBJ_PRIORITY_DEFAULT);
     gcAddGObjDisplay(online_words,lbCommonDrawSObjAttr,3,GOBJ_PRIORITY_DEFAULT,~0);
     port_yougame_menu_text(online_words,"ONLINE",28,28,1.5F,0x3C73B4);
@@ -260,7 +267,7 @@ static void online_draw(void) {
         labels[0] = online_phase == 4 ? "REMATCH" : online_phase == 6 ? "TRY AGAIN" : "WAITING";
         labels[1] = "BACK";
     }
-    for (i=0;i<(online_phase ? 2 : 3);i++) {
+    for (i=0;i<ONLINE_ENTRIES;i++) {
         float x=115-i*20, y=58+i*38;
         GObj *b=online_buttons[i]=gcMakeGObjSPAfter(0,NULL,4,GOBJ_PRIORITY_DEFAULT);
         gcAddGObjDisplay(b,lbCommonDrawSObjAttr,2,GOBJ_PRIORITY_DEFAULT,~0);
@@ -272,7 +279,7 @@ static void online_draw(void) {
 void port_yougame_online_start(void) {
     int i;
     port_yougame_menu_font();
-    for(i=0;i<3;i++) online_buttons[i]=NULL;
+    for(i=0;i<ONLINE_ENTRIES;i++) online_buttons[i]=NULL;
     online_words=NULL; online_cursor=0; online_wait=15;
     online_phase=EM_ASM_INT({return Module.yougameMenu?.phase || 0;});
     online_revision=EM_ASM_INT({return Module.yougameMenu?.revision || 0;});
@@ -293,15 +300,14 @@ void port_yougame_online_run(void) {
         return;
     }
     if(y || (taps&(U_JPAD|D_JPAD))) {
-        int count=online_phase?2:3;
-        online_cursor=(online_cursor+((y>0 || (taps&U_JPAD))?count-1:1))%count;
+        online_cursor=(online_cursor+((y>0 || (taps&U_JPAD))?ONLINE_ENTRIES-1:1))%ONLINE_ENTRIES;
         func_800269C0_275C0(nSYAudioFGMMenuScroll2);
         online_wait=12;online_draw();
     }
     if(taps&(A_BUTTON|START_BUTTON)) {
         online_wait=15;
         if(!online_phase) {
-            port_yougame_queue_kind=online_cursor;
+            port_yougame_queue_kind=online_kinds[online_cursor];
             func_800269C0_275C0(nSYAudioFGMMenuSelect);
             online_event(6, port_yougame_queue_kind);
         } else if(online_cursor==1) online_event(2,0);
