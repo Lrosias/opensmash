@@ -191,6 +191,7 @@ static void *menu_font, *menu_digits;
  * its queue kind to the wrapper: 0 casual, 2 friends), the session action and BACK
  * otherwise. Ranked (kind 1) stays off this screen until it is a full ranked mode. */
 #define ONLINE_ENTRIES 2
+_Static_assert(ONLINE_ENTRIES == 2, "the session phase draws its action and BACK in these two buttons");
 static const char *const online_labels[ONLINE_ENTRIES] = {"CASUAL", "FRIENDS"};
 static const int online_kinds[ONLINE_ENTRIES] = {0, 2};
 static GObj *online_buttons[ONLINE_ENTRIES], *online_words;
