@@ -183,6 +183,6 @@ async function online(){
 }
 window.addEventListener('pagehide',disconnect);
 const params=engineParams();
-try{if(window.YouGame){await YouGame.ready();if(YouGame.multiplayer.invite){queueKind=3;params.set('SSB64_START_SCENE','16');params.set('SSB64_YOUGAME_INVITE','1');}}}catch(e){console.warn(e);}
+try{if(window.YouGame){await YouGame.ready();YouGame.controllers?.setup?.({players:4});if(YouGame.multiplayer.invite){queueKind=3;params.set('SSB64_START_SCENE','16');params.set('SSB64_YOUGAME_INVITE','1');}}}catch(e){console.warn(e);}
 menu=createEngine(params);
 if(window.YouGame?.multiplayer?.invite){queueKind=3;online();window.focus();}

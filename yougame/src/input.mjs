@@ -18,8 +18,18 @@ export function createInput({allowStart=false,readTouch=()=>[0,0,0],adapter=null
   // online only port 1 is this player's seat. Port 1 also carries the keyboard and touch.
   const portOf=new Map(); // browser gamepad index -> port
   function ports() {
+    const pads=[...(navigator.getGamepads?.()||[])];
+    // On YouGame the platform seats the pads (the player's Controls panel and seating plan, then
+    // the console rule below); the lobby hands seat 1 to this player and seat 2 to a second local
+    // player. Elsewhere the same rule runs here.
+    const seats=globalThis.YouGame?.controllers?.seats?.();
+    if(Array.isArray(seats)&&seats.length){
+      const out=[null,null,null,null];
+      seats.forEach((s,i)=>{const p=s&&pads[s.index];if(i<4&&p?.connected&&p.id===s.id)out[i]=p;});
+      return out;
+    }
     const live=new Map();
-    for(const p of navigator.getGamepads?.()||[])if(p?.connected)live.set(p.index,p);
+    for(const p of pads)if(p?.connected)live.set(p.index,p);
     for(const index of [...portOf.keys()])if(!live.has(index))portOf.delete(index);
     for(const index of [...live.keys()].sort((a,b)=>a-b)){
       if(portOf.has(index))continue;
